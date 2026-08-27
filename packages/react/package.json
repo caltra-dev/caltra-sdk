@@ -4,6 +4,15 @@
   "description": "assistant-ui runtime adapter for Caltra sessions",
   "type": "module",
   "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/caltra-dev/caltra-sdk.git",
+    "directory": "packages/react"
+  },
+  "homepage": "https://github.com/caltra-dev/caltra-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/caltra-dev/caltra-sdk/issues"
+  },
   "files": [
     "dist"
   ],
@@ -43,5 +52,9 @@
   "engines": {
     "node": ">=24.0.0"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  }
 }
