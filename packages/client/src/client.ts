@@ -111,6 +111,10 @@ export class CaltraClient {
     );
   }
 
+  async invalidateToken(): Promise<void> {
+    await this.options.tokenInvalidator?.();
+  }
+
   private async getPage<T>(
     path: string,
     input: CaltraPageInput,

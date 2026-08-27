@@ -3,6 +3,7 @@ export type CaltraTokenProvider = () => Promise<string>;
 export interface CaltraClientOptions {
   apiUrl: string;
   fetch?: typeof fetch;
+  tokenInvalidator?: () => Promise<void> | void;
   tokenProvider: CaltraTokenProvider;
 }
 

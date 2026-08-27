@@ -1,0 +1,47 @@
+{
+  "name": "@caltra/react",
+  "version": "0.1.0",
+  "description": "assistant-ui runtime adapter for Caltra sessions",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prebuild": "npm run build --workspace=@caltra/client",
+    "pretest": "npm run build --workspace=@caltra/client",
+    "pretypecheck": "npm run build --workspace=@caltra/client",
+    "test": "vitest run tests",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@caltra/client": "0.1.0"
+  },
+  "peerDependencies": {
+    "@assistant-ui/react": "^0.15.16",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@assistant-ui/react": "0.15.16",
+    "@testing-library/react": "16.3.2",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "jsdom": "30.0.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "license": "MIT"
+}
