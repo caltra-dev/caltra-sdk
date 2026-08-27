@@ -46,4 +46,37 @@ describe("TestAppTokenProxy", () => {
       CALTRA_WORKSPACE_ID: "20000000-0000-4000-8000-000000000001",
     })).toThrow();
   });
+
+  it("uses npm command-line options ahead of matching environment values", () => {
+    const config = new TestAppServerConfig({
+      CALTRA_API_KEY: "csk_from_env",
+      CALTRA_API_URL: "https://env-api.caltra.dev",
+      CALTRA_TENANT_USER_EXTERNAL_ID: "env-user",
+      CALTRA_WORKSPACE_ID: "20000000-0000-4000-8000-000000000001",
+      npm_config_api_key: "csk_from_cli",
+      npm_config_caltra_url: "https://cli-api.caltra.dev",
+      npm_config_tenant_user_external_id: "cli-user",
+      npm_config_workspace_id: "30000000-0000-4000-8000-000000000002",
+    });
+
+    expect(config.apiKey).toBe("csk_from_cli");
+    expect(config.apiUrl).toBe("https://cli-api.caltra.dev");
+    expect(config.tenantUserExternalId).toBe("cli-user");
+    expect(config.workspaceId).toBe("30000000-0000-4000-8000-000000000002");
+  });
+
+  it("falls back to environment values for omitted npm command-line options", () => {
+    const config = new TestAppServerConfig({
+      CALTRA_API_KEY: "csk_from_env",
+      CALTRA_API_URL: "https://env-api.caltra.dev",
+      CALTRA_TENANT_USER_EXTERNAL_ID: "env-user",
+      CALTRA_WORKSPACE_ID: "20000000-0000-4000-8000-000000000001",
+      npm_config_caltra_url: "https://cli-api.caltra.dev",
+    });
+
+    expect(config.apiKey).toBe("csk_from_env");
+    expect(config.apiUrl).toBe("https://cli-api.caltra.dev");
+    expect(config.tenantUserExternalId).toBe("env-user");
+    expect(config.workspaceId).toBe("20000000-0000-4000-8000-000000000001");
+  });
 });
