@@ -26,6 +26,34 @@ class StubEventConnection implements AsyncIterable<CaltraSessionEvent> {
 }
 
 describe("CaltraSessionStore", () => {
+  it("restarts after a development Strict Mode start-stop-start cycle", async () => {
+    const connection = new StubEventConnection([]);
+    let attempts = 0;
+    const client = {
+      invalidateToken: vi.fn(),
+      listSessionMessages: vi.fn(async () => ({ data: [], next_cursor: null })),
+      openSessionEvents: vi.fn(async (_sessionId: string, options: { signal?: AbortSignal }) => {
+        attempts += 1;
+        if (attempts > 1) return connection;
+        return await new Promise<StubEventConnection>((_resolve, reject) => {
+          options.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+        });
+      }),
+      sendMessage: vi.fn(),
+    };
+    const store = new CaltraSessionStore(client as never, sessionId);
+
+    const firstStart = store.start();
+    await vi.waitFor(() => expect(client.openSessionEvents).toHaveBeenCalledTimes(1));
+    await store.stop();
+    await expect(firstStart).rejects.toThrow("stopped");
+    await expect(store.start()).resolves.toBeUndefined();
+
+    expect(client.openSessionEvents).toHaveBeenCalledTimes(2);
+    expect(store.getSnapshot().connection).toBe("connected");
+    await store.stop();
+  });
+
   it("connects before history and sending, then reconciles streamed completion", async () => {
     const calls: string[] = [];
     let historyLoads = 0;

@@ -58,10 +58,15 @@ export class CaltraSessionStore {
   }
 
   async stop(): Promise<void> {
+    const connection = this.connection;
     this.abortController?.abort();
-    await this.connection?.close();
     this.abortController = undefined;
     this.connection = undefined;
+    this.readyPromise = undefined;
+    this.rejectReady?.(new Error("The Caltra session connection was stopped."));
+    this.rejectReady = undefined;
+    this.resolveReady = undefined;
+    await connection?.close().catch(() => undefined);
   }
 
   async refresh(): Promise<void> {

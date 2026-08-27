@@ -5,6 +5,25 @@ const sessionId = "40000000-0000-4000-8000-000000000001";
 const agentId = "50000000-0000-4000-8000-000000000001";
 
 describe("CaltraClient", () => {
+  it("keeps the browser receiver when using the global fetch implementation", async () => {
+    const fetchImplementation = vi.fn(function (this: typeof globalThis) {
+      expect(this).toBe(globalThis);
+      return Promise.resolve(Response.json({ data: [], next_cursor: null }));
+    });
+    vi.stubGlobal("fetch", fetchImplementation);
+
+    try {
+      const client = new CaltraClient({
+        apiUrl: "https://api.example.test",
+        tokenProvider: async () => "client-token",
+      });
+
+      await expect(client.listSessions()).resolves.toEqual({ data: [], next_cursor: null });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("uses the browser token for session discovery and creation", async () => {
     const fetchImplementation = vi.fn(async (input: URL | RequestInfo, init?: RequestInit) => {
       const url = String(input);

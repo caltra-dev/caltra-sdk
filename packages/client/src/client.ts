@@ -51,7 +51,7 @@ export class CaltraClient {
 
   constructor(private readonly options: CaltraClientOptions) {
     this.apiUrl = options.apiUrl.replace(/\/+$/, "");
-    this.fetchImplementation = options.fetch ?? globalThis.fetch;
+    this.fetchImplementation = options.fetch ?? globalThis.fetch.bind(globalThis);
   }
 
   async listAgents(input: CaltraPageInput = {}): Promise<CaltraPage<CaltraAgent>> {
