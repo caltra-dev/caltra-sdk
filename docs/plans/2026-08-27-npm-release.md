@@ -95,6 +95,8 @@ jobs:
           node-version: "24"
           registry-url: https://registry.npmjs.org
           package-manager-cache: false
+      - name: Use the repository npm version
+        run: npm install --global npm@11.19.0
       - run: npm ci
       - run: npm run typecheck
       - run: npm test

@@ -1,0 +1,29 @@
+name: Publish SDK packages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Use the repository npm version
+        run: npm install --global npm@11.19.0
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Publish client
+        run: npm publish --workspace=@caltra/client
+      - name: Publish React adapter
+        run: npm publish --workspace=@caltra/react
