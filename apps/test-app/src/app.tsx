@@ -1,14 +1,27 @@
-import { CaltraClient, type CaltraAgent, type CaltraSession } from "@caltra/client";
+import {
+  CaltraClient,
+  CaltraHandoffTokenProvider,
+  type CaltraAgent,
+  type CaltraSession,
+} from "@caltra/client";
 import { LoaderCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Chat } from "./components/chat.js";
 import { SessionList } from "./components/session_list.js";
 import { useSuccessToast } from "./components/success_toast.js";
-import { TestAppTokenProvider } from "./token_provider.js";
+import { TestAppHandoffProvider } from "./handoff_provider.js";
+
+declare const __CALTRA_API_URL__: string;
 
 export function App() {
   const { success } = useSuccessToast();
-  const tokenProvider = useMemo(() => new TestAppTokenProvider(), []);
+  const tokenProvider = useMemo(() => {
+    const handoffProvider = new TestAppHandoffProvider();
+    return new CaltraHandoffTokenProvider({
+      apiUrl: __CALTRA_API_URL__,
+      handoffProvider: async () => await handoffProvider.create(),
+    });
+  }, []);
   const [client, setClient] = useState<CaltraClient>();
   const [agents, setAgents] = useState<CaltraAgent[]>([]);
   const [sessions, setSessions] = useState<CaltraSession[]>([]);
@@ -17,10 +30,10 @@ export function App() {
   const [error, setError] = useState<Error>();
 
   useEffect(() => {
-    void tokenProvider.getConfiguration()
-      .then(async (configuration) => {
+    void tokenProvider.getToken()
+      .then(async () => {
         const nextClient = new CaltraClient({
-          apiUrl: configuration.api_url,
+          apiUrl: __CALTRA_API_URL__,
           tokenInvalidator: () => tokenProvider.invalidate(),
           tokenProvider: async () => await tokenProvider.getToken(),
         });
@@ -72,7 +85,7 @@ export function App() {
     return (
       <div className="boot-state">
         <LoaderCircle className="spinner" />
-        <span>NEGOTIATING CLIENT TOKEN</span>
+        <span>EXCHANGING AUTH HANDOFF</span>
       </div>
     );
   }

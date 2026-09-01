@@ -34,8 +34,9 @@ CALTRA_WORKSPACE_ID=00000000-0000-4000-8000-000000000000
 CALTRA_TENANT_USER_EXTERNAL_ID=sdk-test-user
 ```
 
-All four variables are read by Vite's local Node process. The API key is exchanged at
-`/api/client-token` and is never returned to the browser or embedded in the production bundle.
+All four variables are read by Vite's local Node process. The local server uses the API key to
+create a 60-second, single-use handoff at `/api/client-handoff`; the API key and Caltra client token
+are never returned by that customer-backend route or embedded in the production bundle.
 The test app lists published agents and permanent sessions, creates a selected agent session, opens
 the authenticated event stream, reloads its safe transcript, and renders it with assistant-ui
 primitives.
@@ -43,11 +44,21 @@ primitives.
 ## Client usage
 
 ```ts
-import { CaltraClient } from "@caltra/client";
+import { CaltraClient, CaltraHandoffTokenProvider } from "@caltra/client";
+
+const handoffs = new CaltraHandoffTokenProvider({
+  apiUrl: "https://api.caltra.dev",
+  handoffProvider: async () => {
+    const response = await fetch("/api/caltra/handoff", { method: "POST" });
+    if (!response.ok) throw new Error("Caltra authentication failed.");
+    return (await response.json() as { handoff_code: string }).handoff_code;
+  },
+});
 
 const client = new CaltraClient({
   apiUrl: "https://api.caltra.dev",
-  tokenProvider: async () => getShortLivedClientToken(),
+  tokenInvalidator: () => handoffs.invalidate(),
+  tokenProvider: async () => await handoffs.getToken(),
 });
 
 const sessions = await client.listSessions();
@@ -58,3 +69,26 @@ const events = await client.openSessionEvents(created.id);
 React applications can pass a client and selected session to `useCaltraRuntime` from
 `@caltra/react`, then provide the returned runtime to assistant-ui's `AssistantRuntimeProvider`.
 The React package intentionally exports no chat UI components.
+
+## Customer backend handoff
+
+The application's same-origin `/api/caltra/handoff` route is intentionally provider-neutral. Its
+existing authentication middleware resolves the signed-in user, then its server code calls:
+
+```http
+POST https://api.caltra.dev/server/v1/workspaces/{workspace_id}/client-handoffs
+Authorization: Bearer csk_live_...
+Content-Type: application/json
+
+{
+  "origin": "https://customer.example.com",
+  "tenant_user": { "external_id": "stable-customer-user-id" }
+}
+```
+
+Return only Caltra's `handoff_code` and `expires_at` fields to the browser. Each code is bound to
+the configured browser origin, expires after at most 60 seconds, and can be exchanged once.
+
+Organizations using Clerk can instead configure Clerk OAuth directly in Caltra. That option needs
+no customer backend adapter for identity; the SDK handoff remains available for custom auth,
+Better Auth, legacy sessions, or any other provider resolved by the customer's backend.

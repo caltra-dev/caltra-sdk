@@ -1,5 +1,19 @@
 export type CaltraTokenProvider = () => Promise<string>;
 
+export type CaltraHandoffProvider = () => Promise<string>;
+
+export interface CaltraHandoffTokenProviderOptions {
+  apiUrl: string;
+  fetch?: typeof fetch;
+  handoffProvider: CaltraHandoffProvider;
+}
+
+export interface CaltraTokenConfiguration {
+  clientToken: string;
+  expiresAt: Date;
+  refreshAfter: Date;
+}
+
 export interface CaltraClientOptions {
   apiUrl: string;
   fetch?: typeof fetch;

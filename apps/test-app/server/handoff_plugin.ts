@@ -1,16 +1,16 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Plugin } from "vite";
-import type { TestAppTokenProxy } from "./token_proxy.js";
+import type { TestAppHandoffProxy } from "./handoff_proxy.js";
 
-/** Adds the local-only same-origin token endpoint to Vite's development server. */
-export class TestAppTokenPlugin {
-  constructor(private readonly proxy: TestAppTokenProxy) {}
+/** Adds the local authenticated handoff endpoint to Vite's development server. */
+export class TestAppHandoffPlugin {
+  constructor(private readonly proxy: TestAppHandoffProxy) {}
 
   toVitePlugin(): Plugin {
     return {
-      name: "caltra-test-app-client-token",
+      name: "caltra-test-app-client-handoff",
       configureServer: (server) => {
-        server.middlewares.use("/api/client-token", async (request, response, next) => {
+        server.middlewares.use("/api/client-handoff", async (request, response, next) => {
           if (request.method !== "POST") {
             next();
             return;
@@ -29,17 +29,17 @@ export class TestAppTokenPlugin {
         response.end(JSON.stringify({ error: "Browser Origin header is required." }));
         return;
       }
-      const token = await this.proxy.exchange(origin);
-      response.statusCode = 200;
+      const handoff = await this.proxy.create(origin);
+      response.statusCode = 201;
       response.setHeader("cache-control", "no-store");
       response.setHeader("content-type", "application/json");
-      response.end(JSON.stringify(token));
+      response.end(JSON.stringify(handoff));
     } catch (error) {
       response.statusCode = 502;
       response.setHeader("cache-control", "no-store");
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify({
-        error: error instanceof Error ? error.message : "Client token exchange failed.",
+        error: error instanceof Error ? error.message : "Client handoff creation failed.",
       }));
     }
   }

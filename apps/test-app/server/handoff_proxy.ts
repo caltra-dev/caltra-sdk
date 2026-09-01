@@ -1,22 +1,20 @@
 import type { TestAppServerConfig } from "./config.js";
 
-export interface TestAppClientTokenResponse {
-  api_url: string;
-  client_token: string;
+export interface TestAppClientHandoffResponse {
   expires_at: string;
-  refresh_after: string;
+  handoff_code: string;
 }
 
-/** Exchanges a server credential without returning it or forwarding it to browser code. */
-export class TestAppTokenProxy {
+/** Creates a one-time handoff while keeping the Caltra server API key outside browser code. */
+export class TestAppHandoffProxy {
   constructor(
     private readonly config: TestAppServerConfig,
     private readonly fetchImplementation: typeof fetch = globalThis.fetch,
   ) {}
 
-  async exchange(origin: string): Promise<TestAppClientTokenResponse> {
+  async create(origin: string): Promise<TestAppClientHandoffResponse> {
     const response = await this.fetchImplementation(
-      `${this.config.apiUrl}/server/v1/workspaces/${encodeURIComponent(this.config.workspaceId)}/client-tokens`,
+      `${this.config.apiUrl}/server/v1/workspaces/${encodeURIComponent(this.config.workspaceId)}/client-handoffs`,
       {
         body: JSON.stringify({
           origin,
@@ -31,9 +29,8 @@ export class TestAppTokenProxy {
     );
     if (!response.ok) {
       const detail = await response.text();
-      throw new Error(`Caltra token exchange failed with HTTP ${response.status}: ${detail}`);
+      throw new Error(`Caltra handoff creation failed with HTTP ${response.status}: ${detail}`);
     }
-    const token = await response.json() as Omit<TestAppClientTokenResponse, "api_url">;
-    return { ...token, api_url: this.config.apiUrl };
+    return await response.json() as TestAppClientHandoffResponse;
   }
 }

@@ -27,3 +27,6 @@ export function CaltraSession(props: { client: CaltraClient; sessionId: string }
 ```
 
 The package is ESM-only and requires `@caltra/client`. See the [Caltra SDK repository](https://github.com/caltra-dev/caltra-sdk) for a complete local integration application.
+
+Authentication belongs to `@caltra/client`. Use `CaltraHandoffTokenProvider` for a provider-neutral
+customer-backend integration, then pass the resulting `CaltraClient` to this React adapter.

@@ -19,7 +19,9 @@ CALTRA_WORKSPACE_ID=00000000-0000-4000-8000-000000000000
 CALTRA_TENANT_USER_EXTERNAL_ID=sdk-test-user
 ```
 
-`CALTRA_API_KEY` is read only by the local Vite server and is exchanged for a tenant-scoped browser token. It is never exposed to the browser application.
+`CALTRA_API_KEY` is read only by the local Vite server. The server creates a one-time Caltra
+handoff and returns only that handoff to `CaltraHandoffTokenProvider`; neither the API key nor the
+tenant-scoped browser token is exposed by the application's backend route.
 
 ## Run
 

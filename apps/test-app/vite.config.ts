@@ -1,15 +1,20 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 import { TestAppServerConfig } from "./server/config.js";
-import { TestAppTokenPlugin } from "./server/token_plugin.js";
-import { TestAppTokenProxy } from "./server/token_proxy.js";
+import { TestAppHandoffPlugin } from "./server/handoff_plugin.js";
+import { TestAppHandoffProxy } from "./server/handoff_proxy.js";
 
 export default defineConfig(({ command, mode }) => {
   const plugins = [...react()];
+  let apiUrl = mode === "test" ? "http://caltra.test" : "https://api.caltra.dev";
   if (command === "serve" && mode !== "test") {
     const environment = loadEnv(mode, process.cwd(), "");
     const config = new TestAppServerConfig(environment);
-    plugins.push(new TestAppTokenPlugin(new TestAppTokenProxy(config)).toVitePlugin());
+    apiUrl = config.apiUrl;
+    plugins.push(new TestAppHandoffPlugin(new TestAppHandoffProxy(config)).toVitePlugin());
   }
-  return { plugins };
+  return {
+    define: { __CALTRA_API_URL__: JSON.stringify(apiUrl) },
+    plugins,
+  };
 });
