@@ -12,12 +12,10 @@ export default defineConfig({
     baseURL: "http://localhost:5173",
     trace: "retain-on-failure",
   },
-  webServer: configured
-    ? {
-        command: "npm run dev",
-        reuseExistingServer: true,
-        timeout: 30_000,
-        url: "http://127.0.0.1:5173",
-      }
-    : undefined,
+  webServer: {
+    command: configured ? "npm run dev" : "npm run dev -- --mode test",
+    reuseExistingServer: true,
+    timeout: 30_000,
+    url: "http://127.0.0.1:5173",
+  },
 });

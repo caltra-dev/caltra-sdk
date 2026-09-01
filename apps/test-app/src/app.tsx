@@ -3,9 +3,11 @@ import { LoaderCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Chat } from "./components/chat.js";
 import { SessionList } from "./components/session_list.js";
+import { useSuccessToast } from "./components/success_toast.js";
 import { TestAppTokenProvider } from "./token_provider.js";
 
 export function App() {
+  const { success } = useSuccessToast();
   const tokenProvider = useMemo(() => new TestAppTokenProvider(), []);
   const [client, setClient] = useState<CaltraClient>();
   const [agents, setAgents] = useState<CaltraAgent[]>([]);
@@ -42,8 +44,12 @@ export function App() {
     setError(undefined);
     try {
       const session = await client.createSession({ agentId });
-      setSessions((current) => [session, ...current]);
+      setSessions((current) => [session, ...current.filter((item) => item.id !== session.id)]);
       setSelected(session);
+      success({
+        message: `Session opened for ${session.agent.name}.`,
+        operationId: `create-session:${session.id}`,
+      });
     } catch (reason) {
       setError(reason instanceof Error ? reason : new Error("Session creation failed."));
     } finally {

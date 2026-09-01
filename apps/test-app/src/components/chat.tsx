@@ -20,12 +20,12 @@ export function Chat({ client, session }: ChatProps) {
   return (
     <AssistantRuntimeProvider runtime={caltra.runtime}>
       <main className="chat-shell">
-        <header className="chat-header">
-          <div>
+        <header className="chat-header" data-success-toast-anchor>
+          <div data-success-toast-avoid>
             <span className="eyebrow">ACTIVE AGENT CHANNEL</span>
             <h1>{session.agent.name}</h1>
           </div>
-          <div className={`connection ${caltra.connection}`}>
+          <div className={`connection ${caltra.connection}`} data-success-toast-avoid>
             <span />
             {caltra.connection}
           </div>
