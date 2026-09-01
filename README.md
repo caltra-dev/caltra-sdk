@@ -89,6 +89,6 @@ Content-Type: application/json
 Return only Caltra's `handoff_code` and `expires_at` fields to the browser. Each code is bound to
 the configured browser origin, expires after at most 60 seconds, and can be exchanged once.
 
-Organizations using Clerk can instead configure Clerk OAuth directly in Caltra. That option needs
-no customer backend adapter for identity; the SDK handoff remains available for custom auth,
-Better Auth, legacy sessions, or any other provider resolved by the customer's backend.
+Organizations can configure Clerk OAuth directly in Caltra as their upstream identity boundary.
+Direct Clerk exchange for SDK sessions is not available yet, so browser clients currently use the
+same handoff contract with Clerk, Better Auth, legacy sessions, or any other customer-side provider.

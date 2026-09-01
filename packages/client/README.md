@@ -39,8 +39,8 @@ ID and exact browser origin, and returns only `handoff_code`. The SDK exchanges 
 caches only the resulting short-lived client token in memory, and requests a new handoff at the
 server-provided refresh time. Never embed a Caltra server API key in a browser bundle.
 
-When the organization connects Clerk directly in Caltra, customer applications can use the
-Clerk-backed Caltra login flow instead of implementing this backend adapter. The client API remains
-provider-neutral in either case.
+The organization-level Clerk connection configures the upstream identity boundary separately. Until
+direct Clerk exchange becomes available for SDK sessions, browser clients still use this
+provider-neutral handoff contract.
 
 The package is ESM-only. See the [Caltra SDK repository](https://github.com/caltra-dev/caltra-sdk) for development and integration-app instructions.
