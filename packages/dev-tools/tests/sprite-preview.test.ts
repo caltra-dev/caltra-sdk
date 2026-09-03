@@ -3,7 +3,8 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { APIError, type Sprite, type SpritesClient } from "@fly/sprites";
+import { describe, expect, it, vi } from "vitest";
 
 import type { DevToolsConfig } from "../src/config.js";
 import {
@@ -13,6 +14,7 @@ import {
   remoteServiceDefinitions,
   requiredSdkEnvironment,
   requiredSpritesToken,
+  updatePreview,
 } from "../src/sprite-preview.js";
 
 const config: DevToolsConfig["sprites"] = {
@@ -67,5 +69,61 @@ describe("Sprite SDK preview", () => {
     expect(() => requiredSdkEnvironment({})).toThrow("CALTRA_API_URL");
     expect(redactPreviewError(new Error("failed key-value"), { CALTRA_API_KEY: "key-value" }))
       .toBe("failed [REDACTED]");
+  });
+
+  it("hot-updates the committed SDK without recreating the Vite service", async () => {
+    const repository = mkdtempSync(join(tmpdir(), "sdk-preview-update-"));
+    const git = (args: string[]) => execFileSync("git", args, { cwd: repository, encoding: "utf8" }).trim();
+    git(["init", "--initial-branch=main"]);
+    git(["config", "user.email", "developer@example.test"]);
+    git(["config", "user.name", "Developer"]);
+    writeFileSync(join(repository, "tracked.txt"), "committed\n", "utf8");
+    git(["add", "tracked.txt"]);
+    git(["commit", "-m", "initial"]);
+    const commit = git(["rev-parse", "HEAD"]);
+    const writeFile = vi.fn().mockResolvedValue(undefined);
+    const execFile = vi.fn().mockResolvedValue({ exitCode: 0, stderr: "", stdout: "" });
+    const sprite = {
+      createService: vi.fn(),
+      deleteService: vi.fn(),
+      execFile,
+      filesystem: vi.fn().mockReturnValue({ rm: vi.fn().mockResolvedValue(undefined), writeFile }),
+      listServices: vi.fn().mockResolvedValue([{ name: "web" }]),
+      url: "https://preview.example.test",
+    } as unknown as Sprite;
+    const client = { getSprite: vi.fn().mockResolvedValue(sprite) } as unknown as SpritesClient;
+
+    await expect(updatePreview({ client, config, cwd: repository, environment: {}, revision: "HEAD" }))
+      .resolves.toEqual({ commit, name: "local-dev-tools-caltra-sdk-main", url: "https://preview.example.test" });
+
+    expect(sprite.createService).not.toHaveBeenCalled();
+    expect(sprite.deleteService).not.toHaveBeenCalled();
+    expect(execFile.mock.calls).toContainEqual([
+      "npm",
+      ["run", "build", "--workspace=@caltra/react"],
+      expect.objectContaining({ cwd: config.workspaceDir }),
+    ]);
+    expect(writeFile).toHaveBeenCalledWith(
+      "/home/sprite/.sprite-dev/deployment.json",
+      JSON.stringify({ commit }),
+      { mode: 0o600 },
+    );
+  });
+
+  it("rejects update when the branch Sprite does not exist", async () => {
+    const repository = mkdtempSync(join(tmpdir(), "sdk-preview-missing-update-"));
+    const git = (args: string[]) => execFileSync("git", args, { cwd: repository, encoding: "utf8" }).trim();
+    git(["init", "--initial-branch=main"]);
+    git(["config", "user.email", "developer@example.test"]);
+    git(["config", "user.name", "Developer"]);
+    writeFileSync(join(repository, "tracked.txt"), "committed\n", "utf8");
+    git(["add", "tracked.txt"]);
+    git(["commit", "-m", "initial"]);
+    const client = {
+      getSprite: vi.fn().mockRejectedValue(new APIError("missing", { statusCode: 404 })),
+    } as unknown as SpritesClient;
+
+    await expect(updatePreview({ client, config, cwd: repository, environment: {}, revision: "HEAD" }))
+      .rejects.toThrow("run `npm run sprite-dev -- up`");
   });
 });

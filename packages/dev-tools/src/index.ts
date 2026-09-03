@@ -18,5 +18,6 @@ export {
   requiredSdkEnvironment,
   requiredSpritesToken,
   type SpriteSummary,
+  updatePreview,
   upPreview,
 } from "./sprite-preview.js";

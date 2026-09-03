@@ -20,6 +20,9 @@ export type SpriteSummary = {
 export type PreviewService = { definition: ServiceRequest; name: string };
 
 type SpriteManagementClient = Pick<SpritesClient, "deleteSprite" | "listAllSprites">;
+type SpriteLookupClient = Pick<SpritesClient, "getSprite">;
+
+const managedServiceNames = ["web"] as const;
 
 const gitEnvironmentNames = [
   "HOME", "LANG", "LC_ALL", "PATH", "SHELL", "SSL_CERT_DIR", "SSL_CERT_FILE", "TMP", "TMPDIR", "TEMP",
@@ -168,6 +171,57 @@ export async function removeManagedServices(sprite: Sprite): Promise<void> {
   if (existing.has("web")) await sprite.deleteService("web");
 }
 
+async function requireHotReloadServices(sprite: Sprite): Promise<void> {
+  const existing = new Set((await sprite.listServices()).map((service) => service.name));
+  const missing = managedServiceNames.filter((name) => !existing.has(name));
+  if (missing.length > 0) {
+    throw new Error(
+      `Sprite preview is missing managed services (${missing.join(", ")}); run \`npm run sprite-dev -- up\` to reconcile it.`,
+    );
+  }
+}
+
+async function existingSprite(client: SpriteLookupClient, name: string): Promise<Sprite> {
+  try {
+    return await client.getSprite(name);
+  } catch (error) {
+    if (!(error instanceof APIError) || error.statusCode !== 404) throw error;
+    throw new Error(
+      `Sprite preview does not exist: ${name}; run \`npm run sprite-dev -- up\` to create it.`,
+      { cause: error },
+    );
+  }
+}
+
+async function checkoutRevision(
+  sprite: Sprite,
+  config: DevToolsConfig["sprites"],
+  bundle: RevisionBundle,
+): Promise<void> {
+  const filesystem = sprite.filesystem("/");
+  await filesystem.writeFile(config.bundlePath, readFileSync(bundle.path), { mode: 0o600 });
+  try {
+    await execChecked(sprite, "mkdir", ["-p", config.workspaceDir]);
+    await execChecked(sprite, "git", ["-C", config.workspaceDir, "init"]);
+    await execChecked(sprite, "git", ["-C", config.workspaceDir, "fetch", "--force", config.bundlePath, bundle.ref]);
+    await execChecked(sprite, "git", ["-C", config.workspaceDir, "checkout", "--detach", "--force", "FETCH_HEAD"]);
+    await execChecked(sprite, "git", ["-C", config.workspaceDir, "clean", "-ffd"]);
+  } finally {
+    await filesystem.rm(config.bundlePath, { force: true });
+  }
+}
+
+async function refreshWorkspace(sprite: Sprite, config: DevToolsConfig["sprites"]): Promise<void> {
+  await execChecked(sprite, "npm", ["install", "--ignore-scripts=false"], {
+    cwd: config.workspaceDir,
+    timeout: 900_000,
+  });
+  await execChecked(sprite, "npm", ["run", "build", "--workspace=@caltra/react"], {
+    cwd: config.workspaceDir,
+    timeout: 120_000,
+  });
+}
+
 export async function upPreview(input: {
   config: DevToolsConfig["sprites"];
   cwd: string;
@@ -184,30 +238,46 @@ export async function upPreview(input: {
     const sprite = await ensureSprite(client, name, input.config);
     const url = sprite.url;
     if (!url) throw new Error("Sprites did not return a preview URL.");
-    const filesystem = sprite.filesystem("/");
     await removeManagedServices(sprite);
-    await filesystem.writeFile(input.config.bundlePath, readFileSync(bundle.path), { mode: 0o600 });
-    try {
-      await execChecked(sprite, "mkdir", ["-p", input.config.workspaceDir]);
-      await execChecked(sprite, "git", ["-C", input.config.workspaceDir, "init"]);
-      await execChecked(sprite, "git", ["-C", input.config.workspaceDir, "fetch", "--force", input.config.bundlePath, bundle.ref]);
-      await execChecked(sprite, "git", ["-C", input.config.workspaceDir, "checkout", "--detach", "--force", "FETCH_HEAD"]);
-      await execChecked(sprite, "git", ["-C", input.config.workspaceDir, "clean", "-ffd"]);
-    } finally {
-      await filesystem.rm(input.config.bundlePath, { force: true });
-    }
-    await execChecked(sprite, "npm", ["install", "--ignore-scripts=false"], {
-      cwd: input.config.workspaceDir,
-      timeout: 900_000,
-    });
-    await execChecked(sprite, "npm", ["run", "build", "--workspace=@caltra/react"], {
-      cwd: input.config.workspaceDir,
-      timeout: 120_000,
-    });
+    await checkoutRevision(sprite, input.config, bundle);
+    await refreshWorkspace(sprite, input.config);
     for (const service of remoteServiceDefinitions(input.config, applicationEnvironment, url)) {
       await drain(await sprite.createService(service.name, service.definition, "2s"));
     }
-    await filesystem.writeFile("/home/sprite/.sprite-dev/deployment.json", JSON.stringify({ commit: bundle.commit }), { mode: 0o600 });
+    await sprite.filesystem("/").writeFile("/home/sprite/.sprite-dev/deployment.json", JSON.stringify({ commit: bundle.commit }), { mode: 0o600 });
+    return { commit: bundle.commit, name, url };
+  } finally {
+    bundle.cleanup();
+  }
+}
+
+export async function updatePreview(input: {
+  client?: SpriteLookupClient;
+  config: DevToolsConfig["sprites"];
+  cwd: string;
+  environment: NodeJS.ProcessEnv;
+  revision: string;
+}): Promise<PreviewResult> {
+  const root = repositoryRoot(input.cwd);
+  const name = previewName(repositoryPrefix(input.config), repositoryBranch(root));
+  const client = input.client ?? new SpritesClient(
+    requiredSpritesToken(input.environment, input.config.tokenEnv),
+    { controlMode: false, timeout: 60_000 },
+  );
+  const sprite = await existingSprite(client, name);
+  const url = sprite.url;
+  if (!url) throw new Error("Sprites did not return a preview URL.");
+  await requireHotReloadServices(sprite);
+
+  const bundle = createRevisionBundle({ environment: input.environment, repositoryRoot: root, revision: input.revision });
+  try {
+    await checkoutRevision(sprite, input.config, bundle);
+    await refreshWorkspace(sprite, input.config);
+    await sprite.filesystem("/").writeFile(
+      "/home/sprite/.sprite-dev/deployment.json",
+      JSON.stringify({ commit: bundle.commit }),
+      { mode: 0o600 },
+    );
     return { commit: bundle.commit, name, url };
   } finally {
     bundle.cleanup();
