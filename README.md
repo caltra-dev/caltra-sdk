@@ -2,8 +2,9 @@
 
 Open-source TypeScript clients for embedding permanent Caltra agent sessions in web applications.
 
-This repository contains the framework-neutral `@caltra/client`, the assistant-ui adapter
-`@caltra/react`, and a local integration application under `apps/test-app`.
+This repository contains the server-only `@caltra/server`, the framework-neutral browser
+`@caltra/client`, the assistant-ui adapter `@caltra/react`, and a local integration application
+under `apps/test-app`.
 
 ## Development
 
@@ -15,6 +16,25 @@ npm run build
 ```
 
 The packages are ESM-only and require Node.js 24 or newer for development.
+
+## Server usage
+
+Use `@caltra/server` only in trusted backend code. An API key belongs to one Caltra organization,
+so a customer application can map its own organization IDs directly to Caltra workspaces without
+an application ID or customer-specific integration code:
+
+```ts
+import { CaltraServerClient } from "@caltra/server";
+
+const caltra = new CaltraServerClient({ apiKey: config.caltraApiKey });
+const workspace = await caltra.workspaces.get({
+  externalId: organization.id,
+  createIfMissing: { name: organization.name },
+});
+```
+
+Omit `createIfMissing` for a lookup-only call that returns `null` when the mapping does not exist.
+Concurrent create-if-missing calls are idempotent and return the same workspace.
 
 ## Local integration application
 

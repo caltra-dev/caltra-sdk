@@ -2,6 +2,15 @@ name: Publish SDK packages
 
 on:
   workflow_dispatch:
+    inputs:
+      package:
+        description: Package to publish
+        required: true
+        type: choice
+        options:
+          - server
+          - client
+          - react
 
 permissions:
   contents: read
@@ -23,7 +32,12 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - name: Publish server SDK
+        if: inputs.package == 'server'
+        run: npm publish --workspace=@caltra/server
       - name: Publish client
+        if: inputs.package == 'client'
         run: npm publish --workspace=@caltra/client
       - name: Publish React adapter
+        if: inputs.package == 'react'
         run: npm publish --workspace=@caltra/react
