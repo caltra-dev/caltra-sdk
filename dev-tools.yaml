@@ -1,0 +1,18 @@
+sprites:
+  tokenEnv: SPRITES_API_TOKEN
+  namePrefix: local-dev-tools
+  repositorySlug: caltra-sdk
+  workspaceDir: /home/sprite/workspace
+  bundlePath: /home/sprite/.sprite-dev/source.bundle
+  runtime: dev
+  resources:
+    cpus: 2
+    ramMB: 2048
+    storageGB: 10
+  url:
+    auth: sprite
+    privateAccess: org_users
+  lifecycle:
+    idle: platform
+  application:
+    webPort: 5173

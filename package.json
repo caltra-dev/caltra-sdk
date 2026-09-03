@@ -10,10 +10,13 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
+    "sprite-dev": "npx gitvaulty run -f .env.dev-tools -- node scripts/run-with-env.mjs .env.dev-tools -- npm run sprite-dev:configured --",
+    "sprite-dev:configured": "npm run build -w dev-tools && node packages/dev-tools/dist/cli.js",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {
+    "gitvaulty": "3.0.3",
     "typescript": "5.9.3",
     "vitest": "4.1.11"
   },

@@ -16,5 +16,6 @@ export default defineConfig(({ command, mode }) => {
   return {
     define: { __CALTRA_API_URL__: JSON.stringify(apiUrl) },
     plugins,
+    server: { allowedHosts: [".sprites.app"] },
   };
 });
