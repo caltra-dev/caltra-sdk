@@ -1,9 +1,6 @@
 import { z } from "zod";
 import { CaltraApiError } from "./error.js";
-import type {
-  CaltraHandoffTokenProviderOptions,
-  CaltraTokenConfiguration,
-} from "./types.js";
+import type { CaltraClientOptions, CaltraTokenConfiguration } from "./types.js";
 
 const TokenConfigurationSchema = z.object({
   client_token: z.string().min(1),
@@ -11,20 +8,16 @@ const TokenConfigurationSchema = z.object({
   refresh_after: z.iso.datetime(),
 }).strict();
 
-/**
- * Exchanges customer-authenticated, single-use handoffs and retains only the resulting short-lived
- * Caltra client token in browser memory.
- */
-export class CaltraHandoffTokenProvider {
-  private readonly apiUrl: string;
+/** Exchanges one-time authorization codes and retains only the resulting client token in memory. */
+export class CaltraClientTokenProvider {
   private configuration?: CaltraTokenConfiguration;
-  private readonly fetchImplementation: typeof fetch;
   private pending?: Promise<CaltraTokenConfiguration>;
 
-  constructor(private readonly options: CaltraHandoffTokenProviderOptions) {
-    this.apiUrl = options.apiUrl.replace(/\/+$/, "");
-    this.fetchImplementation = options.fetch ?? globalThis.fetch.bind(globalThis);
-  }
+  constructor(
+    private readonly apiUrl: string,
+    private readonly fetchImplementation: typeof fetch,
+    private readonly authorizationCodeProvider: CaltraClientOptions["authorizationCodeProvider"],
+  ) {}
 
   async getToken(): Promise<string> {
     return (await this.getConfiguration()).clientToken;
@@ -35,14 +28,11 @@ export class CaltraHandoffTokenProvider {
   }
 
   private async getConfiguration(): Promise<CaltraTokenConfiguration> {
-    if (
-      this.configuration
-      && Date.now() < this.configuration.refreshAfter.getTime()
-    ) {
+    if (this.configuration && Date.now() < this.configuration.refreshAfter.getTime()) {
       return this.configuration;
     }
     if (this.pending) return await this.pending;
-    this.pending = this.exchange();
+    this.pending = this.authenticate();
     try {
       this.configuration = await this.pending;
       return this.configuration;
@@ -51,12 +41,12 @@ export class CaltraHandoffTokenProvider {
     }
   }
 
-  private async exchange(): Promise<CaltraTokenConfiguration> {
-    const handoffCode = await this.options.handoffProvider();
+  private async authenticate(): Promise<CaltraTokenConfiguration> {
+    const authorizationCode = await this.authorizationCodeProvider();
     const response = await this.fetchImplementation(
-      `${this.apiUrl}/client/v1/auth/handoffs/exchange`,
+      `${this.apiUrl}/caltra/v1/auth/authenticate`,
       {
-        body: JSON.stringify({ handoff_code: handoffCode }),
+        body: JSON.stringify({ authorization_code: authorizationCode }),
         headers: { "content-type": "application/json" },
         method: "POST",
       },

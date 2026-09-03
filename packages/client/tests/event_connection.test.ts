@@ -41,10 +41,16 @@ describe("CaltraSessionEventConnection", () => {
     });
     const client = new CaltraClient({
       apiUrl: "https://api.example.test",
-      fetch: (async () => new Response(body, {
-        headers: { "content-type": "text/event-stream; charset=utf-8" },
-      })) as typeof fetch,
-      tokenProvider: async () => "client-token",
+      authorizationCodeProvider: async () => "cac_test",
+      fetch: (async (input) => input.toString().endsWith("/caltra/v1/auth/authenticate")
+        ? Response.json({
+          client_token: "client-token",
+          expires_at: new Date(Date.now() + 600_000).toISOString(),
+          refresh_after: new Date(Date.now() + 540_000).toISOString(),
+        })
+        : new Response(body, {
+          headers: { "content-type": "text/event-stream; charset=utf-8" },
+        })) as typeof fetch,
     });
 
     const connection = await client.openSessionEvents(sessionId);

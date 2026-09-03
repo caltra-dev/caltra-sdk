@@ -1,6 +1,5 @@
 import {
   CaltraClient,
-  CaltraHandoffTokenProvider,
   type CaltraAgent,
   type CaltraSession,
 } from "@caltra/client";
@@ -9,17 +8,17 @@ import { useEffect, useMemo, useState } from "react";
 import { Chat } from "./components/chat.js";
 import { SessionList } from "./components/session_list.js";
 import { useSuccessToast } from "./components/success_toast.js";
-import { TestAppHandoffProvider } from "./handoff_provider.js";
+import { TestAppAuthorizationCodeProvider } from "./authorization_code_provider.js";
 
 declare const __CALTRA_API_URL__: string;
 
 export function App() {
   const { success } = useSuccessToast();
-  const tokenProvider = useMemo(() => {
-    const handoffProvider = new TestAppHandoffProvider();
-    return new CaltraHandoffTokenProvider({
+  const sdkClient = useMemo(() => {
+    const authorizationCodeProvider = new TestAppAuthorizationCodeProvider();
+    return new CaltraClient({
       apiUrl: __CALTRA_API_URL__,
-      handoffProvider: async () => await handoffProvider.create(),
+      authorizationCodeProvider: async () => await authorizationCodeProvider.create(),
     });
   }, []);
   const [client, setClient] = useState<CaltraClient>();
@@ -30,18 +29,13 @@ export function App() {
   const [error, setError] = useState<Error>();
 
   useEffect(() => {
-    void tokenProvider.getToken()
+    void Promise.resolve()
       .then(async () => {
-        const nextClient = new CaltraClient({
-          apiUrl: __CALTRA_API_URL__,
-          tokenInvalidator: () => tokenProvider.invalidate(),
-          tokenProvider: async () => await tokenProvider.getToken(),
-        });
         const [agentPage, sessionPage] = await Promise.all([
-          nextClient.listAgents({ limit: 100 }),
-          nextClient.listSessions({ limit: 100 }),
+          sdkClient.listAgents({ limit: 100 }),
+          sdkClient.listSessions({ limit: 100 }),
         ]);
-        setClient(nextClient);
+        setClient(sdkClient);
         setAgents(agentPage.data);
         setSessions(sessionPage.data);
         setSelected(sessionPage.data[0]);
@@ -49,7 +43,7 @@ export function App() {
       .catch((reason: unknown) => setError(
         reason instanceof Error ? reason : new Error("SDK initialization failed."),
       ));
-  }, [tokenProvider]);
+  }, [sdkClient]);
 
   const createSession = async (agentId: string) => {
     if (!client) return;
@@ -85,7 +79,7 @@ export function App() {
     return (
       <div className="boot-state">
         <LoaderCircle className="spinner" />
-        <span>EXCHANGING AUTH HANDOFF</span>
+        <span>AUTHENTICATING CLIENT</span>
       </div>
     );
   }

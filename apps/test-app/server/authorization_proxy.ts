@@ -1,20 +1,20 @@
 import type { TestAppServerConfig } from "./config.js";
 
-export interface TestAppClientHandoffResponse {
+export interface TestAppClientAuthorizationResponse {
+  authorization_code: string;
   expires_at: string;
-  handoff_code: string;
 }
 
-/** Creates a one-time handoff while keeping the Caltra server API key outside browser code. */
-export class TestAppHandoffProxy {
+/** Creates a client authorization while keeping the Caltra server API key outside browser code. */
+export class TestAppAuthorizationProxy {
   constructor(
     private readonly config: TestAppServerConfig,
     private readonly fetchImplementation: typeof fetch = globalThis.fetch,
   ) {}
 
-  async create(origin: string): Promise<TestAppClientHandoffResponse> {
+  async create(origin: string): Promise<TestAppClientAuthorizationResponse> {
     const response = await this.fetchImplementation(
-      `${this.config.apiUrl}/server/v1/workspaces/${encodeURIComponent(this.config.workspaceId)}/client-handoffs`,
+      `${this.config.apiUrl}/server/v1/workspaces/${encodeURIComponent(this.config.workspaceId)}/client-authorizations`,
       {
         body: JSON.stringify({
           origin,
@@ -29,8 +29,8 @@ export class TestAppHandoffProxy {
     );
     if (!response.ok) {
       const detail = await response.text();
-      throw new Error(`Caltra handoff creation failed with HTTP ${response.status}: ${detail}`);
+      throw new Error(`Caltra authorization creation failed with HTTP ${response.status}: ${detail}`);
     }
-    return await response.json() as TestAppClientHandoffResponse;
+    return await response.json() as TestAppClientAuthorizationResponse;
   }
 }

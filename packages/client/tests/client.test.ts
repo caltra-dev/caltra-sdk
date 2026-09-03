@@ -6,8 +6,15 @@ const agentId = "50000000-0000-4000-8000-000000000001";
 
 describe("CaltraClient", () => {
   it("keeps the browser receiver when using the global fetch implementation", async () => {
-    const fetchImplementation = vi.fn(function (this: typeof globalThis) {
+    const fetchImplementation = vi.fn(function (this: typeof globalThis, input: RequestInfo | URL) {
       expect(this).toBe(globalThis);
+      if (input.toString().endsWith("/caltra/v1/auth/authenticate")) {
+        return Promise.resolve(Response.json({
+          client_token: "client-token",
+          expires_at: new Date(Date.now() + 600_000).toISOString(),
+          refresh_after: new Date(Date.now() + 540_000).toISOString(),
+        }));
+      }
       return Promise.resolve(Response.json({ data: [], next_cursor: null }));
     });
     vi.stubGlobal("fetch", fetchImplementation);
@@ -15,7 +22,7 @@ describe("CaltraClient", () => {
     try {
       const client = new CaltraClient({
         apiUrl: "https://api.example.test",
-        tokenProvider: async () => "client-token",
+        authorizationCodeProvider: async () => "cac_test",
       });
 
       await expect(client.listSessions()).resolves.toEqual({ data: [], next_cursor: null });
@@ -27,6 +34,13 @@ describe("CaltraClient", () => {
   it("uses the browser token for session discovery and creation", async () => {
     const fetchImplementation = vi.fn(async (input: URL | RequestInfo, init?: RequestInit) => {
       const url = String(input);
+      if (url.endsWith("/caltra/v1/auth/authenticate")) {
+        return Response.json({
+          client_token: "client-token",
+          expires_at: new Date(Date.now() + 600_000).toISOString(),
+          refresh_after: new Date(Date.now() + 540_000).toISOString(),
+        });
+      }
       if (init?.method === "POST") {
         return Response.json({
           agent: { id: agentId, name: "Support" },
@@ -40,20 +54,20 @@ describe("CaltraClient", () => {
     });
     const client = new CaltraClient({
       apiUrl: "https://api.example.test/",
+      authorizationCodeProvider: async () => "cac_test",
       fetch: fetchImplementation as typeof fetch,
-      tokenProvider: async () => "client-token",
     });
 
     await client.listSessions({ cursor: "next", limit: 10 });
     await client.createSession({ agentId });
 
-    const listUrl = fetchImplementation.mock.calls[0]![0] as URL;
+    const listUrl = fetchImplementation.mock.calls[1]![0] as URL;
     expect(listUrl.toString()).toBe(
       "https://api.example.test/client/v1/sessions?limit=10&cursor=next",
     );
-    const listHeaders = fetchImplementation.mock.calls[0]![1]!.headers as Headers;
+    const listHeaders = fetchImplementation.mock.calls[1]![1]!.headers as Headers;
     expect(listHeaders.get("authorization")).toBe("Bearer client-token");
-    expect(fetchImplementation.mock.calls[1]![1]).toMatchObject({
+    expect(fetchImplementation.mock.calls[2]![1]).toMatchObject({
       body: JSON.stringify({ agent_id: agentId }),
       method: "POST",
     });
@@ -62,16 +76,22 @@ describe("CaltraClient", () => {
   it("throws a structured Caltra error for RFC problem responses", async () => {
     const client = new CaltraClient({
       apiUrl: "https://api.example.test",
-      fetch: (async () => Response.json({
-        code: "resource_not_found",
-        detail: "The session is unavailable.",
-        request_id: "request-1",
-        retryable: false,
-        status: 404,
-        title: "Resource not found",
-        type: "https://api.caltra.dev/problems/resource-not-found",
-      }, { status: 404 })) as typeof fetch,
-      tokenProvider: async () => "client-token",
+      authorizationCodeProvider: async () => "cac_test",
+      fetch: (async (input) => input.toString().endsWith("/caltra/v1/auth/authenticate")
+        ? Response.json({
+          client_token: "client-token",
+          expires_at: new Date(Date.now() + 600_000).toISOString(),
+          refresh_after: new Date(Date.now() + 540_000).toISOString(),
+        })
+        : Response.json({
+          code: "resource_not_found",
+          detail: "The session is unavailable.",
+          request_id: "request-1",
+          retryable: false,
+          status: 404,
+          title: "Resource not found",
+          type: "https://api.caltra.dev/problems/resource-not-found",
+        }, { status: 404 })) as typeof fetch,
     });
 
     const error = await client.listSessionMessages(sessionId).catch((reason: unknown) => reason);

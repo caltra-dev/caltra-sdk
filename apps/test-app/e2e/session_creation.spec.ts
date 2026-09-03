@@ -15,21 +15,21 @@ async function installApiHarness(page: Page): Promise<ApiHarness> {
     releaseCreate = resolve;
   });
 
-  await page.route("**/api/client-handoff", async (route) => {
+  await page.route("**/api/client-authorization", async (route) => {
     await route.fulfill({
       contentType: "application/json",
       json: {
         expires_at: "2099-01-01T00:00:00.000Z",
-        handoff_code: "chd_browser_test",
+        authorization_code: "cac_browser_test",
       },
     });
   });
 
-  await page.route("http://caltra.test/client/v1/**", async (route) => {
+  await page.route("http://caltra.test/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
 
-    if (request.method() === "POST" && url.pathname === "/client/v1/auth/handoffs/exchange") {
+    if (request.method() === "POST" && url.pathname === "/caltra/v1/auth/authenticate") {
       await json(route, {
         client_token: "browser-test-token",
         expires_at: "2099-01-01T00:00:00.000Z",

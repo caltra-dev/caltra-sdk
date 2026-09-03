@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
+import { TestAppAuthorizationProxy } from "../server/authorization_proxy.js";
 import { TestAppServerConfig } from "../server/config.js";
-import { TestAppHandoffProxy } from "../server/handoff_proxy.js";
 
-describe("TestAppHandoffProxy", () => {
-  it("keeps the API key server-side while returning only a one-time handoff", async () => {
+describe("TestAppAuthorizationProxy", () => {
+  it("keeps the API key server-side while returning only a one-time authorization code", async () => {
     const apiKey = "csk_test_server_secret";
     const fetchImplementation = vi.fn(async () => Response.json({
+      authorization_code: "cac_single_use",
       expires_at: "2026-08-26T17:41:00.000Z",
-      handoff_code: "chd_single_use",
     }, { status: 201 }));
     const config = new TestAppServerConfig({
       CALTRA_API_KEY: apiKey,
@@ -15,17 +15,17 @@ describe("TestAppHandoffProxy", () => {
       CALTRA_TENANT_USER_EXTERNAL_ID: "sdk-user",
       CALTRA_WORKSPACE_ID: "20000000-0000-4000-8000-000000000001",
     });
-    const proxy = new TestAppHandoffProxy(config, fetchImplementation as typeof fetch);
+    const proxy = new TestAppAuthorizationProxy(config, fetchImplementation as typeof fetch);
 
     const response = await proxy.create("http://localhost:5173");
 
     expect(response).toEqual({
+      authorization_code: "cac_single_use",
       expires_at: "2026-08-26T17:41:00.000Z",
-      handoff_code: "chd_single_use",
     });
     expect(JSON.stringify(response)).not.toContain(apiKey);
     expect(fetchImplementation).toHaveBeenCalledWith(
-      "http://api.caltra/server/v1/workspaces/20000000-0000-4000-8000-000000000001/client-handoffs",
+      "http://api.caltra/server/v1/workspaces/20000000-0000-4000-8000-000000000001/client-authorizations",
       expect.objectContaining({
         body: JSON.stringify({
           origin: "http://localhost:5173",

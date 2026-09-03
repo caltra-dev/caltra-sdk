@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CaltraApiError } from "./error.js";
 import { CaltraSessionEventConnection } from "./event_connection.js";
+import { CaltraClientTokenProvider } from "./token_provider.js";
 import type {
   CaltraAgent,
   CaltraClientOptions,
@@ -48,10 +49,16 @@ const SubmissionSchema = z.object({
 export class CaltraClient {
   private readonly apiUrl: string;
   private readonly fetchImplementation: typeof fetch;
+  private readonly tokenProvider: CaltraClientTokenProvider;
 
-  constructor(private readonly options: CaltraClientOptions) {
-    this.apiUrl = options.apiUrl.replace(/\/+$/, "");
+  constructor(options: CaltraClientOptions) {
+    this.apiUrl = (options.apiUrl ?? "https://api.caltra.dev").replace(/\/+$/, "");
     this.fetchImplementation = options.fetch ?? globalThis.fetch.bind(globalThis);
+    this.tokenProvider = new CaltraClientTokenProvider(
+      this.apiUrl,
+      this.fetchImplementation,
+      options.authorizationCodeProvider,
+    );
   }
 
   async listAgents(input: CaltraPageInput = {}): Promise<CaltraPage<CaltraAgent>> {
@@ -112,7 +119,7 @@ export class CaltraClient {
   }
 
   async invalidateToken(): Promise<void> {
-    await this.options.tokenInvalidator?.();
+    this.tokenProvider.invalidate();
   }
 
   private async getPage<T>(
@@ -144,7 +151,7 @@ export class CaltraClient {
 
   private async headers(input?: HeadersInit): Promise<Headers> {
     const headers = new Headers(input);
-    headers.set("authorization", `Bearer ${await this.options.tokenProvider()}`);
+    headers.set("authorization", `Bearer ${await this.tokenProvider.getToken()}`);
     return headers;
   }
 

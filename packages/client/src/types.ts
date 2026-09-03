@@ -1,12 +1,4 @@
-export type CaltraTokenProvider = () => Promise<string>;
-
-export type CaltraHandoffProvider = () => Promise<string>;
-
-export interface CaltraHandoffTokenProviderOptions {
-  apiUrl: string;
-  fetch?: typeof fetch;
-  handoffProvider: CaltraHandoffProvider;
-}
+export type CaltraAuthorizationCodeProvider = () => Promise<string>;
 
 export interface CaltraTokenConfiguration {
   clientToken: string;
@@ -15,10 +7,9 @@ export interface CaltraTokenConfiguration {
 }
 
 export interface CaltraClientOptions {
-  apiUrl: string;
+  apiUrl?: string;
+  authorizationCodeProvider: CaltraAuthorizationCodeProvider;
   fetch?: typeof fetch;
-  tokenInvalidator?: () => Promise<void> | void;
-  tokenProvider: CaltraTokenProvider;
 }
 
 export interface CaltraPageInput {

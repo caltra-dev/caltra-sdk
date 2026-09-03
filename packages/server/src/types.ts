@@ -10,6 +10,19 @@ export interface CaltraServerWorkspace {
   name: string;
 }
 
+export interface CaltraClientAuthorizationCreate {
+  agentIds?: string[];
+  origin: string;
+  tenantUser: { externalId: string };
+  workspace: CaltraWorkspaceCreateIfMissing;
+}
+
+export interface CaltraClientAuthorization {
+  authorizationCode: string;
+  expiresAt: Date;
+  workspace: CaltraServerWorkspace;
+}
+
 export interface CaltraServerProblem {
   code: string;
   detail: string;
