@@ -17,7 +17,7 @@ export class CaltraAuthorizationCodeEndpointProvider {
     headers.set("content-type", "application/json");
     const response = await this.fetchImplementation(this.route, {
       body: JSON.stringify({ workspace_external_id: this.workspaceExternalId }),
-      credentials: "include",
+      credentials: "same-origin",
       headers,
       method: "POST",
     });

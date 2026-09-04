@@ -65,7 +65,7 @@ describe("Caltra client authorization", () => {
     expect(fetchImplementation.mock.calls[0]![0]).toBe("/api/caltra/authorize");
     expect(fetchImplementation.mock.calls[0]![1]).toMatchObject({
       body: JSON.stringify({ workspace_external_id: "piria-organization-1" }),
-      credentials: "include",
+      credentials: "same-origin",
       method: "POST",
     });
     expect(new Headers(fetchImplementation.mock.calls[0]![1]?.headers).get("content-type"))

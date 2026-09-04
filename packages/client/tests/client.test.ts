@@ -12,7 +12,7 @@ describe("CaltraClient", () => {
         expect(headers.get("authorization")).toBe("Bearer host-token");
         expect(init).toMatchObject({
           body: JSON.stringify({ workspace_external_id: "organization-1" }),
-          credentials: "include",
+          credentials: "same-origin",
           method: "POST",
         });
         return Response.json({ authorization_code: "cac_test" });
