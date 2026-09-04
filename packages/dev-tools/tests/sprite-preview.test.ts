@@ -93,7 +93,7 @@ describe("Sprite SDK preview", () => {
     const client = { getSprite: vi.fn().mockResolvedValue(sprite) } as unknown as SpritesClient;
 
     await expect(updatePreview({ client, config, cwd: repository, environment: {}, revision: "HEAD" }))
-      .resolves.toEqual({ commit, name: "local-dev-tools-caltra-sdk-main", url: "https://preview.example.test" });
+      .resolves.toEqual({ commit, name: "local-dev-tools-4be4546d-caltra-sdk-main", url: "https://preview.example.test" });
 
     expect(sprite.createService).not.toHaveBeenCalled();
     expect(sprite.deleteService).not.toHaveBeenCalled();

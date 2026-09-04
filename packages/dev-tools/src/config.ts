@@ -30,8 +30,8 @@ const spritesSchema = z.object({
 }).strict().refine(
   (value) => value.bundlePath !== value.workspaceDir
     && value.bundlePath.startsWith("/home/sprite/.sprite-dev/")
-    && `${value.namePrefix}-${value.repositorySlug}`.length <= 50,
-  { message: "Sprite transfer paths or repository prefix are invalid." },
+    && `${value.namePrefix}-${value.repositorySlug}`.length <= 41,
+  { message: "Sprite transfer paths or repository prefix are invalid before the identity hash." },
 );
 
 const configSchema = z.object({ sprites: spritesSchema }).strict();

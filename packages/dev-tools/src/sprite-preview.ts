@@ -10,6 +10,7 @@ import {
   execChecked,
   previewName,
   reconcileBranchSprite,
+  repositoryPrefix as branchSpriteRepositoryPrefix,
   repositoryBranch,
   repositoryRoot,
   requiredSpritesToken,
@@ -66,7 +67,7 @@ export function requiredSdkEnvironment(environment: NodeJS.ProcessEnv): Record<s
 }
 
 function repositoryPrefix(config: DevToolsConfig["sprites"]): string {
-  return `${config.namePrefix}-${config.repositorySlug}`;
+  return branchSpriteRepositoryPrefix(config);
 }
 
 function managedPrefix(config: DevToolsConfig["sprites"]): string {

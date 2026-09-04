@@ -12,6 +12,7 @@ import {
   ensureSprite,
   provisionSprite,
   readProvisioningScript,
+  repositoryPrefix,
 } from "../src/sprite-environment.js";
 
 const config: DevToolsConfig["sprites"] = {
@@ -44,6 +45,12 @@ function provisioningRepository(): { commit: string; root: string } {
 }
 
 describe("branch Sprite environment", () => {
+  it("keeps repository ownership prefixes disjoint when one slug prefixes another", () => {
+    const parent = `${repositoryPrefix({ ...config, repositorySlug: "example" })}-`;
+    const sibling = `${repositoryPrefix({ ...config, repositorySlug: "example-sdk" })}-`;
+    expect(sibling.startsWith(parent)).toBe(false);
+  });
+
   it("reads provisioning from the exact commit instead of the working tree", () => {
     const repository = provisioningRepository();
     writeFileSync(join(repository.root, "scripts/sprite/provision.sh"), "#!/bin/bash\necho dirty\n", "utf8");
@@ -118,7 +125,7 @@ describe("branch Sprite environment", () => {
       environment: {},
       revision: "HEAD",
     })).resolves.toEqual({
-      name: "dev-preview-caltra-sdk-main",
+      name: "dev-preview-4be4546d-caltra-sdk-main",
       provisioningCommit: repository.commit,
       status: "warm",
       url: "https://preview.example.test",

@@ -32,7 +32,7 @@ describe("Sprite environment CLI", () => {
 
   it("creates the current branch Sprite from committed HEAD and prints one JSON result", async () => {
     const result = {
-      name: "dev-preview-caltra-sdk-main",
+      name: "dev-preview-4be4546d-caltra-sdk-main",
       provisioningCommit: "0123456789abcdef",
       status: "warm",
       url: "https://preview.example.test",

@@ -12,6 +12,7 @@ export {
   readProvisioningScript,
   reconcileBranchSprite,
   repositoryBranch,
+  repositoryPrefix,
   repositoryRoot,
   requiredSpritesToken,
   type BranchSpriteResult,

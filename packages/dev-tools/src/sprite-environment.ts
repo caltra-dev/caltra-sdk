@@ -75,8 +75,9 @@ export function previewName(prefix: string, source: string): string {
   return `${prefix}-${suffix}`.slice(0, spriteNameDnsBudget).replaceAll(/-+$/gu, "");
 }
 
-function repositoryPrefix(config: DevToolsConfig["sprites"]): string {
-  return `${config.namePrefix}-${config.repositorySlug}`;
+export function repositoryPrefix(config: DevToolsConfig["sprites"]): string {
+  const repositoryIdentity = createHash("sha256").update(config.repositorySlug).digest("hex").slice(0, 8);
+  return `${config.namePrefix}-${repositoryIdentity}-${config.repositorySlug}`;
 }
 
 export function requiredSpritesToken(environment: NodeJS.ProcessEnv, name: "SPRITES_API_TOKEN"): string {
