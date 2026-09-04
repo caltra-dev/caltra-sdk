@@ -62,12 +62,14 @@ describe("Caltra client authorization", () => {
     });
 
     await client.listAgents();
-    expect(fetchImplementation).toHaveBeenNthCalledWith(1, "/api/caltra/authorize", {
+    expect(fetchImplementation.mock.calls[0]![0]).toBe("/api/caltra/authorize");
+    expect(fetchImplementation.mock.calls[0]![1]).toMatchObject({
       body: JSON.stringify({ workspace_external_id: "piria-organization-1" }),
       credentials: "include",
-      headers: { "content-type": "application/json" },
       method: "POST",
     });
+    expect(new Headers(fetchImplementation.mock.calls[0]![1]?.headers).get("content-type"))
+      .toBe("application/json");
   });
 
   it("deduplicates concurrent authentication and obtains a new code after invalidation", async () => {

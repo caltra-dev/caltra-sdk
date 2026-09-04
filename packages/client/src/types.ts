@@ -9,6 +9,7 @@ export interface CaltraTokenConfiguration {
 export interface CaltraClientOptions {
   apiUrl?: string;
   authorizationCodeProvider?: CaltraAuthorizationCodeProvider;
+  authorizationHeadersProvider?: () => Promise<HeadersInit>;
   authorizationRoute?: string;
   fetch?: typeof fetch;
   workspaceExternalId?: string;

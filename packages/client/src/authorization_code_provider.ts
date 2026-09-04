@@ -9,13 +9,16 @@ export class CaltraAuthorizationCodeEndpointProvider {
     private readonly fetchImplementation: typeof fetch,
     private readonly route: string,
     private readonly workspaceExternalId: string,
+    private readonly headersProvider?: () => Promise<HeadersInit>,
   ) {}
 
   async get(): Promise<string> {
+    const headers = new Headers(await this.headersProvider?.());
+    headers.set("content-type", "application/json");
     const response = await this.fetchImplementation(this.route, {
       body: JSON.stringify({ workspace_external_id: this.workspaceExternalId }),
       credentials: "include",
-      headers: { "content-type": "application/json" },
+      headers,
       method: "POST",
     });
     if (!response.ok) throw await CaltraApiError.fromResponse(response);

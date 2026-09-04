@@ -5,6 +5,38 @@ const sessionId = "40000000-0000-4000-8000-000000000001";
 const agentId = "50000000-0000-4000-8000-000000000001";
 
 describe("CaltraClient", () => {
+  it("adds host authentication headers to the default authorization request", async () => {
+    const fetchImplementation = vi.fn(async (input: URL | RequestInfo, init?: RequestInit) => {
+      if (String(input) === "https://host.example.test/api/caltra/authorize") {
+        const headers = new Headers(init?.headers);
+        expect(headers.get("authorization")).toBe("Bearer host-token");
+        expect(init).toMatchObject({
+          body: JSON.stringify({ workspace_external_id: "organization-1" }),
+          credentials: "include",
+          method: "POST",
+        });
+        return Response.json({ authorization_code: "cac_test" });
+      }
+      if (String(input).endsWith("/caltra/v1/auth/authenticate")) {
+        return Response.json({
+          client_token: "client-token",
+          expires_at: new Date(Date.now() + 600_000).toISOString(),
+          refresh_after: new Date(Date.now() + 540_000).toISOString(),
+        });
+      }
+      return Response.json({ data: [], next_cursor: null });
+    });
+    const client = new CaltraClient({
+      apiUrl: "https://api.example.test",
+      authorizationHeadersProvider: async () => ({ authorization: "Bearer host-token" }),
+      authorizationRoute: "https://host.example.test/api/caltra/authorize",
+      fetch: fetchImplementation as typeof fetch,
+      workspaceExternalId: "organization-1",
+    });
+
+    await expect(client.listSessions()).resolves.toEqual({ data: [], next_cursor: null });
+  });
+
   it("keeps the browser receiver when using the global fetch implementation", async () => {
     const fetchImplementation = vi.fn(function (this: typeof globalThis, input: RequestInfo | URL) {
       expect(this).toBe(globalThis);

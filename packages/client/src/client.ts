@@ -200,6 +200,7 @@ export class CaltraClient {
       this.fetchImplementation,
       options.authorizationRoute ?? "/api/caltra/authorize",
       options.workspaceExternalId,
+      options.authorizationHeadersProvider,
     );
     return async () => await provider.get();
   }
