@@ -14,6 +14,8 @@ describe("Caltra Fastify plugin", () => {
     await app.register(caltraFastify, {
       client: { clientAuthorizations: { create } } as unknown as CaltraServerClient,
       resolveIdentity: async (_request, input) => ({
+        firstName: "Giulia",
+        lastName: "Bianchi",
         userExternalId: "user-1",
         workspaceExternalId: input.requestedWorkspaceExternalId,
       }),
@@ -33,7 +35,11 @@ describe("Caltra Fastify plugin", () => {
     });
     expect(create).toHaveBeenCalledWith({
       origin: "https://app.piria.test",
-      tenantUser: { externalId: "user-1" },
+      tenantUser: {
+        externalId: "user-1",
+        firstName: "Giulia",
+        lastName: "Bianchi",
+      },
       workspace: { externalId: "org-1" },
     });
     await app.close();

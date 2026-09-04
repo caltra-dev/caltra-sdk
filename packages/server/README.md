@@ -29,7 +29,11 @@ Caltra API key or client token to browser code:
 ```ts
 const authorization = await caltra.clientAuthorizations.create({
   origin: config.customerWebOrigin,
-  tenantUser: { externalId: user.id },
+  tenantUser: {
+    externalId: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+  },
   workspace: {
     externalId: organization.id,
     createIfMissing: { name: organization.name },
@@ -52,12 +56,17 @@ await app.register(caltraFastify, {
     const user = await piriaAuth.resolve(request);
     if (!user || !await memberships.hasAccess(user.id, requestedWorkspaceExternalId)) return null;
     return {
+      firstName: user.firstName,
+      lastName: user.lastName,
       userExternalId: user.id,
       workspaceExternalId: requestedWorkspaceExternalId,
     };
   },
 });
 ```
+
+Structured names are optional. When supplied, they synchronize the Caltra tenant identity; omitted
+fields preserve the names already stored in Caltra.
 
 Without `createIfMissing`, `workspaces.get()` returns `null` when the external ID is unknown. With
 `createIfMissing`, concurrent calls converge on the same workspace for the API key's Caltra

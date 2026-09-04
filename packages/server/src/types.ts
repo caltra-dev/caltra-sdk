@@ -13,7 +13,11 @@ export interface CaltraServerWorkspace {
 export interface CaltraClientAuthorizationCreate {
   agentIds?: string[];
   origin: string;
-  tenantUser: { externalId: string };
+  tenantUser: {
+    externalId: string;
+    firstName?: string;
+    lastName?: string;
+  };
   workspace: CaltraWorkspaceLookup | CaltraWorkspaceCreateIfMissing;
 }
 

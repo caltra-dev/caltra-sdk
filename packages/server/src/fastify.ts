@@ -8,6 +8,8 @@ const AuthorizationBodySchema = z.object({
 }).strict();
 
 export interface CaltraResolvedIdentity {
+  firstName?: string;
+  lastName?: string;
   userExternalId: string;
   workspaceExternalId: string;
 }
@@ -48,7 +50,11 @@ class CaltraFastifyPlugin {
       }
       const authorization = await options.client.clientAuthorizations.create({
         origin,
-        tenantUser: { externalId: identity.userExternalId },
+        tenantUser: {
+          externalId: identity.userExternalId,
+          ...(identity.firstName === undefined ? {} : { firstName: identity.firstName }),
+          ...(identity.lastName === undefined ? {} : { lastName: identity.lastName }),
+        },
         workspace: { externalId: identity.workspaceExternalId },
       });
       await reply

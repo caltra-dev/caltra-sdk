@@ -27,7 +27,11 @@ describe("CaltraClientAuthorizationsClient", () => {
     await expect(client.clientAuthorizations.create({
       agentIds: ["agent-1"],
       origin: "https://app.piria.example",
-      tenantUser: { externalId: "piria-user-1" },
+      tenantUser: {
+        externalId: "piria-user-1",
+        firstName: "Giulia",
+        lastName: "Bianchi",
+      },
       workspace: {
         createIfMissing: { name: "Acme" },
         externalId: "piria-organization-1",
@@ -50,7 +54,11 @@ describe("CaltraClientAuthorizationsClient", () => {
       body: JSON.stringify({
         agent_ids: ["agent-1"],
         origin: "https://app.piria.example",
-        tenant_user: { external_id: "piria-user-1" },
+        tenant_user: {
+          external_id: "piria-user-1",
+          first_name: "Giulia",
+          last_name: "Bianchi",
+        },
       }),
       method: "POST",
     });

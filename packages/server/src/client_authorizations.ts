@@ -31,7 +31,11 @@ export class CaltraClientAuthorizationsClient {
         body: JSON.stringify({
           ...(input.agentIds ? { agent_ids: input.agentIds } : {}),
           origin: input.origin,
-          tenant_user: { external_id: input.tenantUser.externalId },
+          tenant_user: {
+            external_id: input.tenantUser.externalId,
+            ...(input.tenantUser.firstName === undefined ? {} : { first_name: input.tenantUser.firstName }),
+            ...(input.tenantUser.lastName === undefined ? {} : { last_name: input.tenantUser.lastName }),
+          },
         }),
         headers,
         method: "POST",
