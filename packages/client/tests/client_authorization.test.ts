@@ -42,6 +42,34 @@ describe("Caltra client authorization", () => {
     );
   });
 
+  it("gets authorization from the default same-origin route", async () => {
+    const fetchImplementation = vi.fn(async (input: RequestInfo | URL) => {
+      if (input.toString() === "/api/caltra/authorize") {
+        return Response.json({ authorization_code: "cac_same_origin" });
+      }
+      if (input.toString().endsWith("/caltra/v1/auth/authenticate")) {
+        return Response.json({
+          client_token: "client-token",
+          expires_at: new Date(Date.now() + 600_000).toISOString(),
+          refresh_after: new Date(Date.now() + 540_000).toISOString(),
+        });
+      }
+      return Response.json({ data: [], next_cursor: null });
+    });
+    const client = new CaltraClient({
+      fetch: fetchImplementation as typeof fetch,
+      workspaceExternalId: "piria-organization-1",
+    });
+
+    await client.listAgents();
+    expect(fetchImplementation).toHaveBeenNthCalledWith(1, "/api/caltra/authorize", {
+      body: JSON.stringify({ workspace_external_id: "piria-organization-1" }),
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+  });
+
   it("deduplicates concurrent authentication and obtains a new code after invalidation", async () => {
     const authorizationCodeProvider = vi.fn(async () => `cac_${authorizationCodeProvider.mock.calls.length}`);
     let authenticationCount = 0;

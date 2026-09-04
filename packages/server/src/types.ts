@@ -14,7 +14,7 @@ export interface CaltraClientAuthorizationCreate {
   agentIds?: string[];
   origin: string;
   tenantUser: { externalId: string };
-  workspace: CaltraWorkspaceCreateIfMissing;
+  workspace: CaltraWorkspaceLookup | CaltraWorkspaceCreateIfMissing;
 }
 
 export interface CaltraClientAuthorization {
@@ -39,4 +39,25 @@ export interface CaltraWorkspaceLookup {
 
 export interface CaltraWorkspaceCreateIfMissing extends CaltraWorkspaceLookup {
   createIfMissing: { name: string };
+}
+
+export interface CaltraServerAgent {
+  externalId: string;
+  id: string;
+  name: string;
+}
+
+export interface CaltraAgentLookup {
+  externalId: string;
+  owner: { tenantUserExternalId: string };
+  workspaceId: string;
+}
+
+export interface CaltraAgentCreateIfMissing extends CaltraAgentLookup {
+  createIfMissing: {
+    browserVisible?: boolean;
+    description?: string;
+    instructions: string;
+    name: string;
+  };
 }

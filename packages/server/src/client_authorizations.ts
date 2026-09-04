@@ -22,6 +22,7 @@ export class CaltraClientAuthorizationsClient {
 
   async create(input: CaltraClientAuthorizationCreate): Promise<CaltraClientAuthorization> {
     const workspace = await this.workspaces.get(input.workspace);
+    if (!workspace) throw new Error("The Caltra workspace was not found.");
     const headers = new Headers({ "content-type": "application/json" });
     headers.set("authorization", `Bearer ${this.apiKey}`);
     const response = await this.fetchImplementation(

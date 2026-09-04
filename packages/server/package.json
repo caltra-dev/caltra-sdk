@@ -1,6 +1,6 @@
 {
   "name": "@caltra/server",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Server-side SDK for the Caltra Server API",
   "type": "module",
   "sideEffects": false,
@@ -20,6 +20,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./fastify": {
+      "types": "./dist/fastify.d.ts",
+      "import": "./dist/fastify.js"
     }
   },
   "scripts": {
@@ -28,9 +32,14 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "fastify-plugin": "5.1.0",
     "zod": "4.4.3"
   },
+  "peerDependencies": {
+    "fastify": "^5.0.0"
+  },
   "devDependencies": {
+    "fastify": "5.10.0",
     "typescript": "5.9.3",
     "vitest": "4.1.11"
   },

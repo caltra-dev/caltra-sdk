@@ -11,6 +11,16 @@ const workspace = await caltra.workspaces.get({
   externalId: piriaOrganization.id,
   createIfMissing: { name: piriaOrganization.name },
 });
+
+await caltra.agents.get({
+  externalId: "personal-assistant",
+  owner: { tenantUserExternalId: user.id },
+  workspaceId: workspace.id,
+  createIfMissing: {
+    name: "Piria Assistant",
+    instructions: PIRIA_ASSISTANT_INSTRUCTIONS,
+  },
+});
 ```
 
 Create an origin-bound client authorization for an authenticated product user without exposing the
@@ -27,6 +37,26 @@ const authorization = await caltra.clientAuthorizations.create({
 });
 
 return { authorization_code: authorization.authorizationCode };
+```
+
+Fastify applications can install that authorization bridge at the default
+`/api/caltra/authorize` route. The host callback remains responsible for authenticating its user,
+authorizing the requested workspace, and running any application-specific provisioning:
+
+```ts
+import caltraFastify from "@caltra/server/fastify";
+
+await app.register(caltraFastify, {
+  client: caltra,
+  resolveIdentity: async (request, { requestedWorkspaceExternalId }) => {
+    const user = await piriaAuth.resolve(request);
+    if (!user || !await memberships.hasAccess(user.id, requestedWorkspaceExternalId)) return null;
+    return {
+      userExternalId: user.id,
+      workspaceExternalId: requestedWorkspaceExternalId,
+    };
+  },
+});
 ```
 
 Without `createIfMissing`, `workspaces.get()` returns `null` when the external ID is unknown. With

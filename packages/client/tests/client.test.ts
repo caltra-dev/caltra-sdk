@@ -45,6 +45,7 @@ describe("CaltraClient", () => {
         return Response.json({
           agent: { id: agentId, name: "Support" },
           created_at: "2026-08-26T16:00:00.000Z",
+          external_id: null,
           id: sessionId,
           status: "active",
           updated_at: "2026-08-26T16:00:00.000Z",
@@ -69,6 +70,43 @@ describe("CaltraClient", () => {
     expect(listHeaders.get("authorization")).toBe("Bearer client-token");
     expect(fetchImplementation.mock.calls[2]![1]).toMatchObject({
       body: JSON.stringify({ agent_id: agentId }),
+      method: "POST",
+    });
+  });
+
+  it("gets or creates the tenant user's stable session by external ID", async () => {
+    const fetchImplementation = vi.fn(async (input: URL | RequestInfo) => {
+      if (input.toString().endsWith("/caltra/v1/auth/authenticate")) {
+        return Response.json({
+          client_token: "client-token",
+          expires_at: new Date(Date.now() + 600_000).toISOString(),
+          refresh_after: new Date(Date.now() + 540_000).toISOString(),
+        });
+      }
+      return Response.json({
+        agent: { id: agentId, name: "Piria Assistant" },
+        created_at: "2026-09-03T18:00:00.000Z",
+        external_id: "primary",
+        id: sessionId,
+        status: "active",
+        updated_at: "2026-09-03T18:00:00.000Z",
+      });
+    });
+    const client = new CaltraClient({
+      apiUrl: "https://api.example.test",
+      authorizationCodeProvider: async () => "cac_test",
+      fetch: fetchImplementation as typeof fetch,
+    });
+
+    await expect(client.sessions.get({
+      createIfMissing: { agentExternalId: "personal-assistant" },
+      externalId: "primary",
+    })).resolves.toMatchObject({ id: sessionId, external_id: "primary" });
+    expect(fetchImplementation.mock.calls[1]![1]).toMatchObject({
+      body: JSON.stringify({
+        create_if_missing: { agent_external_id: "personal-assistant" },
+        external_id: "primary",
+      }),
       method: "POST",
     });
   });

@@ -8,8 +8,10 @@ export interface CaltraTokenConfiguration {
 
 export interface CaltraClientOptions {
   apiUrl?: string;
-  authorizationCodeProvider: CaltraAuthorizationCodeProvider;
+  authorizationCodeProvider?: CaltraAuthorizationCodeProvider;
+  authorizationRoute?: string;
   fetch?: typeof fetch;
+  workspaceExternalId?: string;
 }
 
 export interface CaltraPageInput {
@@ -32,9 +34,18 @@ export interface CaltraAgent {
 export interface CaltraSession {
   agent: { id: string; name: string };
   created_at: string;
+  external_id: string | null;
   id: string;
   status: "active" | "closed";
   updated_at: string;
+}
+
+export interface CaltraSessionLookup {
+  externalId: string;
+}
+
+export interface CaltraSessionCreateIfMissing extends CaltraSessionLookup {
+  createIfMissing: { agentExternalId: string };
 }
 
 export interface CaltraSessionMessage {

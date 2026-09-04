@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { CaltraApiError } from "./error.js";
-import type { CaltraClientOptions, CaltraTokenConfiguration } from "./types.js";
+import type { CaltraAuthorizationCodeProvider, CaltraTokenConfiguration } from "./types.js";
 
 const TokenConfigurationSchema = z.object({
   client_token: z.string().min(1),
@@ -16,7 +16,7 @@ export class CaltraClientTokenProvider {
   constructor(
     private readonly apiUrl: string,
     private readonly fetchImplementation: typeof fetch,
-    private readonly authorizationCodeProvider: CaltraClientOptions["authorizationCodeProvider"],
+    private readonly authorizationCodeProvider: CaltraAuthorizationCodeProvider,
   ) {}
 
   async getToken(): Promise<string> {

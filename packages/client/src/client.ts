@@ -2,6 +2,8 @@ import { z } from "zod";
 import { CaltraApiError } from "./error.js";
 import { CaltraSessionEventConnection } from "./event_connection.js";
 import { CaltraClientTokenProvider } from "./token_provider.js";
+import { CaltraAuthorizationCodeEndpointProvider } from "./authorization_code_provider.js";
+import { CaltraSessionsClient } from "./sessions.js";
 import type {
   CaltraAgent,
   CaltraClientOptions,
@@ -9,6 +11,8 @@ import type {
   CaltraPage,
   CaltraPageInput,
   CaltraSession,
+  CaltraSessionCreateIfMissing,
+  CaltraSessionLookup,
   CaltraSessionMessage,
 } from "./types.js";
 
@@ -27,6 +31,7 @@ const AgentSchema = z.object({
 const SessionSchema = z.object({
   agent: z.object({ id: z.string().uuid(), name: z.string() }).strict(),
   created_at: z.string(),
+  external_id: z.string().nullable(),
   id: z.string().uuid(),
   status: z.enum(["active", "closed"]),
   updated_at: z.string(),
@@ -47,6 +52,7 @@ const SubmissionSchema = z.object({
 
 /** Calls the versioned Caltra Client API without coupling applications to a React runtime. */
 export class CaltraClient {
+  readonly sessions: CaltraSessionsClient;
   private readonly apiUrl: string;
   private readonly fetchImplementation: typeof fetch;
   private readonly tokenProvider: CaltraClientTokenProvider;
@@ -54,11 +60,14 @@ export class CaltraClient {
   constructor(options: CaltraClientOptions) {
     this.apiUrl = (options.apiUrl ?? "https://api.caltra.dev").replace(/\/+$/, "");
     this.fetchImplementation = options.fetch ?? globalThis.fetch.bind(globalThis);
+    const authorizationCodeProvider = options.authorizationCodeProvider
+      ?? this.endpointAuthorizationCodeProvider(options);
     this.tokenProvider = new CaltraClientTokenProvider(
       this.apiUrl,
       this.fetchImplementation,
-      options.authorizationCodeProvider,
+      authorizationCodeProvider,
     );
+    this.sessions = new CaltraSessionsClient(this);
   }
 
   async listAgents(input: CaltraPageInput = {}): Promise<CaltraPage<CaltraAgent>> {
@@ -75,6 +84,30 @@ export class CaltraClient {
       headers: { "content-type": "application/json" },
       method: "POST",
     });
+  }
+
+  async getSession(input: CaltraSessionCreateIfMissing): Promise<CaltraSession>;
+  async getSession(input: CaltraSessionLookup): Promise<CaltraSession | null>;
+  async getSession(
+    input: CaltraSessionLookup | CaltraSessionCreateIfMissing,
+  ): Promise<CaltraSession | null> {
+    const createIfMissing = "createIfMissing" in input ? input.createIfMissing : undefined;
+    try {
+      return await this.request("/sessions/get", SessionSchema, {
+        body: JSON.stringify({
+          ...(createIfMissing ? {
+            create_if_missing: { agent_external_id: createIfMissing.agentExternalId },
+          } : {}),
+          external_id: input.externalId,
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      });
+    } catch (error) {
+      if (!createIfMissing && error instanceof CaltraApiError
+        && error.status === 404 && error.code === "resource_not_found") return null;
+      throw error;
+    }
   }
 
   async listSessionMessages(
@@ -157,5 +190,17 @@ export class CaltraClient {
 
   private url(path: string): URL {
     return new URL(`${this.apiUrl}/client/v1${path}`);
+  }
+
+  private endpointAuthorizationCodeProvider(options: CaltraClientOptions): () => Promise<string> {
+    if (!options.workspaceExternalId) {
+      throw new Error("workspaceExternalId is required when authorizationCodeProvider is omitted.");
+    }
+    const provider = new CaltraAuthorizationCodeEndpointProvider(
+      this.fetchImplementation,
+      options.authorizationRoute ?? "/api/caltra/authorize",
+      options.workspaceExternalId,
+    );
+    return async () => await provider.get();
   }
 }

@@ -16,19 +16,19 @@ import { CaltraClient } from "@caltra/client";
 const client = new CaltraClient({
   // Optional. Production defaults to https://api.caltra.dev.
   apiUrl: "https://api.caltra.dev",
-  authorizationCodeProvider: async () => {
-    const response = await fetch("/api/caltra/client-authorization", { method: "POST" });
-    if (!response.ok) throw new Error("Caltra authentication failed.");
-    return (await response.json() as { authorization_code: string }).authorization_code;
-  },
+  workspaceExternalId: piriaOrganization.id,
 });
 
-const agents = await client.listAgents();
-const session = await client.createSession({ agentId: agents.data[0].id });
+const session = await client.sessions.get({
+  externalId: "primary",
+  createIfMissing: { agentExternalId: "personal-assistant" },
+});
 const events = await client.openSessionEvents(session.id);
 ```
 
-The customer endpoint authenticates the current user, uses `@caltra/server` to create a client
+By default the SDK requests authorization from the same-origin `/api/caltra/authorize` route. Set
+`authorizationRoute` to override it, or provide `authorizationCodeProvider` for a custom transport.
+The server route authenticates the current user, uses `@caltra/server` to create a client
 authorization with the stable external user ID and exact browser origin, and returns only
 `authorization_code`. The SDK authenticates each code once at `/caltra/v1/auth/authenticate`,
 caches only the resulting short-lived client token in memory, and requests a new authorization at
