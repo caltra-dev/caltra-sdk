@@ -1,10 +1,11 @@
 # Caltra SDK test app Sprite development preview
 
-The repository-level `npm run sprite-dev` command sends the exact committed revision in a temporary Git bundle and starts the Vite test app and its server-side SDK configuration inside a private Fly Sprite. Working-tree changes and Git credentials are never transferred.
+The repository-level Sprite commands send the exact committed revision in a temporary Git bundle and start the Vite test app and its server-side SDK configuration inside a private Fly Sprite. Working-tree changes and Git credentials are never transferred.
 
 The command reads `SPRITES_API_TOKEN` and any application-only preview settings from the encrypted `.env.dev-tools.gitvaulty` profile. GitVaulty materializes plaintext only for the command lifetime. The Sprite URL uses Sprites organization-user authentication.
 
 ```sh
+npm run sprite -- create
 npm run sprite-dev
 npm run sprite-dev -- up <revision>
 npm run sprite-dev -- update [revision]
@@ -15,6 +16,10 @@ npm run sprite-dev -- list --all
 npm run sprite-dev -- delete [name-or-id]
 npm run sprite-dev -- prune --older-than 7d
 ```
+
+`npm run sprite -- create` creates or reconciles only the current branch's Sprite and provisions it from committed `HEAD`. It preserves storage, reapplies the private URL policy, and does not transfer or start the application. Creation-time CPU, RAM, storage, or runtime changes require explicit deletion and recreation.
+
+Add native tools required by development, tests, builds, or previews to `scripts/sprite/provision.sh`. Keep it idempotent, noninteractive, architecture-aware, and free of credentials. JavaScript dependencies remain lockfile-owned. Provisioning changes require `sprite-dev up`; `update` deliberately skips provisioning.
 
 Names are stable per repository and branch under the shared `local-dev-tools` token prefix, so repositories cannot collide on `main`. Sprites owns idle suspension and wake-up. The workspace survives warm suspension and cold boot; the managed Vite service is recreated automatically after a cold boot. Use `delete` or `prune` to remove retained storage.
 

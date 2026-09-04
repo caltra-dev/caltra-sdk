@@ -1,5 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
-import { execFileSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,6 +6,15 @@ import { join } from "node:path";
 import { APIError, SpritesClient, type ServiceRequest, type Sprite } from "@fly/sprites";
 
 import type { DevToolsConfig } from "./config.js";
+import {
+  execChecked,
+  previewName,
+  reconcileBranchSprite,
+  repositoryBranch,
+  repositoryRoot,
+  requiredSpritesToken,
+  runGit,
+} from "./sprite-environment.js";
 
 export type RevisionBundle = { cleanup(): void; commit: string; path: string; ref: string };
 export type PreviewResult = { commit: string; name: string; url: string };
@@ -24,30 +32,9 @@ type SpriteLookupClient = Pick<SpritesClient, "getSprite">;
 
 const managedServiceNames = ["web"] as const;
 
-const gitEnvironmentNames = [
-  "HOME", "LANG", "LC_ALL", "PATH", "SHELL", "SSL_CERT_DIR", "SSL_CERT_FILE", "TMP", "TMPDIR", "TEMP",
-] as const;
 const sdkEnvironmentNames = [
   "CALTRA_API_URL", "CALTRA_API_KEY", "CALTRA_WORKSPACE_ID", "CALTRA_TENANT_USER_EXTERNAL_ID",
 ] as const;
-
-function gitEnvironment(environment: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  const child: NodeJS.ProcessEnv = { GIT_TERMINAL_PROMPT: "0" };
-  for (const name of gitEnvironmentNames) {
-    const value = environment[name];
-    if (value !== undefined) child[name] = value;
-  }
-  return child;
-}
-
-function runGit(repositoryRoot: string, args: string[], environment = process.env): string {
-  return execFileSync("git", args, {
-    cwd: repositoryRoot,
-    encoding: "utf8",
-    env: gitEnvironment(environment),
-    stdio: ["ignore", "pipe", "pipe"],
-  }).trim();
-}
 
 export function createRevisionBundle(input: {
   environment?: NodeJS.ProcessEnv;
@@ -68,12 +55,6 @@ export function createRevisionBundle(input: {
   return { cleanup: () => rmSync(directory, { force: true, recursive: true }), commit, path, ref };
 }
 
-export function requiredSpritesToken(environment: NodeJS.ProcessEnv, name: "SPRITES_API_TOKEN"): string {
-  const token = environment[name]?.trim();
-  if (!token) throw new Error(`${name} is required in .env.dev-tools.gitvaulty.`);
-  return token;
-}
-
 export function requiredSdkEnvironment(environment: NodeJS.ProcessEnv): Record<string, string> {
   const result: Record<string, string> = {};
   for (const name of sdkEnvironmentNames) {
@@ -82,28 +63,6 @@ export function requiredSdkEnvironment(environment: NodeJS.ProcessEnv): Record<s
     result[name] = value;
   }
   return result;
-}
-
-export function previewName(prefix: string, source: string): string {
-  const slug = source.toLowerCase()
-    .replaceAll(/[^a-z0-9]+/gu, "-")
-    .replaceAll(/^-+|-+$/gu, "")
-    .slice(0, Math.max(0, 62 - prefix.length))
-    .replaceAll(/-+$/gu, "");
-  const suffix = slug || createHash("sha256").update(source).digest("hex").slice(0, 10);
-  return `${prefix}-${suffix}`.slice(0, 63).replaceAll(/-+$/gu, "");
-}
-
-function repositoryRoot(cwd: string): string {
-  return runGit(cwd, ["rev-parse", "--show-toplevel"]);
-}
-
-function repositoryBranch(root: string): string {
-  try {
-    return runGit(root, ["symbolic-ref", "--quiet", "--short", "HEAD"]);
-  } catch {
-    return runGit(root, ["rev-parse", "--short=12", "HEAD"]);
-  }
 }
 
 function repositoryPrefix(config: DevToolsConfig["sprites"]): string {
@@ -133,37 +92,6 @@ export function remoteServiceDefinitions(
 
 async function drain(stream: AsyncIterable<unknown>): Promise<void> {
   for await (const event of stream) void event;
-}
-
-async function execChecked(
-  sprite: Sprite,
-  file: string,
-  args: string[],
-  options: { cwd?: string; env?: Record<string, string>; timeout?: number } = {},
-): Promise<void> {
-  try {
-    await sprite.execFile(file, args, options);
-  } catch (error) {
-    const result = (error as { result?: { exitCode?: number; stderr?: unknown; stdout?: unknown } }).result;
-    const detail = String(result?.stderr ?? "").trim() || String(result?.stdout ?? "").trim().slice(-4_000);
-    throw new Error(detail || `Remote command failed with exit code ${result?.exitCode ?? "unknown"}.`, { cause: error });
-  }
-}
-
-export async function ensureSprite(client: SpritesClient, name: string, config: DevToolsConfig["sprites"]): Promise<Sprite> {
-  try {
-    const sprite = await client.getSprite(name);
-    await sprite.update({ urlSettings: config.url });
-    return sprite;
-  } catch (error) {
-    if (!(error instanceof APIError) || error.statusCode !== 404) throw error;
-    return await client.createSprite(name, {
-      config: config.resources,
-      runtime: config.runtime,
-      urlSettings: config.url,
-      waitForCapacity: true,
-    });
-  }
 }
 
 export async function removeManagedServices(sprite: Sprite): Promise<void> {
@@ -229,15 +157,18 @@ export async function upPreview(input: {
   revision: string;
 }): Promise<PreviewResult> {
   const root = repositoryRoot(input.cwd);
-  const name = previewName(repositoryPrefix(input.config), repositoryBranch(root));
-  const token = requiredSpritesToken(input.environment, input.config.tokenEnv);
   const applicationEnvironment = requiredSdkEnvironment(input.environment);
   const bundle = createRevisionBundle({ environment: input.environment, repositoryRoot: root, revision: input.revision });
+  const token = requiredSpritesToken(input.environment, input.config.tokenEnv);
   const client = new SpritesClient(token, { controlMode: false, timeout: 60_000 });
   try {
-    const sprite = await ensureSprite(client, name, input.config);
-    const url = sprite.url;
-    if (!url) throw new Error("Sprites did not return a preview URL.");
+    const { name, sprite, url } = await reconcileBranchSprite({
+      client,
+      config: input.config,
+      cwd: root,
+      environment: input.environment,
+      revision: bundle.commit,
+    });
     await removeManagedServices(sprite);
     await checkoutRevision(sprite, input.config, bundle);
     await refreshWorkspace(sprite, input.config);

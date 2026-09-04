@@ -7,13 +7,12 @@ import { APIError, type Sprite, type SpritesClient } from "@fly/sprites";
 import { describe, expect, it, vi } from "vitest";
 
 import type { DevToolsConfig } from "../src/config.js";
+import { previewName, requiredSpritesToken } from "../src/sprite-environment.js";
 import {
   createRevisionBundle,
-  previewName,
   redactPreviewError,
   remoteServiceDefinitions,
   requiredSdkEnvironment,
-  requiredSpritesToken,
   updatePreview,
 } from "../src/sprite-preview.js";
 
