@@ -45,6 +45,23 @@ const authorization = await caltra.clientAuthorizations.create({
 Omit `createIfMissing` for a lookup-only call that returns `null` when the mapping does not exist.
 Concurrent create-if-missing calls are idempotent and return the same workspace.
 
+### Personal assistant names
+
+Supply `syncNames` to explicitly synchronize the agent/public name and its user-owned hosted default runtime on every call, including existing resources:
+
+```ts
+const assistantName = user.firstName ? `${user.firstName}'s Assistant` : "Piria Assistant";
+await caltra.agents.get({
+  externalId: "personal-assistant",
+  owner: { tenantUserExternalId: user.id },
+  workspaceId: workspace.id,
+  createIfMissing: { name: assistantName, instructions: "Help with accounting." },
+  syncNames: { agent: assistantName, hostedRuntime: assistantName },
+});
+```
+
+Requires a Caltra API supporting `sync_names`. Omitting it preserves existing names. Synchronization preserves IDs and other settings and skips external runtimes or runtimes owned by another principal. Each name must contain 1–160 characters.
+
 ## Local integration application
 
 `apps/test-app` exercises the workspace packages against a real Caltra API. Copy its example

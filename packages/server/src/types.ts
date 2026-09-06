@@ -52,6 +52,8 @@ export interface CaltraServerAgent {
 }
 
 export interface CaltraAgentLookup {
+  /** Explicitly synchronize names on every lookup, including an existing personal hosted runtime. */
+  syncNames?: { agent: string; hostedRuntime: string };
   externalId: string;
   owner: { tenantUserExternalId: string };
   workspaceId: string;

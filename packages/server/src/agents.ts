@@ -30,6 +30,10 @@ export class CaltraAgentsClient {
       `${this.apiUrl}/server/v1/workspaces/${encodeURIComponent(input.workspaceId)}/agents/get`,
       {
         body: JSON.stringify({
+          ...(input.syncNames ? { sync_names: {
+            agent: input.syncNames.agent,
+            hosted_runtime: input.syncNames.hostedRuntime,
+          } } : {}),
           ...(createIfMissing ? {
             create_if_missing: {
               browser_visible: createIfMissing.browserVisible ?? true,

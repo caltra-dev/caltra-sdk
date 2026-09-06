@@ -5,6 +5,21 @@ const workspaceId = "40000000-0000-4000-8000-000000000001";
 const agentId = "50000000-0000-4000-8000-000000000001";
 
 describe("CaltraAgentsClient", () => {
+  it("sends explicit name synchronization during lookup without adding creation defaults", async () => {
+    const fetchImplementation = vi.fn(async () => Response.json({ external_id: "personal-assistant", id: agentId, name: "Ada's Assistant" }));
+    const client = new CaltraServerClient({ apiKey: "csk_live_test", fetch: fetchImplementation as typeof fetch });
+    await expect(client.agents.get({
+      externalId: "personal-assistant", owner: { tenantUserExternalId: "piria-user-1" }, workspaceId,
+      syncNames: { agent: "Ada's Assistant", hostedRuntime: "Ada's Assistant" },
+    })).resolves.toMatchObject({ id: agentId, name: "Ada's Assistant" });
+    expect(fetchImplementation).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+      body: JSON.stringify({
+        sync_names: { agent: "Ada's Assistant", hosted_runtime: "Ada's Assistant" },
+        external_id: "personal-assistant", owner: { tenant_user_external_id: "piria-user-1" },
+      }),
+    }));
+  });
+
   it("provisions a stable tenant-user-owned agent", async () => {
     const fetchImplementation = vi.fn(async () => Response.json({
       external_id: "personal-assistant",
