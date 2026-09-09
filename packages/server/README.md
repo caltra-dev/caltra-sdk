@@ -12,13 +12,11 @@ const workspace = await caltra.workspaces.get({
   createIfMissing: { name: piriaOrganization.name },
 });
 
-await caltra.agents.get({
-  externalId: "personal-assistant",
+await caltra.runtimes.get({
   owner: { tenantUserExternalId: user.id },
   workspaceId: workspace.id,
   createIfMissing: {
     name: "Piria Assistant",
-    instructions: PIRIA_ASSISTANT_INSTRUCTIONS,
   },
 });
 ```
@@ -71,3 +69,5 @@ fields preserve the names already stored in Caltra.
 Without `createIfMissing`, `workspaces.get()` returns `null` when the external ID is unknown. With
 `createIfMissing`, concurrent calls converge on the same workspace for the API key's Caltra
 organization.
+
+Runtime provisioning requires `runtimes:provision`. It creates or reuses the user’s hosted runtime without creating an agent. Add `syncName` to update an existing runtime’s display name; creation is idempotent for the same workspace and user. Caltra must expose the runtime provisioning API before deploying this SDK version to consumers.

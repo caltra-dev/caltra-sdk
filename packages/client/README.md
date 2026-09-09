@@ -1,6 +1,6 @@
 # `@caltra/client`
 
-Framework-neutral TypeScript client for durable Caltra agent sessions in browser applications.
+Framework-neutral TypeScript client for runtime-owned Caltra sessions in browser applications.
 
 ## Install
 
@@ -19,9 +19,10 @@ const client = new CaltraClient({
   workspaceExternalId: piriaOrganization.id,
 });
 
-const session = await client.sessions.get({
+const runtime = await client.runtimes.get();
+const session = await runtime.sessions.get({
   externalId: "primary",
-  createIfMissing: { agentExternalId: "personal-assistant" },
+  createIfMissing: {},
 });
 const events = await client.openSessionEvents(session.id);
 ```
@@ -39,3 +40,5 @@ direct Clerk exchange becomes available for SDK sessions, browser clients still 
 provider-neutral client-authorization contract.
 
 The package is ESM-only. See the [Caltra SDK repository](https://github.com/caltra-dev/caltra-sdk) for development and integration-app instructions.
+
+Provision the user’s hosted runtime through the server SDK before opening the browser. External session IDs are unique within that runtime. Use `runtime.sessions.create()` for a new independent conversation. Session documents include `runtime`; their optional `agent` execution profile may be `null`.
