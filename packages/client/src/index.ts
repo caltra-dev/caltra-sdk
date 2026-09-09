@@ -20,3 +20,5 @@ export type {
   CaltraSessionLookup,
   CaltraTokenConfiguration,
 } from "./types.js";
+
+export { CaltraRuntimesClient, CaltraRuntimeSessionsClient } from "./runtimes.js";

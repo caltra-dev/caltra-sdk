@@ -23,6 +23,8 @@ CALTRA_TENANT_USER_EXTERNAL_ID=sdk-test-user
 client authorization and returns only its one-time code to `CaltraClient`; neither the API key nor the
 tenant-scoped browser token is exposed by the application's backend route.
 
+Provision a hosted runtime for `CALTRA_TENANT_USER_EXTERNAL_ID` through the server SDK before opening the app. Sessions are created within that runtime.
+
 ## Run
 
 From this directory:

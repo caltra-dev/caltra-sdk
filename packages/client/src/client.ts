@@ -1,3 +1,4 @@
+import { CaltraRuntimesClient } from "./runtimes.js";
 import { z } from "zod";
 import { CaltraApiError } from "./error.js";
 import { CaltraSessionEventConnection } from "./event_connection.js";
@@ -29,11 +30,12 @@ const AgentSchema = z.object({
 }).strict();
 
 const SessionSchema = z.object({
-  agent: z.object({ id: z.string().uuid(), name: z.string() }).strict(),
+  agent: z.object({ id: z.string().uuid(), name: z.string() }).strict().nullable(),
+  runtime: z.object({ id: z.string().uuid(), name: z.string() }).strict(),
   created_at: z.string(),
   external_id: z.string().nullable(),
   id: z.string().uuid(),
-  status: z.enum(["active", "closed"]),
+  status: z.enum(["active", "closed", "expired", "revoked"]),
   updated_at: z.string(),
 }).strict();
 
@@ -52,6 +54,7 @@ const SubmissionSchema = z.object({
 
 /** Calls the versioned Caltra Client API without coupling applications to a React runtime. */
 export class CaltraClient {
+  readonly runtimes: CaltraRuntimesClient;
   readonly sessions: CaltraSessionsClient;
   private readonly apiUrl: string;
   private readonly fetchImplementation: typeof fetch;
@@ -67,7 +70,32 @@ export class CaltraClient {
       this.fetchImplementation,
       authorizationCodeProvider,
     );
+    this.runtimes = new CaltraRuntimesClient(this);
     this.sessions = new CaltraSessionsClient(this);
+  }
+
+  async getRuntime(): Promise<{ id: string; name: string }> {
+    return this.request("/runtimes/get", z.object({ id: z.string().uuid(), name: z.string() }).strict(), {
+      body: "{}", method: "POST", headers: { "content-type": "application/json" },
+    });
+  }
+
+  async createRuntimeSession(runtimeId: string): Promise<CaltraSession> {
+    return this.request(`/runtimes/${encodeURIComponent(runtimeId)}/sessions`, SessionSchema, {
+      body: "{}", method: "POST", headers: { "content-type": "application/json" },
+    });
+  }
+
+  async getRuntimeSession(runtimeId: string, input: { externalId: string; createIfMissing?: Record<string, never> }): Promise<CaltraSession | null> {
+    try {
+      return await this.request(`/runtimes/${encodeURIComponent(runtimeId)}/sessions/get`, SessionSchema, {
+        body: JSON.stringify({ external_id: input.externalId, ...(input.createIfMissing ? { create_if_missing: {} } : {}) }),
+        method: "POST", headers: { "content-type": "application/json" },
+      });
+    } catch (error) {
+      if (!input.createIfMissing && error instanceof CaltraApiError && error.status === 404 && error.code === "resource_not_found") return null;
+      throw error;
+    }
   }
 
   async listAgents(input: CaltraPageInput = {}): Promise<CaltraPage<CaltraAgent>> {

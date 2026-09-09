@@ -15,3 +15,6 @@ export type {
   CaltraWorkspaceCreateIfMissing,
   CaltraWorkspaceLookup,
 } from "./types.js";
+
+export { CaltraRuntimesClient } from "./runtimes.js";
+export type { CaltraRuntimeLookup, CaltraRuntimeCreateIfMissing, CaltraServerRuntime } from "./runtimes.js";

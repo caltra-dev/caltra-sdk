@@ -75,6 +75,7 @@ describe("CaltraClient", () => {
       }
       if (init?.method === "POST") {
         return Response.json({
+          runtime: { id: agentId, name: "Test runtime" },
           agent: { id: agentId, name: "Support" },
           created_at: "2026-08-26T16:00:00.000Z",
           external_id: null,
@@ -116,7 +117,8 @@ describe("CaltraClient", () => {
         });
       }
       return Response.json({
-        agent: { id: agentId, name: "Piria Assistant" },
+        runtime: { id: agentId, name: "Test runtime" },
+          agent: { id: agentId, name: "Piria Assistant" },
         created_at: "2026-09-03T18:00:00.000Z",
         external_id: "primary",
         id: sessionId,

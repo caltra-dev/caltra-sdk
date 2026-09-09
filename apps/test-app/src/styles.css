@@ -66,8 +66,8 @@ button { color: inherit; }
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
-.agent-picker { display: grid; grid-template-columns: 1fr 42px; margin-top: 10px; }
-.agent-picker select {
+.runtime-picker { display: grid; grid-template-columns: 1fr 42px; margin-top: 10px; }
+.runtime-picker input {
   min-width: 0;
   padding: 10px 11px;
   color: #ecebdc;
@@ -76,7 +76,7 @@ button { color: inherit; }
   border-right: 0;
   outline: none;
 }
-.agent-picker button {
+.runtime-picker button {
   display: grid;
   place-items: center;
   background: var(--acid);
@@ -84,7 +84,7 @@ button { color: inherit; }
   border: 0;
   cursor: pointer;
 }
-.agent-picker button:disabled { opacity: 0.35; cursor: not-allowed; }
+.runtime-picker button:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .rail-label { display: flex; justify-content: space-between; padding: 0 4px 9px; color: var(--muted); border-bottom: 1px solid var(--line); }
 .session-list { display: flex; flex: 1; flex-direction: column; gap: 5px; padding-top: 8px; }
@@ -104,7 +104,7 @@ button { color: inherit; }
 .session-item:hover { background: #202018; }
 .session-item.active { background: #25251a; border-color: #3b3b2d; }
 .session-item.active::before { background: var(--coral); }
-.session-agent { overflow: hidden; font-size: 13px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.session-runtime { overflow: hidden; font-size: 13px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .session-meta { color: var(--muted); font-size: 10px; text-transform: uppercase; }
 .empty-rail { padding: 18px 5px; color: var(--muted); font-size: 11px; line-height: 1.6; }
 

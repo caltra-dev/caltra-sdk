@@ -22,8 +22,8 @@ export function Chat({ client, session }: ChatProps) {
       <main className="chat-shell">
         <header className="chat-header" data-success-toast-anchor>
           <div data-success-toast-avoid>
-            <span className="eyebrow">ACTIVE AGENT CHANNEL</span>
-            <h1>{session.agent.name}</h1>
+            <span className="eyebrow">ACTIVE RUNTIME SESSION</span>
+            <h1>{session.runtime.name}</h1>
           </div>
           <div className={`connection ${caltra.connection}`} data-success-toast-avoid>
             <span />
@@ -45,7 +45,7 @@ export function Chat({ client, session }: ChatProps) {
               {({ message }) => (
                 <MessagePrimitive.Root className={`message ${message.role}`}>
                   <span className="message-role">
-                    {message.role === "user" ? "YOU" : session.agent.name.toUpperCase()}
+                    {message.role === "user" ? "YOU" : session.runtime.name.toUpperCase()}
                   </span>
                   <div className="message-body"><MessagePrimitive.Parts /></div>
                 </MessagePrimitive.Root>

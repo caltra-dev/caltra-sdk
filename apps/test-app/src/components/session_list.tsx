@@ -1,18 +1,16 @@
-import type { CaltraAgent, CaltraSession } from "@caltra/client";
+import type { CaltraSession } from "@caltra/client";
 import { Plus, Radio } from "lucide-react";
-import { useState } from "react";
 
 interface SessionListProps {
-  agents: CaltraAgent[];
+  runtime?: { id: string; name: string };
   creating: boolean;
-  onCreate: (agentId: string) => Promise<void>;
+  onCreate: () => Promise<void>;
   onSelect: (session: CaltraSession) => void;
   selectedSessionId?: string;
   sessions: CaltraSession[];
 }
 
 export function SessionList(props: SessionListProps) {
-  const [agentId, setAgentId] = useState("");
 
   return (
     <aside className="session-rail">
@@ -28,22 +26,13 @@ export function SessionList(props: SessionListProps) {
         className="new-session"
         onSubmit={(event) => {
           event.preventDefault();
-          if (agentId) void props.onCreate(agentId);
+          if (props.runtime) void props.onCreate();
         }}
       >
-        <label htmlFor="agent">Open a channel</label>
-        <div className="agent-picker">
-          <select
-            id="agent"
-            value={agentId}
-            onChange={(event) => setAgentId(event.target.value)}
-          >
-            <option value="">Choose an agent</option>
-            {props.agents.map((agent) => (
-              <option key={agent.id} value={agent.id}>{agent.name}</option>
-            ))}
-          </select>
-          <button disabled={!agentId || props.creating} type="submit" aria-label="Create session">
+        <label htmlFor="runtime">Open a channel</label>
+        <div className="runtime-picker">
+          <input id="runtime" readOnly value={props.runtime?.name ?? "Loading runtime…"} />
+          <button disabled={!props.runtime || props.creating} type="submit" aria-label="Create session">
             <Plus size={18} />
           </button>
         </div>
@@ -61,14 +50,14 @@ export function SessionList(props: SessionListProps) {
             onClick={() => props.onSelect(session)}
             type="button"
           >
-            <span className="session-agent">{session.agent.name}</span>
+            <span className="session-runtime">{session.runtime.name}</span>
             <span className="session-meta">
               {session.status} · {new Date(session.updated_at).toLocaleDateString()}
             </span>
           </button>
         ))}
         {props.sessions.length === 0 && (
-          <p className="empty-rail">No channels yet. Choose a published agent above.</p>
+          <p className="empty-rail">No channels yet. Open a session in your runtime above.</p>
         )}
       </nav>
     </aside>

@@ -9,10 +9,9 @@ test("creates a session and renders a streamed assistant response", async ({ pag
   test.skip(!configured, "Set the Caltra test-app server variables to run the real local smoke test.");
 
   await page.goto("/");
-  const agentSelect = page.getByLabel("Open a channel");
-  await expect(agentSelect).toBeVisible();
-  await expect.poll(async () => await agentSelect.locator("option").count()).toBeGreaterThan(1);
-  await agentSelect.selectOption({ index: 1 });
+  const runtime = page.getByLabel("Open a channel");
+  await expect(runtime).toBeVisible();
+  await expect(runtime).not.toHaveValue("Loading runtime…");
   await page.getByRole("button", { name: "Create session" }).click();
   await expect(page.locator(".connection")).toContainText("connected");
 

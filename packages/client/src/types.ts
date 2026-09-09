@@ -33,11 +33,12 @@ export interface CaltraAgent {
 }
 
 export interface CaltraSession {
-  agent: { id: string; name: string };
+  agent: { id: string; name: string } | null;
+  runtime: { id: string; name: string };
   created_at: string;
   external_id: string | null;
   id: string;
-  status: "active" | "closed";
+  status: "active" | "closed" | "expired" | "revoked";
   updated_at: string;
 }
 
