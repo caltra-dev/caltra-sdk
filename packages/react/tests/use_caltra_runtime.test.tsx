@@ -15,6 +15,7 @@ describe("useCaltraRuntime", () => {
     const client = {
       invalidateToken: vi.fn(),
       listSessionMessages: vi.fn(async () => ({ data: [], next_cursor: null })),
+      getSessionById: vi.fn(async () => ({ id: "40000000-0000-4000-8000-000000000001", title: null })),
       openSessionEvents: vi.fn(async () => connection),
       sendMessage: vi.fn(),
     };

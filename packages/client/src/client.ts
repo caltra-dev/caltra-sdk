@@ -30,6 +30,10 @@ const AgentSchema = z.object({
 }).strict();
 
 const SessionSchema = z.object({
+  auto_name: z.boolean(),
+  title: z.string().nullable(),
+  title_source: z.enum(["generated", "manual"]).nullable(),
+  title_updated_at: z.string().nullable(),
   agent: z.object({ id: z.string().uuid(), name: z.string() }).strict().nullable(),
   runtime: z.object({ id: z.string().uuid(), name: z.string() }).strict(),
   created_at: z.string(),
@@ -80,16 +84,16 @@ export class CaltraClient {
     });
   }
 
-  async createRuntimeSession(runtimeId: string): Promise<CaltraSession> {
+  async createRuntimeSession(runtimeId: string, input: { autoName?: boolean } = {}): Promise<CaltraSession> {
     return this.request(`/runtimes/${encodeURIComponent(runtimeId)}/sessions`, SessionSchema, {
-      body: "{}", method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ auto_name: input.autoName }), method: "POST", headers: { "content-type": "application/json" },
     });
   }
 
-  async getRuntimeSession(runtimeId: string, input: { externalId: string; createIfMissing?: Record<string, never> }): Promise<CaltraSession | null> {
+  async getRuntimeSession(runtimeId: string, input: { externalId: string; createIfMissing?: { autoName?: boolean } }): Promise<CaltraSession | null> {
     try {
       return await this.request(`/runtimes/${encodeURIComponent(runtimeId)}/sessions/get`, SessionSchema, {
-        body: JSON.stringify({ external_id: input.externalId, ...(input.createIfMissing ? { create_if_missing: {} } : {}) }),
+        body: JSON.stringify({ external_id: input.externalId, ...(input.createIfMissing ? { create_if_missing: { auto_name: input.createIfMissing.autoName } } : {}) }),
         method: "POST", headers: { "content-type": "application/json" },
       });
     } catch (error) {
@@ -106,9 +110,9 @@ export class CaltraClient {
     return await this.getPage("/sessions", input, PageSchema(SessionSchema));
   }
 
-  async createSession(input: { agentId: string }): Promise<CaltraSession> {
+  async createSession(input: { agentId: string; autoName?: boolean }): Promise<CaltraSession> {
     return await this.request("/sessions", SessionSchema, {
-      body: JSON.stringify({ agent_id: input.agentId }),
+      body: JSON.stringify({ agent_id: input.agentId, auto_name: input.autoName }),
       headers: { "content-type": "application/json" },
       method: "POST",
     });
@@ -124,7 +128,7 @@ export class CaltraClient {
       return await this.request("/sessions/get", SessionSchema, {
         body: JSON.stringify({
           ...(createIfMissing ? {
-            create_if_missing: { agent_external_id: createIfMissing.agentExternalId },
+            create_if_missing: { agent_external_id: createIfMissing.agentExternalId, auto_name: createIfMissing.autoName },
           } : {}),
           external_id: input.externalId,
         }),
@@ -149,12 +153,18 @@ export class CaltraClient {
     );
   }
 
+  async getSessionById(sessionId: string): Promise<CaltraSession> {
+    return await this.request(`/sessions/${encodeURIComponent(sessionId)}`, SessionSchema, {
+      method: "GET",
+    });
+  }
+
   async openSessionEvents(
     sessionId: string,
     options: { signal?: AbortSignal } = {},
   ): Promise<CaltraSessionEventConnection> {
     const response = await this.fetchImplementation(this.url(
-      `/sessions/${encodeURIComponent(sessionId)}/events`,
+      `/sessions/${encodeURIComponent(sessionId)}/events?include_metadata=true`,
     ), {
       headers: await this.headers({ accept: "text/event-stream" }),
       method: "GET",
@@ -213,6 +223,7 @@ export class CaltraClient {
   private async headers(input?: HeadersInit): Promise<Headers> {
     const headers = new Headers(input);
     headers.set("authorization", `Bearer ${await this.tokenProvider.getToken()}`);
+    headers.set("x-caltra-session-metadata", "true");
     return headers;
   }
 

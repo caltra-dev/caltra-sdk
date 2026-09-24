@@ -33,6 +33,10 @@ export interface CaltraAgent {
 }
 
 export interface CaltraSession {
+  auto_name: boolean;
+  title: string | null;
+  title_source: "generated" | "manual" | null;
+  title_updated_at: string | null;
   agent: { id: string; name: string } | null;
   runtime: { id: string; name: string };
   created_at: string;
@@ -47,7 +51,7 @@ export interface CaltraSessionLookup {
 }
 
 export interface CaltraSessionCreateIfMissing extends CaltraSessionLookup {
-  createIfMissing: { agentExternalId: string };
+  createIfMissing: { agentExternalId: string; autoName?: boolean };
 }
 
 export interface CaltraSessionMessage {
@@ -82,10 +86,17 @@ export interface CaltraMessageCompletedEvent {
   id: string;
 }
 
+export interface CaltraSessionUpdatedEvent {
+  data: { session_id: string };
+  event: "session.updated";
+  id: string;
+}
+
 export type CaltraSessionEvent =
   | CaltraMessageStartedEvent
   | CaltraMessageDeltaEvent
-  | CaltraMessageCompletedEvent;
+  | CaltraMessageCompletedEvent
+  | CaltraSessionUpdatedEvent;
 
 export interface CaltraMessageSubmission {
   message_id: string;

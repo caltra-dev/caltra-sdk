@@ -9,6 +9,7 @@ const EventDataSchema = z.object({
 }).strict();
 
 const DeltaDataSchema = EventDataSchema.extend({ delta: z.string() }).strict();
+const SessionUpdatedDataSchema = z.object({ session_id: z.string().uuid() }).strict();
 
 /** Converts one authenticated fetch response into validated Caltra lifecycle events. */
 export class CaltraSessionEventConnection implements AsyncIterable<CaltraSessionEvent> {
@@ -84,6 +85,9 @@ export class CaltraSessionEventConnection implements AsyncIterable<CaltraSession
     }
     if (event === "message.started" || event === "message.completed") {
       return { data: EventDataSchema.parse(value), event, id: message.id ?? "" };
+    }
+    if (event === "session.updated") {
+      return { data: SessionUpdatedDataSchema.parse(value), event, id: message.id ?? "" };
     }
     throw new Error(`Unsupported Caltra session event: ${event ?? "unnamed"}`);
   }

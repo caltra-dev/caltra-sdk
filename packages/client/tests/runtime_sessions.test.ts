@@ -11,7 +11,7 @@ describe('runtime session collection',()=>{
       if(url.endsWith('/runtimes/get')) return Response.json({id:runtimeId,name:'My runtime'});
       expect(url).toBe(`https://caltra.example/client/v1/runtimes/${runtimeId}/sessions/get`);
       expect(JSON.parse(String(init?.body))).toEqual({external_id:'primary',create_if_missing:{}});
-      return Response.json({id:sessionId,runtime:{id:runtimeId,name:'My runtime'},agent:null,external_id:'primary',status:'active',created_at:'2026-09-09T00:00:00Z',updated_at:'2026-09-09T00:00:00Z'});
+      return Response.json({id:sessionId,runtime:{id:runtimeId,name:'My runtime'},agent:null,auto_name:false,title:null,title_source:null,title_updated_at:null,external_id:'primary',status:'active',created_at:'2026-09-09T00:00:00Z',updated_at:'2026-09-09T00:00:00Z'});
     }});
     const runtime=await client.runtimes.get();
     expect(await runtime.sessions.get({externalId:'primary',createIfMissing:{}})).toMatchObject({id:sessionId,agent:null,runtime:{id:runtimeId}});

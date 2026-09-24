@@ -24,6 +24,9 @@ describe("CaltraSessionEventConnection", () => {
         session_id: sessionId,
         turn_id: turnId,
       })}\n\n`,
+      `id: metadata:1\nevent: session.updated\ndata: ${JSON.stringify({
+        session_id: sessionId,
+      })}\n\n`,
     ].join("");
     const bytes = new TextEncoder().encode(payload);
     const splitPoints = [7, 31, 88, bytes.length];
@@ -61,7 +64,9 @@ describe("CaltraSessionEventConnection", () => {
       "message.started",
       "message.delta",
       "message.completed",
+      "session.updated",
     ]);
     expect(events[1]).toMatchObject({ data: { delta: "Hello" }, id: "stream:0" });
+    expect(events[3]).toMatchObject({ data: { session_id: sessionId }, id: "metadata:1" });
   });
 });

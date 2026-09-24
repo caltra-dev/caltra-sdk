@@ -14,4 +14,8 @@ export class CaltraSessionsClient {
   async get(input: CaltraSessionLookup | CaltraSessionCreateIfMissing): Promise<CaltraSession | null> {
     return await this.client.getSession(input);
   }
+
+  async getById(sessionId: string): Promise<CaltraSession> {
+    return await this.client.getSessionById(sessionId);
+  }
 }

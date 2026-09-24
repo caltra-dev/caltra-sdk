@@ -3,11 +3,13 @@ import {
   type CaltraClient,
   type CaltraSessionEvent,
   type CaltraSessionMessage,
+  type CaltraSession,
 } from "@caltra/client";
 
 export type CaltraConnectionState = "connecting" | "connected" | "recovering" | "failed";
 
 export interface CaltraSessionSnapshot {
+  session: CaltraSession | null;
   connection: CaltraConnectionState;
   error: Error | null;
   isRunning: boolean;
@@ -27,6 +29,7 @@ export class CaltraSessionStore {
   private rejectReady?: (reason: unknown) => void;
   private resolveReady?: () => void;
   private snapshot: CaltraSessionSnapshot = {
+    session: null,
     connection: "connecting",
     error: null,
     isRunning: false,
@@ -74,6 +77,11 @@ export class CaltraSessionStore {
     this.update({ messages: page.data });
   }
 
+  async refreshMetadata(): Promise<void> {
+    const session = await this.client.getSessionById(this.sessionId);
+    this.update({ session });
+  }
+
   async send(text: string): Promise<void> {
     await this.start();
     const temporaryId = `pending-${crypto.randomUUID()}`;
@@ -107,7 +115,7 @@ export class CaltraSessionStore {
       try {
         this.update({ connection: attempt === 0 ? "connecting" : "recovering", error: null });
         this.connection = await this.client.openSessionEvents(this.sessionId, { signal });
-        await this.refresh();
+        await Promise.all([this.refresh(), this.refreshMetadata()]);
         this.update({ connection: "connected", error: null });
         this.resolveReady?.();
         this.resolveReady = undefined;
@@ -143,6 +151,10 @@ export class CaltraSessionStore {
   }
 
   private async apply(event: CaltraSessionEvent): Promise<void> {
+    if (event.event === "session.updated") {
+      await this.refreshMetadata();
+      return;
+    }
     if (event.event === "message.started") {
       if (!this.snapshot.messages.some((message) => message.id === event.data.message_id)) {
         this.update({

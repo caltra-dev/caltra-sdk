@@ -32,6 +32,7 @@ describe("CaltraSessionStore", () => {
     const client = {
       invalidateToken: vi.fn(),
       listSessionMessages: vi.fn(async () => ({ data: [], next_cursor: null })),
+      getSessionById: vi.fn(async () => ({ id: sessionId, title: null })),
       openSessionEvents: vi.fn(async (_sessionId: string, options: { signal?: AbortSignal }) => {
         attempts += 1;
         if (attempts > 1) return connection;
@@ -57,6 +58,7 @@ describe("CaltraSessionStore", () => {
   it("connects before history and sending, then reconciles streamed completion", async () => {
     const calls: string[] = [];
     let historyLoads = 0;
+    let metadataLoads = 0;
     const connection = new StubEventConnection([
       {
         data: { message_id: assistantMessageId, session_id: sessionId, turn_id: turnId },
@@ -78,6 +80,7 @@ describe("CaltraSessionStore", () => {
         event: "message.completed",
         id: "stream:completed",
       },
+      { data: { session_id: sessionId }, event: "session.updated", id: "metadata:1" },
     ]);
     const client = {
       invalidateToken: vi.fn(),
@@ -99,6 +102,10 @@ describe("CaltraSessionStore", () => {
           next_cursor: null,
         };
       }),
+      getSessionById: vi.fn(async () => ({
+        id: sessionId,
+        title: ++metadataLoads === 1 ? null : "Hello durable",
+      })),
       sendMessage: vi.fn(async () => {
         calls.push("send");
         return { message_id: userMessageId, turn_id: turnId };
@@ -115,6 +122,7 @@ describe("CaltraSessionStore", () => {
         expect.objectContaining({ id: assistantMessageId, text: "Hello durable" }),
       ]));
     });
+    await vi.waitFor(() => expect(store.getSnapshot().session?.title).toBe("Hello durable"));
 
     expect(calls.slice(0, 3)).toEqual(["open", "history", "send"]);
     expect(store.getSnapshot()).toMatchObject({ connection: "connected", isRunning: false });

@@ -76,6 +76,10 @@ describe("CaltraClient", () => {
       if (init?.method === "POST") {
         return Response.json({
           runtime: { id: agentId, name: "Test runtime" },
+          auto_name: false,
+          title: null,
+          title_source: null,
+          title_updated_at: null,
           agent: { id: agentId, name: "Support" },
           created_at: "2026-08-26T16:00:00.000Z",
           external_id: null,
@@ -101,6 +105,7 @@ describe("CaltraClient", () => {
     );
     const listHeaders = fetchImplementation.mock.calls[1]![1]!.headers as Headers;
     expect(listHeaders.get("authorization")).toBe("Bearer client-token");
+    expect(listHeaders.get("x-caltra-session-metadata")).toBe("true");
     expect(fetchImplementation.mock.calls[2]![1]).toMatchObject({
       body: JSON.stringify({ agent_id: agentId }),
       method: "POST",
@@ -118,6 +123,10 @@ describe("CaltraClient", () => {
       }
       return Response.json({
         runtime: { id: agentId, name: "Test runtime" },
+        auto_name: true,
+        title: "Piria Assistant",
+        title_source: "generated",
+        title_updated_at: "2026-09-03T18:00:00.000Z",
           agent: { id: agentId, name: "Piria Assistant" },
         created_at: "2026-09-03T18:00:00.000Z",
         external_id: "primary",
