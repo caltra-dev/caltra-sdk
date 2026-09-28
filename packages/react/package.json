@@ -31,7 +31,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@caltra/client": "0.8.0"
+    "@caltra/client": "0.8.1"
   },
   "peerDependencies": {
     "@assistant-ui/react": "^0.15.16",
