@@ -10,3 +10,11 @@ describe('server runtimes',()=>{
     await expect(client.runtimes.get({workspaceId:'workspace',owner:{tenantUserExternalId:'user'},createIfMissing:{name:'My runtime'},syncName:'My runtime'})).resolves.toMatchObject({name:'My runtime'});
   });
 });
+
+it("sends stable project identity and trusted instructions on runtime lookup", async () => {
+  const client = new CaltraServerClient({ apiKey: "test", apiUrl: "https://caltra.example", fetch: async (_input, init) => {
+    expect(JSON.parse(String(init?.body))).toEqual({ external_id: "project-123", instructions: "Plan the project.", owner: { tenant_user_external_id: "user" }, create_if_missing: { name: "Project planning" } });
+    return Response.json({ id: "10000000-0000-4000-8000-000000000001", name: "Project planning" });
+  } });
+  await client.runtimes.get({ workspaceId: "workspace", owner: { tenantUserExternalId: "user" }, externalId: "project-123", instructions: "Plan the project.", createIfMissing: { name: "Project planning" } });
+});

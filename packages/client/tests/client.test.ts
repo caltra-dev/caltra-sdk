@@ -185,3 +185,16 @@ describe("CaltraClient", () => {
     });
   });
 });
+
+it("preserves a message request ID across retries", async () => {
+  const bodies: unknown[] = [];
+  const requestId = "60000000-0000-4000-8000-000000000001";
+  const client = new CaltraClient({ apiUrl: "https://caltra.example", authorizationCodeProvider: async () => "code", fetch: async (input, init) => {
+    if (String(input).endsWith("/auth/authenticate")) return Response.json({ client_token: "token", expires_at: new Date(Date.now()+600000).toISOString(), refresh_after: new Date(Date.now()+500000).toISOString() });
+    bodies.push(JSON.parse(String(init?.body)));
+    return Response.json({ message_id: requestId, turn_id: "70000000-0000-4000-8000-000000000001" });
+  } });
+  await client.sendMessage(sessionId, { text: "New flooring", requestId });
+  await client.sendMessage(sessionId, { text: "New flooring", requestId });
+  expect(bodies).toEqual([{ text: "New flooring", request_id: requestId }, { text: "New flooring", request_id: requestId }]);
+});

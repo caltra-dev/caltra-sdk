@@ -177,12 +177,12 @@ export class CaltraClient {
     return new CaltraSessionEventConnection(response);
   }
 
-  async sendMessage(sessionId: string, input: { text: string }): Promise<CaltraMessageSubmission> {
+  async sendMessage(sessionId: string, input: { text: string; requestId?: string }): Promise<CaltraMessageSubmission> {
     return await this.request(
       `/sessions/${encodeURIComponent(sessionId)}/messages`,
       SubmissionSchema,
       {
-        body: JSON.stringify({ text: input.text }),
+        body: JSON.stringify({ text: input.text, request_id: input.requestId }),
         headers: { "content-type": "application/json" },
         method: "POST",
       },

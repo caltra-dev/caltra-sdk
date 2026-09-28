@@ -5,6 +5,8 @@ export interface CaltraRuntimeLookup {
   workspaceId: string;
   owner: { tenantUserExternalId: string };
   syncName?: string;
+  instructions?: string;
+  externalId?: string;
 }
 export interface CaltraRuntimeCreateIfMissing extends CaltraRuntimeLookup {
   createIfMissing: { name: string };
@@ -20,7 +22,7 @@ export class CaltraRuntimesClient {
     const createIfMissing = "createIfMissing" in input ? input.createIfMissing : undefined;
     const response = await this.fetchImplementation(`${this.apiUrl}/server/v1/workspaces/${encodeURIComponent(input.workspaceId)}/runtimes/get`, {
       method: "POST", headers: { authorization: `Bearer ${this.apiKey}`, "content-type": "application/json" },
-      body: JSON.stringify({ owner: { tenant_user_external_id: input.owner.tenantUserExternalId },
+      body: JSON.stringify({ ...(input.externalId !== undefined ? { external_id: input.externalId } : {}), ...(input.instructions !== undefined ? { instructions: input.instructions } : {}), owner: { tenant_user_external_id: input.owner.tenantUserExternalId },
         ...(createIfMissing ? { create_if_missing: createIfMissing } : {}), ...(input.syncName ? { sync_name: input.syncName } : {}) }),
     });
     if (!response.ok) {
