@@ -1,9 +1,9 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
-const runtimeId = "9a1c6429-a37c-4a67-b2fb-fdc847e6424a";
+const agentId = "9a1c6429-a37c-4a67-b2fb-fdc847e6424a";
 const sessionId = "5da952ec-2d4b-4fb5-9cc9-24e6545c38e4";
-const runtimeName = "Field Researcher";
-const successMessage = `Session opened for ${runtimeName}.`;
+const agentName = "Field Researcher";
+const successMessage = `Session opened for ${agentName}.`;
 
 interface ApiHarness {
   releaseCreate: () => void;
@@ -38,8 +38,8 @@ async function installApiHarness(page: Page): Promise<ApiHarness> {
       return;
     }
 
-    if (request.method() === "POST" && url.pathname === "/client/v1/runtimes/get") {
-      await json(route, { id: runtimeId, name: runtimeName });
+    if (request.method() === "POST" && url.pathname === "/client/v1/agents/get") {
+      await json(route, { id: agentId, name: agentName });
       return;
     }
 
@@ -48,7 +48,7 @@ async function installApiHarness(page: Page): Promise<ApiHarness> {
       return;
     }
 
-    if (request.method() === "POST" && url.pathname === `/client/v1/runtimes/${runtimeId}/sessions`) {
+    if (request.method() === "POST" && url.pathname === `/client/v1/agents/${agentId}/sessions`) {
       await createGate;
       await json(route, createdSession());
       createGate = new Promise<void>((resolve) => {
@@ -83,8 +83,12 @@ async function json(route: Route, value: unknown): Promise<void> {
 
 function createdSession() {
   return {
-    agent: null,
-    runtime: { id: runtimeId, name: runtimeName },
+    auto_name: false,
+    title: null,
+    title_source: null,
+    title_updated_at: null,
+    agentIdentity: null,
+    agent: { id: agentId, name: agentName },
     external_id: null,
     created_at: "2026-09-01T12:01:00.000Z",
     id: sessionId,
@@ -96,7 +100,7 @@ function createdSession() {
 async function startCreate(page: Page): Promise<void> {
   const picker = page.getByLabel("Open a channel");
   await expect(picker).toBeVisible();
-  await expect(picker).toHaveValue(runtimeName);
+  await expect(picker).toHaveValue(agentName);
   await page.getByRole("button", { name: "Create session" }).click();
 }
 
@@ -117,8 +121,8 @@ test("announces exactly one session success only after authoritative completion"
   await expect(status).toHaveText(successMessage);
   await expect(page.locator(".success-toast")).toHaveCount(1);
   await expect(page.locator(".session-item")).toHaveCount(1);
-  await expect(page.locator(".session-item")).toContainText(runtimeName);
-  await expect(page.getByRole("heading", { level: 1, name: runtimeName })).toBeVisible();
+  await expect(page.locator(".session-item")).toContainText(agentName);
+  await expect(page.getByRole("heading", { level: 1, name: agentName })).toBeVisible();
   await expect(page.getByLabel("Open a channel")).toBeFocused();
   await expect(page.locator("main, aside").getByText(successMessage)).toHaveCount(0);
 

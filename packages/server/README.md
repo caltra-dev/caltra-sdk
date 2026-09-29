@@ -12,7 +12,7 @@ const workspace = await caltra.workspaces.get({
   createIfMissing: { name: piriaOrganization.name },
 });
 
-await caltra.runtimes.get({
+await caltra.agents.get({
   owner: { tenantUserExternalId: user.id },
   workspaceId: workspace.id,
   createIfMissing: {
@@ -70,4 +70,6 @@ Without `createIfMissing`, `workspaces.get()` returns `null` when the external I
 `createIfMissing`, concurrent calls converge on the same workspace for the API key's Caltra
 organization.
 
-Runtime provisioning requires `runtimes:provision`. It creates or reuses the user’s hosted runtime without creating an agent. Add `syncName` to update an existing runtime’s display name; creation is idempotent for the same workspace and user. Caltra must expose the runtime provisioning API before deploying this SDK version to consumers.
+Agent provisioning requires `agents:provision`. It creates or reuses the user’s hosted agent without creating an agent identity. Add `syncName` to update an existing agent’s display name; creation is idempotent for the same workspace and user. Caltra must expose the agent provisioning API before deploying this SDK version to consumers.
+
+Use `caltra.agentIdentities.get(...)` when you need a separate identity with its own instructions and access relationships. That operation requires `agent-identities:provision`.

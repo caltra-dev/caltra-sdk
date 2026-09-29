@@ -25,7 +25,7 @@ export interface CaltraPage<T> {
   next_cursor: string | null;
 }
 
-export interface CaltraAgent {
+export interface CaltraAgentIdentity {
   created_at: string;
   description: string | null;
   id: string;
@@ -37,8 +37,8 @@ export interface CaltraSession {
   title: string | null;
   title_source: "generated" | "manual" | null;
   title_updated_at: string | null;
-  agent: { id: string; name: string } | null;
-  runtime: { id: string; name: string };
+  agentIdentity: { id: string; name: string } | null;
+  agent: { id: string; name: string };
   created_at: string;
   external_id: string | null;
   id: string;
@@ -51,7 +51,7 @@ export interface CaltraSessionLookup {
 }
 
 export interface CaltraSessionCreateIfMissing extends CaltraSessionLookup {
-  createIfMissing: { agentExternalId: string; autoName?: boolean };
+  createIfMissing: { agentIdentityExternalId: string; autoName?: boolean };
 }
 
 export interface CaltraSessionMessage {

@@ -28,8 +28,8 @@ describe("Caltra client authorization", () => {
       fetch: fetchImplementation as typeof fetch,
     });
 
-    await expect(client.listAgents()).resolves.toEqual({ data: [], next_cursor: null });
-    await expect(client.listAgents()).resolves.toEqual({ data: [], next_cursor: null });
+    await expect(client.listAgentIdentities()).resolves.toEqual({ data: [], next_cursor: null });
+    await expect(client.listAgentIdentities()).resolves.toEqual({ data: [], next_cursor: null });
     expect(authorizationCodeProvider).toHaveBeenCalledTimes(1);
     expect(fetchImplementation).toHaveBeenNthCalledWith(
       1,
@@ -61,7 +61,7 @@ describe("Caltra client authorization", () => {
       workspaceExternalId: "piria-organization-1",
     });
 
-    await client.listAgents();
+    await client.listAgentIdentities();
     expect(fetchImplementation.mock.calls[0]![0]).toBe("/api/caltra/authorize");
     expect(fetchImplementation.mock.calls[0]![1]).toMatchObject({
       body: JSON.stringify({ workspace_external_id: "piria-organization-1" }),
@@ -93,11 +93,11 @@ describe("Caltra client authorization", () => {
       fetch: fetchImplementation as typeof fetch,
     });
 
-    await expect(Promise.all([client.listAgents(), client.listAgents()])).resolves.toHaveLength(2);
+    await expect(Promise.all([client.listAgentIdentities(), client.listAgentIdentities()])).resolves.toHaveLength(2);
     expect(authorizationCodeProvider).toHaveBeenCalledTimes(1);
 
     await client.invalidateToken();
-    await expect(client.listAgents()).resolves.toEqual({ data: [], next_cursor: null });
+    await expect(client.listAgentIdentities()).resolves.toEqual({ data: [], next_cursor: null });
     expect(authorizationCodeProvider).toHaveBeenCalledTimes(2);
   });
 
@@ -120,9 +120,9 @@ describe("Caltra client authorization", () => {
       fetch: fetchImplementation as typeof fetch,
     });
 
-    await client.listAgents();
+    await client.listAgentIdentities();
     vi.setSystemTime(new Date("2026-09-01T18:01:01.000Z"));
-    await client.listAgents();
+    await client.listAgentIdentities();
     expect(authorizationCodeProvider).toHaveBeenCalledTimes(2);
   });
 
@@ -140,7 +140,7 @@ describe("Caltra client authorization", () => {
       }, { status: 401 })) as typeof fetch,
     });
 
-    const error = await client.listAgents().catch((reason: unknown) => reason);
+    const error = await client.listAgentIdentities().catch((reason: unknown) => reason);
     expect(error).toBeInstanceOf(CaltraApiError);
     expect(error).toMatchObject({ code: "invalid_authorization_code", status: 401 });
   });

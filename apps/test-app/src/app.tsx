@@ -21,7 +21,7 @@ export function App() {
     });
   }, []);
   const [client, setClient] = useState<CaltraClient>();
-  const [runtime, setRuntime] = useState<{ id: string; name: string }>();
+  const [agent, setAgent] = useState<{ id: string; name: string }>();
   const [sessions, setSessions] = useState<CaltraSession[]>([]);
   const [selected, setSelected] = useState<CaltraSession>();
   const [creating, setCreating] = useState(false);
@@ -30,12 +30,12 @@ export function App() {
   useEffect(() => {
     void Promise.resolve()
       .then(async () => {
-        const [hostedRuntime, sessionPage] = await Promise.all([
-          sdkClient.runtimes.get(),
+        const [hostedAgent, sessionPage] = await Promise.all([
+          sdkClient.agents.get(),
           sdkClient.listSessions({ limit: 100 }),
         ]);
         setClient(sdkClient);
-        setRuntime(hostedRuntime);
+        setAgent(hostedAgent);
         setSessions(sessionPage.data);
         setSelected(sessionPage.data[0]);
       })
@@ -45,15 +45,15 @@ export function App() {
   }, [sdkClient]);
 
   const createSession = async () => {
-    if (!client || !runtime) return;
+    if (!client || !agent) return;
     setCreating(true);
     setError(undefined);
     try {
-      const session = await client.runtimes.sessions(runtime.id).create();
+      const session = await client.agents.sessions(agent.id).create();
       setSessions((current) => [session, ...current.filter((item) => item.id !== session.id)]);
       setSelected(session);
       success({
-        message: `Session opened for ${session.runtime.name}.`,
+        message: `Session opened for ${session.agent.name}.`,
         operationId: `create-session:${session.id}`,
       });
     } catch (reason) {
@@ -86,7 +86,7 @@ export function App() {
   return (
     <div className="app-frame">
       <SessionList
-        runtime={runtime}
+        agent={agent}
         creating={creating}
         onCreate={createSession}
         onSelect={setSelected}

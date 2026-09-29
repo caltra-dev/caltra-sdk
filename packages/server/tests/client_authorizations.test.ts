@@ -25,7 +25,7 @@ describe("CaltraClientAuthorizationsClient", () => {
     });
 
     await expect(client.clientAuthorizations.create({
-      agentIds: ["agent-1"],
+      agentIdentityIds: ["agent_identity-1"],
       origin: "https://app.piria.example",
       tenantUser: {
         externalId: "piria-user-1",
@@ -52,7 +52,7 @@ describe("CaltraClientAuthorizationsClient", () => {
     );
     expect(fetchImplementation.mock.calls[1]![1]).toMatchObject({
       body: JSON.stringify({
-        agent_ids: ["agent-1"],
+        agent_identity_ids: ["agent_identity-1"],
         origin: "https://app.piria.example",
         tenant_user: {
           external_id: "piria-user-1",

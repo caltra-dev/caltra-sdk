@@ -1,6 +1,6 @@
 # Caltra SDK
 
-Open-source TypeScript clients for embedding runtime-owned Caltra sessions in web applications.
+Open-source TypeScript clients for embedding agent-owned Caltra sessions in web applications.
 
 This repository contains the server-only `@caltra/server`, the framework-neutral browser
 `@caltra/client`, the assistant-ui adapter `@caltra/react`, and a local integration application
@@ -45,13 +45,13 @@ const authorization = await caltra.clientAuthorizations.create({
 Omit `createIfMissing` for a lookup-only call that returns `null` when the mapping does not exist.
 Concurrent create-if-missing calls are idempotent and return the same workspace.
 
-### Personal runtime names
+### Personal agent names
 
-Provision a hosted runtime for the authenticated user with a credential containing `runtimes:provision`. Use `syncName` to update its display name on subsequent calls:
+Provision a hosted agent for the authenticated user with a credential containing `agents:provision`. Use `syncName` to update its display name on subsequent calls:
 
 ```ts
-const assistantName = user.firstName ? `${user.firstName}'s Assistant` : "Personal runtime";
-await caltra.runtimes.get({
+const assistantName = user.firstName ? `${user.firstName}'s Assistant` : "Personal agent";
+await caltra.agents.get({
   owner: { tenantUserExternalId: user.id },
   workspaceId: workspace.id,
   createIfMissing: { name: assistantName },
@@ -59,7 +59,7 @@ await caltra.runtimes.get({
 });
 ```
 
-No agent profile is created. Omitting `syncName` preserves the existing name. Names must contain 1–160 characters.
+No agent identity profile is created. Omitting `syncName` preserves the existing name. Names must contain 1–160 characters.
 
 ## Local integration application
 
@@ -82,8 +82,8 @@ CALTRA_TENANT_USER_EXTERNAL_ID=sdk-test-user
 All four variables are read by Vite's local Node process. The local server uses the API key to
 create a 60-second, single-use authorization at `/api/client-authorization`; the API key and Caltra client token
 are never returned by that customer-backend route or embedded in the production bundle.
-Provision a hosted runtime for the configured tenant user before opening the test app.
-The test app resolves that runtime, lists sessions, creates sessions beneath it, opens
+Provision a hosted agent for the configured tenant user before opening the test app.
+The test app resolves that agent, lists sessions, creates sessions beneath it, opens
 the authenticated event stream, reloads its safe transcript, and renders it with assistant-ui
 primitives.
 
@@ -103,13 +103,13 @@ const client = new CaltraClient({
 });
 
 const sessions = await client.listSessions();
-const runtime = await client.runtimes.get();
-const created = await runtime.sessions.create();
+const agent = await client.agents.get();
+const created = await agent.sessions.create();
 const events = await client.openSessionEvents(created.id);
 ```
 
 React applications can pass a client and selected session to `useCaltraRuntime` from
-`@caltra/react`, then provide the returned runtime to assistant-ui's `AssistantRuntimeProvider`.
+`@caltra/react`, then provide the returned agent to assistant-ui's `AssistantAgentProvider`.
 The React package intentionally exports no chat UI components.
 
 ## Customer backend authorization
@@ -137,24 +137,24 @@ Direct Clerk exchange for SDK sessions is not available yet, so browser clients 
 same client-authorization contract with Clerk, Better Auth, legacy sessions, or any other customer-side provider.
 
 
-### Runtime-owned sessions
+### Agent-owned sessions
 
-Provision a personal hosted runtime on the server using a credential with `runtimes:provision`:
+Provision a personal hosted agent on the server using a credential with `agents:provision`:
 
 ```ts
-await server.runtimes.get({
+await server.agents.get({
   workspaceId,
   owner: { tenantUserExternalId: userId },
-  createIfMissing: { name: "Personal runtime" },
+  createIfMissing: { name: "Personal agent" },
 });
 ```
 
-In the authorized browser client, resolve the runtime and its stable session:
+In the authorized browser client, resolve the agent and its stable session:
 
 ```ts
-const runtime = await client.runtimes.get();
-const session = await runtime.sessions.get({ externalId: "primary", createIfMissing: {} });
-// Independent conversations can use runtime.sessions.create().
+const agent = await client.agents.get();
+const session = await agent.sessions.get({ externalId: "primary", createIfMissing: {} });
+// Independent conversations can use agent.sessions.create().
 ```
 
-The session external ID is scoped to its runtime. This path creates no agent. Runtime authorization is derived from the signed browser identity; an agent-downscoped token cannot create an agentless runtime session. Caltra API support and the `runtimes:provision` credential scope must be deployed before consumers switch to these methods.
+The session external ID is scoped to its agent. This path creates no agent identity. Agent authorization is derived from the signed browser identity; an agent identity-downscoped token cannot create a session without a separate agent identity. Caltra API support and the `agents:provision` credential scope must be deployed before consumers switch to these methods.

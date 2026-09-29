@@ -29,7 +29,7 @@ export class CaltraClientAuthorizationsClient {
       `${this.apiUrl}/server/v1/workspaces/${encodeURIComponent(workspace.id)}/client-authorizations`,
       {
         body: JSON.stringify({
-          ...(input.agentIds ? { agent_ids: input.agentIds } : {}),
+          ...(input.agentIdentityIds ? { agent_identity_ids: input.agentIdentityIds } : {}),
           origin: input.origin,
           tenant_user: {
             external_id: input.tenantUser.externalId,

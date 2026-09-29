@@ -11,7 +11,7 @@ export interface CaltraServerWorkspace {
 }
 
 export interface CaltraClientAuthorizationCreate {
-  agentIds?: string[];
+  agentIdentityIds?: string[];
   origin: string;
   tenantUser: {
     externalId: string;
@@ -45,21 +45,21 @@ export interface CaltraWorkspaceCreateIfMissing extends CaltraWorkspaceLookup {
   createIfMissing: { name: string };
 }
 
-export interface CaltraServerAgent {
+export interface CaltraServerAgentIdentity {
   externalId: string;
   id: string;
   name: string;
 }
 
-export interface CaltraAgentLookup {
-  /** Explicitly synchronize names on every lookup, including an existing personal hosted runtime. */
-  syncNames?: { agent: string; hostedRuntime: string };
+export interface CaltraAgentIdentityLookup {
+  /** Explicitly synchronize names on every lookup, including an existing personal hosted agent. */
+  syncNames?: { agentIdentity: string; hostedAgent: string };
   externalId: string;
   owner: { tenantUserExternalId: string };
   workspaceId: string;
 }
 
-export interface CaltraAgentCreateIfMissing extends CaltraAgentLookup {
+export interface CaltraAgentIdentityCreateIfMissing extends CaltraAgentIdentityLookup {
   createIfMissing: {
     browserVisible?: boolean;
     description?: string;

@@ -1,4 +1,4 @@
-import { CaltraRuntimesClient } from "./runtimes.js";
+import { CaltraAgentsClient } from "./agents.js";
 import { z } from "zod";
 import { CaltraApiError } from "./error.js";
 import { CaltraSessionEventConnection } from "./event_connection.js";
@@ -6,7 +6,7 @@ import { CaltraClientTokenProvider } from "./token_provider.js";
 import { CaltraAuthorizationCodeEndpointProvider } from "./authorization_code_provider.js";
 import { CaltraSessionsClient } from "./sessions.js";
 import type {
-  CaltraAgent,
+  CaltraAgentIdentity,
   CaltraClientOptions,
   CaltraMessageSubmission,
   CaltraPage,
@@ -22,7 +22,7 @@ const PageSchema = <T extends z.ZodType>(item: T) => z.object({
   next_cursor: z.string().nullable(),
 }).strict();
 
-const AgentSchema = z.object({
+const AgentIdentitySchema = z.object({
   created_at: z.string(),
   description: z.string().nullable(),
   id: z.string(),
@@ -34,8 +34,8 @@ const SessionSchema = z.object({
   title: z.string().nullable(),
   title_source: z.enum(["generated", "manual"]).nullable(),
   title_updated_at: z.string().nullable(),
-  agent: z.object({ id: z.string().uuid(), name: z.string() }).strict().nullable(),
-  runtime: z.object({ id: z.string().uuid(), name: z.string() }).strict(),
+  agentIdentity: z.object({ id: z.string().uuid(), name: z.string() }).strict().nullable(),
+  agent: z.object({ id: z.string().uuid(), name: z.string() }).strict(),
   created_at: z.string(),
   external_id: z.string().nullable(),
   id: z.string().uuid(),
@@ -58,7 +58,7 @@ const SubmissionSchema = z.object({
 
 /** Calls the versioned Caltra Client API without coupling applications to a React runtime. */
 export class CaltraClient {
-  readonly runtimes: CaltraRuntimesClient;
+  readonly agents: CaltraAgentsClient;
   readonly sessions: CaltraSessionsClient;
   private readonly apiUrl: string;
   private readonly fetchImplementation: typeof fetch;
@@ -74,25 +74,25 @@ export class CaltraClient {
       this.fetchImplementation,
       authorizationCodeProvider,
     );
-    this.runtimes = new CaltraRuntimesClient(this);
+    this.agents = new CaltraAgentsClient(this);
     this.sessions = new CaltraSessionsClient(this);
   }
 
-  async getRuntime(): Promise<{ id: string; name: string }> {
-    return this.request("/runtimes/get", z.object({ id: z.string().uuid(), name: z.string() }).strict(), {
+  async getAgent(): Promise<{ id: string; name: string }> {
+    return this.request("/agents/get", z.object({ id: z.string().uuid(), name: z.string() }).strict(), {
       body: "{}", method: "POST", headers: { "content-type": "application/json" },
     });
   }
 
-  async createRuntimeSession(runtimeId: string, input: { autoName?: boolean } = {}): Promise<CaltraSession> {
-    return this.request(`/runtimes/${encodeURIComponent(runtimeId)}/sessions`, SessionSchema, {
+  async createAgentSession(agentId: string, input: { autoName?: boolean } = {}): Promise<CaltraSession> {
+    return this.request(`/agents/${encodeURIComponent(agentId)}/sessions`, SessionSchema, {
       body: JSON.stringify({ auto_name: input.autoName }), method: "POST", headers: { "content-type": "application/json" },
     });
   }
 
-  async getRuntimeSession(runtimeId: string, input: { externalId: string; createIfMissing?: { autoName?: boolean } }): Promise<CaltraSession | null> {
+  async getAgentSession(agentId: string, input: { externalId: string; createIfMissing?: { autoName?: boolean } }): Promise<CaltraSession | null> {
     try {
-      return await this.request(`/runtimes/${encodeURIComponent(runtimeId)}/sessions/get`, SessionSchema, {
+      return await this.request(`/agents/${encodeURIComponent(agentId)}/sessions/get`, SessionSchema, {
         body: JSON.stringify({ external_id: input.externalId, ...(input.createIfMissing ? { create_if_missing: { auto_name: input.createIfMissing.autoName } } : {}) }),
         method: "POST", headers: { "content-type": "application/json" },
       });
@@ -102,17 +102,17 @@ export class CaltraClient {
     }
   }
 
-  async listAgents(input: CaltraPageInput = {}): Promise<CaltraPage<CaltraAgent>> {
-    return await this.getPage("/agents", input, PageSchema(AgentSchema));
+  async listAgentIdentities(input: CaltraPageInput = {}): Promise<CaltraPage<CaltraAgentIdentity>> {
+    return await this.getPage("/agent-identities", input, PageSchema(AgentIdentitySchema));
   }
 
   async listSessions(input: CaltraPageInput = {}): Promise<CaltraPage<CaltraSession>> {
     return await this.getPage("/sessions", input, PageSchema(SessionSchema));
   }
 
-  async createSession(input: { agentId: string; autoName?: boolean }): Promise<CaltraSession> {
+  async createSession(input: { agentIdentityId: string; autoName?: boolean }): Promise<CaltraSession> {
     return await this.request("/sessions", SessionSchema, {
-      body: JSON.stringify({ agent_id: input.agentId, auto_name: input.autoName }),
+      body: JSON.stringify({ agent_identity_id: input.agentIdentityId, auto_name: input.autoName }),
       headers: { "content-type": "application/json" },
       method: "POST",
     });
@@ -128,7 +128,7 @@ export class CaltraClient {
       return await this.request("/sessions/get", SessionSchema, {
         body: JSON.stringify({
           ...(createIfMissing ? {
-            create_if_missing: { agent_external_id: createIfMissing.agentExternalId, auto_name: createIfMissing.autoName },
+            create_if_missing: { agent_identity_external_id: createIfMissing.agentIdentityExternalId, auto_name: createIfMissing.autoName },
           } : {}),
           external_id: input.externalId,
         }),

@@ -1,6 +1,6 @@
 {
   "name": "@caltra/react",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "assistant-ui runtime adapter for Caltra sessions",
   "type": "module",
   "sideEffects": false,
@@ -31,7 +31,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@caltra/client": "0.8.1"
+    "@caltra/client": "0.8.2"
   },
   "peerDependencies": {
     "@assistant-ui/react": "^0.15.16",

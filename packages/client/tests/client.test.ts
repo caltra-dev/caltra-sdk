@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { CaltraApiError, CaltraClient } from "../src/index.js";
 
 const sessionId = "40000000-0000-4000-8000-000000000001";
-const agentId = "50000000-0000-4000-8000-000000000001";
+const agentIdentityId = "50000000-0000-4000-8000-000000000001";
 
 describe("CaltraClient", () => {
   it("adds host authentication headers to the default authorization request", async () => {
@@ -75,12 +75,12 @@ describe("CaltraClient", () => {
       }
       if (init?.method === "POST") {
         return Response.json({
-          runtime: { id: agentId, name: "Test runtime" },
+          agent: { id: agentIdentityId, name: "Test agent" },
           auto_name: false,
           title: null,
           title_source: null,
           title_updated_at: null,
-          agent: { id: agentId, name: "Support" },
+          agentIdentity: { id: agentIdentityId, name: "Support" },
           created_at: "2026-08-26T16:00:00.000Z",
           external_id: null,
           id: sessionId,
@@ -97,7 +97,7 @@ describe("CaltraClient", () => {
     });
 
     await client.listSessions({ cursor: "next", limit: 10 });
-    await client.createSession({ agentId });
+    await client.createSession({ agentIdentityId });
 
     const listUrl = fetchImplementation.mock.calls[1]![0] as URL;
     expect(listUrl.toString()).toBe(
@@ -107,7 +107,7 @@ describe("CaltraClient", () => {
     expect(listHeaders.get("authorization")).toBe("Bearer client-token");
     expect(listHeaders.get("x-caltra-session-metadata")).toBe("true");
     expect(fetchImplementation.mock.calls[2]![1]).toMatchObject({
-      body: JSON.stringify({ agent_id: agentId }),
+      body: JSON.stringify({ agent_identity_id: agentIdentityId }),
       method: "POST",
     });
   });
@@ -122,12 +122,12 @@ describe("CaltraClient", () => {
         });
       }
       return Response.json({
-        runtime: { id: agentId, name: "Test runtime" },
+        agent: { id: agentIdentityId, name: "Test agent" },
         auto_name: true,
         title: "Piria Assistant",
         title_source: "generated",
         title_updated_at: "2026-09-03T18:00:00.000Z",
-          agent: { id: agentId, name: "Piria Assistant" },
+          agentIdentity: { id: agentIdentityId, name: "Piria Assistant" },
         created_at: "2026-09-03T18:00:00.000Z",
         external_id: "primary",
         id: sessionId,
@@ -142,12 +142,12 @@ describe("CaltraClient", () => {
     });
 
     await expect(client.sessions.get({
-      createIfMissing: { agentExternalId: "personal-assistant" },
+      createIfMissing: { agentIdentityExternalId: "personal-assistant" },
       externalId: "primary",
     })).resolves.toMatchObject({ id: sessionId, external_id: "primary" });
     expect(fetchImplementation.mock.calls[1]![1]).toMatchObject({
       body: JSON.stringify({
-        create_if_missing: { agent_external_id: "personal-assistant" },
+        create_if_missing: { agent_identity_external_id: "personal-assistant" },
         external_id: "primary",
       }),
       method: "POST",
