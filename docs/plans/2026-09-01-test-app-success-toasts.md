@@ -1,6 +1,6 @@
 # Test App Success Toast Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+**Status:** Historical implementation plan (2026-09-01), not current UI conventions or instructions to rerun this work. For new UI work, use the [UI convention entry point](../ui/README.md).
 
 **Goal:** Confirm authoritative session creation through one accessible, collision-safe application toast while preserving the returned session as durable UI state.
 

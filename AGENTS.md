@@ -1,5 +1,9 @@
 # Repository guidance
 
+## UI work
+
+Before changing the test app or consumer-facing React integration, read the [UI convention entry point](docs/ui/README.md).
+
 ## Sprite development provisioning
 
 - When development, tests, builds, or previews require a native package or tool that the standard Sprite runtime does not provide, add its idempotent installation to `scripts/sprite/provision.sh`. Do not rely on an undocumented, one-off installation in a particular Sprite.

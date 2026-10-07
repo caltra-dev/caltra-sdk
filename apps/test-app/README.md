@@ -2,6 +2,8 @@
 
 This app exercises the local `@caltra/client` and `@caltra/react` packages against a Caltra API. It can list and create sessions, send messages, and stream assistant responses.
 
+For UI changes, start at the [UI convention entry point](../../docs/ui/README.md).
+
 ## Configure
 
 Copy the example environment file:
