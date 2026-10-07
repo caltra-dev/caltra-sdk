@@ -158,7 +158,3 @@ const session = await agent.sessions.get({ externalId: "primary", createIfMissin
 ```
 
 The session external ID is scoped to its agent. This path creates no agent identity. Agent authorization is derived from the signed browser identity; an agent identity-downscoped token cannot create a session without a separate agent identity. Caltra API support and the `agents:provision` credential scope must be deployed before consumers switch to these methods.
-
-## Provider accounts
-
-Operator account and resource usage is documented in the encrypted [provider account inventory](docs/provider-accounts.md).

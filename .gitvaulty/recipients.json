@@ -38,13 +38,6 @@
         "team"
       ],
       "users": []
-    },
-    {
-      "path": "docs/provider-accounts.yaml.gitvaulty",
-      "groups": [
-        "team"
-      ],
-      "users": []
     }
   ]
 }

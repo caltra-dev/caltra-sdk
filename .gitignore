@@ -9,6 +9,3 @@ test-results/
 .playwright-mcp/
 *.tsbuildinfo
 .agents/skills/gitvaulty/
-
-# Native operator account inventory
-/docs/provider-accounts.yaml
