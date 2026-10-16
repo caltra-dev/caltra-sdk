@@ -17,6 +17,9 @@ npm run build
 
 The packages are ESM-only and require Node.js 24 or newer for development.
 
+See [validation and publication](docs/workflows.md) for PR checks, silent pushes,
+and explicit manual package releases.
+
 ## Server usage
 
 Use `@caltra/server` only in trusted backend code. An API key belongs to one Caltra organization,
