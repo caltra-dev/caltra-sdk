@@ -65,6 +65,9 @@ its seeded local `dogfood_assistant.server_api_key`, workspace
 `10000000-0000-4000-8000-000000000001`. Route the demo's server authorization call to local
 port 4001 and browser API calls through the same-origin gateway. The existing dogfood seed
 provides saved session `90000000-0000-4000-8000-000000000001` and empty conversations.
-It does not configure a live model route: saved-history and UI validation are available, but
-successful AI generation requires a configured model. Never present seeded messages as a
-successful live model response.
+The Caltra development stack now seeds a `Local deterministic model` and starts its loopback
+provider. Try `/help`, `/echo Hello`, `/capabilities records`, `/tool <capability-id>`, and
+`/call <versioned-action-id> {"recordId":"demo"}`. This exercises real hosted execution,
+authorization, streaming, and history without LLM tokens. Tool calls are real; the default
+records backend contains isolated development data and grants only `records.read`. This is
+a deterministic test provider, not evidence of live AI generation.

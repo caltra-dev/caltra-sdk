@@ -94,6 +94,11 @@ export function CaltraHistoryLoading({ labels }: CaltraChatSlotProps) {
 
 export function CaltraMessage({ labels }: CaltraChatSlotProps) {
   const role = useAuiState((state) => state.message.role);
+  const emptyCompleted = useAuiState((state) => state.message.role === "assistant"
+    && state.message.status?.type === "complete"
+    && !state.message.content.some((part) => part.type !== "text" || part.text !== ""));
+  // Text-only transcripts can retain an empty checkpoint for a server-side tool call.
+  if (emptyCompleted) return null;
   return <MessagePrimitive.Root className="caltra-chat__message" data-role={role}>
     <span className="caltra-chat__sr-only">{role === "user" ? labels.user : labels.assistant}</span>
     <div className="caltra-chat__message-body">
