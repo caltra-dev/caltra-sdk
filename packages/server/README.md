@@ -73,3 +73,27 @@ organization.
 Agent provisioning requires `agents:provision`. It creates or reuses the user’s hosted agent without creating an agent identity. Add `syncName` to update an existing agent’s display name; creation is idempotent for the same workspace and user. Caltra must expose the agent provisioning API before deploying this SDK version to consumers.
 
 Use `caltra.agentIdentities.get(...)` when you need a separate identity with its own instructions and access relationships. That operation requires `agent-identities:provision`.
+
+
+### Pinning development workspaces to a hosted environment
+
+```ts
+const caltra = new CaltraServerClient({
+  apiKey: process.env.CALTRA_API_KEY!,
+  environmentId: "60000000-0000-4000-8000-000000000001",
+  workspaceNamespace: "myapp-local",
+});
+```
+
+`environmentId` is an existing environment in the API-key organization. It is
+sent for every workspace resolution, including client authorization. An unknown
+environment or workspace belonging to another environment is an error; the SDK
+never retries without the target. This requires the hosted API's explicit
+`environment_id` support. An older API rejects the request rather than silently
+provisioning in production.
+
+`workspaceNamespace` prefixes server wire external IDs as `namespace:externalId`.
+Use a distinct namespace for local development and each preview. Browser workspace
+IDs and the host application's authorization checks stay unchanged. Returned
+workspace documents contain the actual namespaced external ID. Both options are
+optional; omitting them preserves existing behavior.

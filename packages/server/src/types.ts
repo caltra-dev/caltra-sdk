@@ -1,6 +1,10 @@
 export interface CaltraServerClientOptions {
   apiKey: string;
   apiUrl?: string;
+  /** Pin all workspace resolution, including authorization, to this existing environment. */
+  environmentId?: string;
+  /** Prefix wire workspace external IDs to isolate local/preview instances. Browser IDs stay unchanged. */
+  workspaceNamespace?: string;
   fetch?: typeof fetch;
 }
 

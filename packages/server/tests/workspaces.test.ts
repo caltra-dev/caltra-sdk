@@ -58,6 +58,31 @@ describe("CaltraWorkspacesClient", () => {
     expect(headers.get("content-type")).toBe("application/json");
   });
 
+  it("rejects empty environment or namespace configuration instead of dropping it", () => {
+    expect(() => new CaltraServerClient({ apiKey: "test", environmentId: "" })).toThrow();
+    expect(() => new CaltraServerClient({ apiKey: "test", workspaceNamespace: "" })).toThrow();
+  });
+
+  it.each([
+    [404, "environment_not_found"],
+    [409, "workspace_environment_mismatch"],
+    [400, "invalid_request"],
+  ])("never retries without the environment after %s %s", async (status, code) => {
+    const fetchImplementation = vi.fn(async () => Response.json({
+      code, detail: "Explicit environment rejected", request_id: "request-env",
+      retryable: false, status, title: "Environment rejected", type: "about:blank",
+    }, { status }));
+    const client = new CaltraServerClient({
+      apiKey: "caltra_test_key", environmentId: "60000000-0000-4000-8000-000000000001",
+      workspaceNamespace: "piria-local", fetch: fetchImplementation as typeof fetch,
+    });
+    await expect(client.workspaces.get({ externalId: "customer" })).rejects.toMatchObject({ code, status });
+    expect(fetchImplementation).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(fetchImplementation.mock.calls[0]![1]?.body))).toEqual({
+      external_id: "piria-local:customer", environment_id: "60000000-0000-4000-8000-000000000001",
+    });
+  });
+
   it("preserves structured server errors instead of treating every 404 as absence", async () => {
     const client = new CaltraServerClient({
       apiKey: "caltra_test_key",

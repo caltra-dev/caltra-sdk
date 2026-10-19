@@ -16,7 +16,7 @@ export class CaltraServerClient {
     const fetchImplementation = options.fetch ?? globalThis.fetch.bind(globalThis);
     this.agents = new CaltraAgentsClient(options.apiKey, apiUrl, fetchImplementation);
     this.agentIdentities = new CaltraAgentIdentitiesClient(options.apiKey, apiUrl, fetchImplementation);
-    this.workspaces = new CaltraWorkspacesClient(options.apiKey, apiUrl, fetchImplementation);
+    this.workspaces = new CaltraWorkspacesClient(options.apiKey, apiUrl, fetchImplementation, options.environmentId, options.workspaceNamespace);
     this.clientAuthorizations = new CaltraClientAuthorizationsClient(
       options.apiKey,
       apiUrl,
