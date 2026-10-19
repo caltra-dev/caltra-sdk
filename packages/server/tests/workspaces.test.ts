@@ -60,6 +60,7 @@ describe("CaltraWorkspacesClient", () => {
 
   it("rejects empty environment or namespace configuration instead of dropping it", () => {
     expect(() => new CaltraServerClient({ apiKey: "test", environmentId: "" })).toThrow();
+    expect(() => CaltraServerClient.forEnvironment({ apiKey: "test", environmentId: "" })).toThrow();
     expect(() => new CaltraServerClient({ apiKey: "test", workspaceNamespace: "" })).toThrow();
   });
 
@@ -72,7 +73,7 @@ describe("CaltraWorkspacesClient", () => {
       code, detail: "Explicit environment rejected", request_id: "request-env",
       retryable: false, status, title: "Environment rejected", type: "about:blank",
     }, { status }));
-    const client = new CaltraServerClient({
+    const client = CaltraServerClient.forEnvironment({
       apiKey: "caltra_test_key", environmentId: "60000000-0000-4000-8000-000000000001",
       workspaceNamespace: "piria-local", fetch: fetchImplementation as typeof fetch,
     });

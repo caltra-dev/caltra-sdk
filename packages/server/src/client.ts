@@ -11,6 +11,12 @@ export class CaltraServerClient {
   readonly clientAuthorizations: CaltraClientAuthorizationsClient;
   readonly workspaces: CaltraWorkspacesClient;
 
+  /** Explicit entry point so integrations can fail closed when an older SDK is installed. */
+  static forEnvironment(options: CaltraServerClientOptions & { environmentId: string }): CaltraServerClient {
+    if (!options.environmentId) throw new Error("environmentId is required for an environment-bound client.");
+    return new CaltraServerClient(options);
+  }
+
   constructor(options: CaltraServerClientOptions) {
     const apiUrl = (options.apiUrl ?? "https://api.caltra.dev").replace(/\/+$/, "");
     const fetchImplementation = options.fetch ?? globalThis.fetch.bind(globalThis);

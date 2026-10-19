@@ -78,7 +78,7 @@ Use `caltra.agentIdentities.get(...)` when you need a separate identity with its
 ### Pinning development workspaces to a hosted environment
 
 ```ts
-const caltra = new CaltraServerClient({
+const caltra = CaltraServerClient.forEnvironment({
   apiKey: process.env.CALTRA_API_KEY!,
   environmentId: "60000000-0000-4000-8000-000000000001",
   workspaceNamespace: "myapp-local",
@@ -97,3 +97,7 @@ Use a distinct namespace for local development and each preview. Browser workspa
 IDs and the host application's authorization checks stay unchanged. Returned
 workspace documents contain the actual namespaced external ID. Both options are
 optional; omitting them preserves existing behavior.
+
+`forEnvironment` requires an explicit environment. Integrations that must fail
+closed with stale installed dependencies can require this entry point; older SDKs
+do not expose it.
