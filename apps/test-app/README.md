@@ -48,7 +48,7 @@ The supported options are `--api-key`, `--caltra-url`, `--workspace-id`, and `--
 
 ## Packaged chat preview
 
-The demo imports `CaltraChat` and `@caltra/react/styles.css` directly. Default styling uses the
+The demo imports `CaltraChat` from `@caltra/react/ui`, which loads its CSS automatically. Default styling uses the
 SDK's neutral theme. The Appearance selector demonstrates an Italian translation and theme
 variables while preserving the session and draft. Selecting a session writes `?session=<id>`
 so reloading that URL exercises loading the saved transcript directly; IDs are resolved only

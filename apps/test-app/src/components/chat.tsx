@@ -1,6 +1,5 @@
 import type { CaltraClient, CaltraSession } from "@caltra/client";
 import { CaltraChat, type CaltraChatLabels } from "@caltra/react/ui";
-import "@caltra/react/styles.css";
 import { useState } from "react";
 
 const italian: CaltraChatLabels = {

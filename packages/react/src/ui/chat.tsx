@@ -38,7 +38,7 @@ export interface CaltraChatProps extends UseCaltraRuntimeOptions {
   submitMode?: CaltraComposerProps["submitMode"];
 }
 
-/** Styled chat with safe loading/empty states. Import @caltra/react/styles.css once in the host. */
+/** Styled chat with safe loading/empty states. The @caltra/react/ui entry loads its scoped CSS. */
 export function CaltraChat({ client, sessionId, ...presentation }: CaltraChatProps) {
   // A new client is an authorization boundary. Remount atomically rather than briefly
   // rendering the old assistant-ui repository while a hook effect switches stores.

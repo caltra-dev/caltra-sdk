@@ -4,6 +4,7 @@
   "description": "Styled React chat and assistant-ui runtime adapter for Caltra sessions",
   "type": "module",
   "sideEffects": [
+    "./dist/ui/index.js",
     "**/*.css"
   ],
   "repository": {

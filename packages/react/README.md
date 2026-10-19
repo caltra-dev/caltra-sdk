@@ -13,7 +13,6 @@ npm install @caltra/client@0.8.2 @caltra/react@0.9.0 @assistant-ui/react@0.15.16
 
 ```tsx
 import { CaltraChat } from "@caltra/react/ui";
-import "@caltra/react/styles.css";
 import type { CaltraClient } from "@caltra/client";
 
 export function Assistant({ client, sessionId }: { client: CaltraClient; sessionId: string }) {
@@ -21,7 +20,10 @@ export function Assistant({ client, sessionId }: { client: CaltraClient; session
 }
 ```
 
-No Tailwind, shadcn setup, copied component source, or host CSS reset is required. The defaults
+The `@caltra/react/ui` entry automatically imports its scoped CSS through your application's
+CSS-capable bundler. No separate stylesheet import, Tailwind, shadcn setup, copied component
+source, or host CSS reset is required. The explicit `@caltra/react/styles.css` export remains
+available for compatibility. The headless `@caltra/react` entry does not import CSS. The defaults
 include a welcome, loading skeleton, Markdown transcript, copy icon with checkmark feedback and localized accessible labels/tooltips, scroll-to-bottom button,
 text composer, connection recovery and retry. Enter sends; Shift+Enter inserts a newline.
 Use `submitMode="ctrlEnter"` or `"none"` to change keyboard submission.
