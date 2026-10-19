@@ -10,7 +10,7 @@ interface ApiHarness {
   releaseHistory: () => void;
 }
 
-async function installApiHarness(page: Page, delayedHistory = false): Promise<ApiHarness> {
+async function installApiHarness(page: Page, delayedHistory = false, historyCount = 1): Promise<ApiHarness> {
   let releaseHistory = () => undefined;
   const historyGate = delayedHistory ? new Promise<void>((resolve) => { releaseHistory = resolve; }) : Promise.resolve();
   let releaseCreate = () => undefined;
@@ -67,7 +67,7 @@ async function installApiHarness(page: Page, delayedHistory = false): Promise<Ap
 
     if (request.method() === "GET" && url.pathname.endsWith("/messages")) {
       await historyGate;
-      await json(route, { data: delayedHistory ? [{ id: "5da952ec-2d4b-4fb5-9cc9-24e6545c38e5", role: "assistant", status: "completed", text: "Saved **conversation**", created_at: "2026-10-19T12:00:00.000Z" }] : [], next_cursor: null });
+      await json(route, { data: delayedHistory ? Array.from({ length: historyCount }, (_, index) => ({ id: `5da952ec-2d4b-4fb5-9cc9-${String(index).padStart(12, "0")}`, role: "assistant", status: "completed", text: "Saved **conversation**", created_at: "2026-10-19T12:00:00.000Z" })) : [], next_cursor: null });
       return;
     }
 
@@ -259,5 +259,23 @@ for (const viewport of [{ width: 360, height: 800 }, { width: 1280, height: 900 
     const composer = await page.locator(".caltra-chat__composer").boundingBox();
     expect(composer!.y + composer!.height).toBeLessThanOrEqual(viewport.height);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width);
+  });
+}
+
+for (const viewport of [{ width: 360, height: 800 }, { width: 1280, height: 900 }]) {
+  test(`keeps long history inside the chat viewport at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    const api = await installApiHarness(page, true, 40);
+    await page.goto("/");
+    await startCreate(page);
+    api.releaseCreate();
+    api.releaseHistory();
+    await expect(page.locator(".caltra-chat__message")).toHaveCount(40);
+    await page.getByRole("textbox", { name: "Message", exact: true }).focus();
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(viewport.height + 1);
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    const scrollArea = page.locator(".caltra-chat__viewport");
+    expect(await scrollArea.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
+    await expect(page.getByRole("textbox", { name: "Message", exact: true })).toBeInViewport();
   });
 }
