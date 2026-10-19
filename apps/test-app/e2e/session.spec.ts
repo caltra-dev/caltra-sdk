@@ -13,12 +13,12 @@ test("creates a session and renders a streamed assistant response", async ({ pag
   await expect(agent).toBeVisible();
   await expect(agent).not.toHaveValue("Loading agent…");
   await page.getByRole("button", { name: "Create session" }).click();
-  await expect(page.locator(".connection")).toContainText("connected");
+  await expect(page.locator("[data-caltra-state=empty]")).toBeVisible();
 
   const prompt = `Reply with the exact phrase SDK connected ${Date.now()}`;
-  await page.getByPlaceholder("Transmit a message…").fill(prompt);
+  await page.getByRole("textbox", { name: "Message", exact: true }).fill(prompt);
   await page.getByRole("button", { name: "Send message" }).click();
 
-  await expect(page.locator(".message.user").last()).toContainText(prompt);
-  await expect(page.locator(".message.assistant").last()).not.toBeEmpty({ timeout: 45_000 });
+  await expect(page.locator(".caltra-chat__message[data-role=user]").last()).toContainText(prompt);
+  await expect(page.locator(".caltra-chat__message[data-role=assistant] .caltra-chat__markdown").last()).not.toBeEmpty({ timeout: 45_000 });
 });

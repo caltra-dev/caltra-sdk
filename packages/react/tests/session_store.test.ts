@@ -55,6 +55,34 @@ describe("CaltraSessionStore", () => {
     await store.stop();
   });
 
+  it("retains loaded history throughout a reconnect and ignores an obsolete history response", async () => {
+    const message = { created_at: "2026-10-19T12:00:00Z", id: assistantMessageId,
+      role: "assistant", status: "completed", text: "Saved transcript" };
+    let finishOldRefresh!: (page: { data: never[] }) => void;
+    let finishReconnect!: (page: { data: typeof message[] }) => void;
+    const client = {
+      openSessionEvents: vi.fn(async () => new StubEventConnection([])),
+      listSessionMessages: vi.fn()
+        .mockResolvedValueOnce({ data: [message] })
+        .mockImplementationOnce(() => new Promise((resolve) => { finishOldRefresh = resolve; }))
+        .mockImplementationOnce(() => new Promise((resolve) => { finishReconnect = resolve; })),
+      getSessionById: vi.fn(async () => ({ id: sessionId, title: null })),
+    };
+    const store = new CaltraSessionStore(client as never, sessionId);
+    await store.start();
+    const oldRefresh = store.refresh();
+    const reconnect = store.reconnect();
+    await vi.waitFor(() => expect(client.listSessionMessages).toHaveBeenCalledTimes(3));
+    expect(store.getSnapshot()).toMatchObject({ historyLoaded: true, messages: [message] });
+    finishOldRefresh({ data: [] });
+    await oldRefresh;
+    expect(store.getSnapshot().messages).toEqual([message]);
+    finishReconnect({ data: [message] });
+    await reconnect;
+    expect(store.getSnapshot()).toMatchObject({ connection: "connected", historyLoaded: true, messages: [message] });
+    await store.stop();
+  });
+
   it("connects before history and sending, then reconciles streamed completion", async () => {
     const calls: string[] = [];
     let historyLoads = 0;

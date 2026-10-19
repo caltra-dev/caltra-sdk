@@ -12,6 +12,8 @@ export interface CaltraSessionSnapshot {
   session: CaltraSession | null;
   connection: CaltraConnectionState;
   error: Error | null;
+  /** True only after an authoritative history response, including an empty one. */
+  historyLoaded: boolean;
   isRunning: boolean;
   messages: readonly CaltraSessionMessage[];
 }
@@ -28,10 +30,12 @@ export class CaltraSessionStore {
   private readyPromise?: Promise<void>;
   private rejectReady?: (reason: unknown) => void;
   private resolveReady?: () => void;
+  private generation = 0;
   private snapshot: CaltraSessionSnapshot = {
     session: null,
     connection: "connecting",
     error: null,
+    historyLoaded: false,
     isRunning: false,
     messages: [],
   };
@@ -52,6 +56,7 @@ export class CaltraSessionStore {
   async start(): Promise<void> {
     if (this.readyPromise) return await this.readyPromise;
     this.abortController = new AbortController();
+    this.generation += 1;
     this.readyPromise = new Promise<void>((resolve, reject) => {
       this.resolveReady = resolve;
       this.rejectReady = reject;
@@ -61,6 +66,7 @@ export class CaltraSessionStore {
   }
 
   async stop(): Promise<void> {
+    this.generation += 1;
     const connection = this.connection;
     this.abortController?.abort();
     this.abortController = undefined;
@@ -73,13 +79,22 @@ export class CaltraSessionStore {
   }
 
   async refresh(): Promise<void> {
+    const generation = this.generation;
     const page = await this.client.listSessionMessages(this.sessionId, { limit: 100 });
-    this.update({ messages: page.data });
+    if (generation !== this.generation) return;
+    this.update({ historyLoaded: true, messages: page.data, isRunning: page.data.some((message) => message.status === "streaming") });
   }
 
   async refreshMetadata(): Promise<void> {
+    const generation = this.generation;
     const session = await this.client.getSessionById(this.sessionId);
-    this.update({ session });
+    if (generation === this.generation) this.update({ session });
+  }
+
+  /** Restarts transport without throwing away a transcript already loaded for this session. */
+  async reconnect(): Promise<void> {
+    await this.stop();
+    await this.start();
   }
 
   async send(text: string): Promise<void> {
@@ -114,8 +129,11 @@ export class CaltraSessionStore {
     while (!signal.aborted) {
       try {
         this.update({ connection: attempt === 0 ? "connecting" : "recovering", error: null });
-        this.connection = await this.client.openSessionEvents(this.sessionId, { signal });
+        const connection = await this.client.openSessionEvents(this.sessionId, { signal });
+        if (signal.aborted) { await connection.close().catch(() => undefined); return; }
+        this.connection = connection;
         await Promise.all([this.refresh(), this.refreshMetadata()]);
+        if (signal.aborted) return;
         this.update({ connection: "connected", error: null });
         this.resolveReady?.();
         this.resolveReady = undefined;

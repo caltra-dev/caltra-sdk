@@ -7,9 +7,12 @@ const successMessage = `Session opened for ${agentName}.`;
 
 interface ApiHarness {
   releaseCreate: () => void;
+  releaseHistory: () => void;
 }
 
-async function installApiHarness(page: Page): Promise<ApiHarness> {
+async function installApiHarness(page: Page, delayedHistory = false): Promise<ApiHarness> {
+  let releaseHistory = () => undefined;
+  const historyGate = delayedHistory ? new Promise<void>((resolve) => { releaseHistory = resolve; }) : Promise.resolve();
   let releaseCreate = () => undefined;
   let createGate = new Promise<void>((resolve) => {
     releaseCreate = resolve;
@@ -57,8 +60,14 @@ async function installApiHarness(page: Page): Promise<ApiHarness> {
       return;
     }
 
+    if (request.method() === "GET" && url.pathname === `/client/v1/sessions/${sessionId}`) {
+      await json(route, createdSession());
+      return;
+    }
+
     if (request.method() === "GET" && url.pathname.endsWith("/messages")) {
-      await json(route, { data: [], next_cursor: null });
+      await historyGate;
+      await json(route, { data: delayedHistory ? [{ id: "5da952ec-2d4b-4fb5-9cc9-24e6545c38e5", role: "assistant", status: "completed", text: "Saved **conversation**", created_at: "2026-10-19T12:00:00.000Z" }] : [], next_cursor: null });
       return;
     }
 
@@ -74,7 +83,7 @@ async function installApiHarness(page: Page): Promise<ApiHarness> {
     await route.fulfill({ status: 404 });
   });
 
-  return { releaseCreate: () => releaseCreate() };
+  return { releaseCreate: () => releaseCreate(), releaseHistory: () => releaseHistory() };
 }
 
 async function json(route: Route, value: unknown): Promise<void> {
@@ -108,7 +117,7 @@ test("announces exactly one session success only after authoritative completion"
   const api = await installApiHarness(page);
   await page.goto("/");
 
-  const status = page.getByRole("status");
+  const status = page.locator(".success-toast-region");
   await expect(status).toHaveAttribute("aria-live", "polite");
   await expect(status).toHaveAttribute("aria-atomic", "true");
   await expect(status).toBeEmpty();
@@ -182,7 +191,7 @@ for (const viewport of [
     api.releaseCreate();
 
     const toast = page.locator(".success-toast");
-    const region = page.getByRole("status");
+    const region = page.locator(".success-toast-region");
     await expect(toast).toBeVisible();
     await expect(region).toHaveCSS("pointer-events", "none");
     await expect(toast).toHaveCSS("pointer-events", "auto");
@@ -226,5 +235,29 @@ for (const viewport of [
     await expect(toast).toHaveCount(0);
     const frameWithoutToast = await page.locator(".app-frame").boundingBox();
     expect(frameWithoutToast).toEqual(frameWithToast);
+  });
+}
+
+for (const viewport of [{ width: 360, height: 800 }, { width: 1280, height: 900 }]) {
+  test(`loads saved history without a welcome and preserves a themed draft at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    const api = await installApiHarness(page, true);
+    await page.goto("/");
+    await startCreate(page);
+    api.releaseCreate();
+    await expect(page.locator("[data-caltra-state=loading]")).toBeVisible();
+    await expect(page.locator("[data-caltra-state=empty]")).toHaveCount(0);
+    api.releaseHistory();
+    await expect(page.locator(".caltra-chat__markdown strong")).toHaveText("conversation");
+    await expect(page.locator("[data-caltra-state=empty]")).toHaveCount(0);
+    const input = page.getByRole("textbox", { name: "Message", exact: true });
+    await input.fill("Keep this draft");
+    await input.press("Shift+Enter");
+    await page.getByLabel("Appearance").selectOption("custom");
+    await expect(page.getByRole("textbox", { name: "Messaggio", exact: true })).toHaveValue("Keep this draft\n");
+    await expect(page.locator(".caltra-chat__markdown strong")).toHaveText("conversation");
+    const composer = await page.locator(".caltra-chat__composer").boundingBox();
+    expect(composer!.y + composer!.height).toBeLessThanOrEqual(viewport.height);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width);
   });
 }

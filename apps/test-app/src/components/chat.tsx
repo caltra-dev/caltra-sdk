@@ -1,77 +1,31 @@
-import {
-  AssistantRuntimeProvider,
-  AuiIf,
-  ComposerPrimitive,
-  MessagePrimitive,
-  ThreadPrimitive,
-} from "@assistant-ui/react";
 import type { CaltraClient, CaltraSession } from "@caltra/client";
-import { useCaltraRuntime } from "@caltra/react";
-import { ArrowDown, ArrowUp, RefreshCw } from "lucide-react";
+import { CaltraChat, type CaltraChatLabels } from "@caltra/react/ui";
+import "@caltra/react/styles.css";
+import { useState } from "react";
 
-interface ChatProps {
-  client: CaltraClient;
-  session: CaltraSession;
-}
+const italian: CaltraChatLabels = {
+  chat: "Conversazione", welcomeTitle: "Come posso aiutarti oggi?", welcomeDescription: "",
+  placeholder: "Scrivi un messaggio…", messageInput: "Messaggio", send: "Invia messaggio",
+  copy: "Copia", copied: "Copiato", scrollToBottom: "Vai in fondo", loading: "Caricamento conversazione…",
+  connecting: "Connessione in corso…", recovering: "Riconnessione in corso. La conversazione è ancora qui.",
+  connectionFailed: "Impossibile connettersi alla conversazione. Riprova.", retry: "Riprova",
+  messageFailed: "Non è stato possibile completare il messaggio.", assistant: "Assistente", user: "Tu",
+};
 
-export function Chat({ client, session }: ChatProps) {
-  const caltra = useCaltraRuntime({ client, sessionId: session.id });
-
-  return (
-    <AssistantRuntimeProvider runtime={caltra.runtime}>
-      <main className="chat-shell">
-        <header className="chat-header" data-success-toast-anchor>
-          <div data-success-toast-avoid>
-            <span className="eyebrow">ACTIVE SESSION</span>
-            <h1>{session.agent.name}</h1>
-          </div>
-          <div className={`connection ${caltra.connection}`} data-success-toast-avoid>
-            <span />
-            {caltra.connection}
-          </div>
-        </header>
-
-        <ThreadPrimitive.Root className="thread-root">
-          <ThreadPrimitive.Viewport className="thread-viewport">
-            <AuiIf condition={(state) => state.thread.isEmpty}>
-              <div className="thread-empty">
-                <span>LINE OPEN</span>
-                <h2>Send the first signal.</h2>
-                <p>The stream is authenticated and the durable transcript is synchronized.</p>
-              </div>
-            </AuiIf>
-
-            <ThreadPrimitive.Messages>
-              {({ message }) => (
-                <MessagePrimitive.Root className={`message ${message.role}`}>
-                  <span className="message-role">
-                    {message.role === "user" ? "YOU" : session.agent.name.toUpperCase()}
-                  </span>
-                  <div className="message-body"><MessagePrimitive.Parts /></div>
-                </MessagePrimitive.Root>
-              )}
-            </ThreadPrimitive.Messages>
-
-            <ThreadPrimitive.ViewportFooter className="thread-footer">
-              <ThreadPrimitive.ScrollToBottom className="scroll-button" aria-label="Scroll to bottom">
-                <ArrowDown size={16} />
-              </ThreadPrimitive.ScrollToBottom>
-              {caltra.error && (
-                <button className="error-banner" type="button" onClick={() => void caltra.refresh()}>
-                  <RefreshCw size={14} /> {caltra.error.message}
-                </button>
-              )}
-              <ComposerPrimitive.Root className="composer">
-                <ComposerPrimitive.Input placeholder="Transmit a message…" rows={1} />
-                <ComposerPrimitive.Send aria-label="Send message">
-                  <ArrowUp size={19} strokeWidth={2.5} />
-                </ComposerPrimitive.Send>
-              </ComposerPrimitive.Root>
-              <p className="composer-note">ENTER TO SEND · DURABLE SESSION · LIVE SSE</p>
-            </ThreadPrimitive.ViewportFooter>
-          </ThreadPrimitive.Viewport>
-        </ThreadPrimitive.Root>
-      </main>
-    </AssistantRuntimeProvider>
-  );
+/** The demo consumes the packaged chat unchanged; customization is a live prop update. */
+export function Chat({ client, session }: { client: CaltraClient; session: CaltraSession }) {
+  const [customized, setCustomized] = useState(false);
+  return <main className="chat-shell">
+    <header className="chat-header" data-success-toast-anchor>
+      <div data-success-toast-avoid><span className="eyebrow">CALTRA REACT SDK</span><h1>{session.agent.name}</h1></div>
+      <label className="demo-appearance" data-success-toast-avoid>
+        Appearance
+        <select value={customized ? "custom" : "default"} onChange={(event) => setCustomized(event.target.value === "custom")}>
+          <option value="default">Default styling</option><option value="custom">Custom theme · Italiano</option>
+        </select>
+      </label>
+    </header>
+    <CaltraChat client={client} sessionId={session.id} labels={customized ? italian : undefined}
+      style={customized ? { "--caltra-accent": "#1d4ed8", "--caltra-background": "#f8fbff", "--caltra-muted": "#e8effb", "--caltra-radius": "0.75rem" } : undefined} />
+  </main>;
 }

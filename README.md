@@ -3,7 +3,7 @@
 Open-source TypeScript clients for embedding agent-owned Caltra sessions in web applications.
 
 This repository contains the server-only `@caltra/server`, the framework-neutral browser
-`@caltra/client`, the assistant-ui adapter `@caltra/react`, and a local integration application
+`@caltra/client`, the styled chat and assistant-ui adapter `@caltra/react`, and a local integration application
 under `apps/test-app`.
 
 ## Development
@@ -87,8 +87,8 @@ create a 60-second, single-use authorization at `/api/client-authorization`; the
 are never returned by that customer-backend route or embedded in the production bundle.
 Provision a hosted agent for the configured tenant user before opening the test app.
 The test app resolves that agent, lists sessions, creates sessions beneath it, opens
-the authenticated event stream, reloads its safe transcript, and renders it with assistant-ui
-primitives.
+the authenticated event stream, reloads its safe transcript, and renders it with the packaged `CaltraChat` component. The Appearance selector switches
+between default styling and an Italian custom theme without changing the session.
 
 ## Client usage
 
@@ -111,9 +111,21 @@ const created = await agent.sessions.create();
 const events = await client.openSessionEvents(created.id);
 ```
 
-React applications can pass a client and selected session to `useCaltraRuntime` from
-`@caltra/react`, then provide the returned agent to assistant-ui's `AssistantAgentProvider`.
-The React package intentionally exports no chat UI components.
+React applications can use the styled chat directly (new in the unreleased 0.9.0):
+
+```tsx
+import { CaltraChat } from "@caltra/react/ui";
+import "@caltra/react/styles.css";
+
+<div style={{ height: "100dvh" }}>
+  <CaltraChat client={client} sessionId={session.id} />
+</div>
+```
+
+The SDK owns loading, confirmed-empty welcome, transcript, Markdown, composer and reconnect
+presentation. Customize labels, CSS variables or component slots. Keep `client` stable for the
+same authenticated identity. The headless `useCaltraRuntime` export remains available.
+See the [React package guide](packages/react/README.md) for both integration paths.
 
 ## Customer backend authorization
 

@@ -18,7 +18,10 @@ export interface UseCaltraRuntimeOptions {
 export interface UseCaltraRuntimeResult {
   connection: CaltraConnectionState;
   error: Error | null;
+  historyLoaded: boolean;
   refresh: () => Promise<void>;
+  /** Reconnects after a terminal failure while preserving this session's loaded history. */
+  reconnect: () => Promise<void>;
   runtime: AssistantRuntime;
 }
 
@@ -62,6 +65,7 @@ export function useCaltraRuntime(options: UseCaltraRuntimeOptions): UseCaltraRun
   // IDs cannot survive as phantom edit/regeneration branches in assistant-ui.
   const messageRepository = useMemo(() => ExportedMessageRepository.fromArray(messages), [messages]);
   const runtime = useExternalStoreRuntime<ThreadMessage>({
+    isLoading: !snapshot.historyLoaded,
     isRunning: snapshot.isRunning,
     isSendDisabled: snapshot.connection !== "connected",
     messageRepository,
@@ -71,7 +75,9 @@ export function useCaltraRuntime(options: UseCaltraRuntimeOptions): UseCaltraRun
   return {
     connection: snapshot.connection,
     error: snapshot.error,
+    historyLoaded: snapshot.historyLoaded,
     refresh: async () => await store.refresh(),
+    reconnect: async () => await store.reconnect(),
     runtime,
   };
 }

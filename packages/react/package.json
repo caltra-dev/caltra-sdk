@@ -1,9 +1,11 @@
 {
   "name": "@caltra/react",
-  "version": "0.8.2",
-  "description": "assistant-ui runtime adapter for Caltra sessions",
+  "version": "0.9.0",
+  "description": "Styled React chat and assistant-ui runtime adapter for Caltra sessions",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "**/*.css"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/caltra-dev/caltra-sdk.git",
@@ -20,10 +22,15 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./ui": {
+      "types": "./dist/ui/index.d.ts",
+      "import": "./dist/ui/index.js"
+    },
+    "./styles.css": "./dist/ui/styles.css"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && cp src/ui/styles.css dist/ui/styles.css",
     "prebuild": "npm run build --workspace=@caltra/client",
     "pretest": "npm run build --workspace=@caltra/client",
     "pretypecheck": "npm run build --workspace=@caltra/client",
@@ -31,7 +38,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@caltra/client": "0.8.2"
+    "@caltra/client": "0.8.2",
+    "@assistant-ui/react-markdown": "0.14.12",
+    "remark-gfm": "4.0.1"
   },
   "peerDependencies": {
     "@assistant-ui/react": "^0.15.16",

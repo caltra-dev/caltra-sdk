@@ -9,6 +9,8 @@ import { SessionList } from "./components/session_list.js";
 import { useSuccessToast } from "./components/success_toast.js";
 import { TestAppAuthorizationCodeProvider } from "./authorization_code_provider.js";
 
+import { TestAppPreviewFetch } from "./preview_fetch.js";
+
 declare const __CALTRA_API_URL__: string;
 
 export function App() {
@@ -17,6 +19,7 @@ export function App() {
     const authorizationCodeProvider = new TestAppAuthorizationCodeProvider();
     return new CaltraClient({
       apiUrl: __CALTRA_API_URL__,
+      fetch: TestAppPreviewFetch.fetch,
       authorizationCodeProvider: async () => await authorizationCodeProvider.create(),
     });
   }, []);
@@ -37,12 +40,21 @@ export function App() {
         setClient(sdkClient);
         setAgent(hostedAgent);
         setSessions(sessionPage.data);
-        setSelected(sessionPage.data[0]);
+        const requested = new URLSearchParams(window.location.search).get("session");
+        // Resolve deep links only within the sessions authorized for this client.
+        setSelected(sessionPage.data.find((session) => session.id === requested) ?? sessionPage.data[0]);
       })
       .catch((reason: unknown) => setError(
         reason instanceof Error ? reason : new Error("SDK initialization failed."),
       ));
   }, [sdkClient]);
+
+  const selectSession = (session: CaltraSession) => {
+    setSelected(session);
+    const url = new URL(window.location.href);
+    url.searchParams.set("session", session.id);
+    window.history.replaceState(null, "", url);
+  };
 
   const createSession = async () => {
     if (!client || !agent) return;
@@ -51,7 +63,7 @@ export function App() {
     try {
       const session = await client.agents.sessions(agent.id).create();
       setSessions((current) => [session, ...current.filter((item) => item.id !== session.id)]);
-      setSelected(session);
+      selectSession(session);
       success({
         message: `Session opened for ${session.agent.name}.`,
         operationId: `create-session:${session.id}`,
@@ -89,7 +101,7 @@ export function App() {
         agent={agent}
         creating={creating}
         onCreate={createSession}
-        onSelect={setSelected}
+        onSelect={selectSession}
         selectedSessionId={selected?.id}
         sessions={sessions}
       />
