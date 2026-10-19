@@ -173,6 +173,12 @@ export class CaltraSessionStore {
       await this.refreshMetadata();
       return;
     }
+    if (event.event === "tool.started") {
+      const tool = { id: event.data.tool_call_id, name: event.data.tool_name, arguments: {}, status: "running" as const };
+      this.update({ isRunning: true, messages: this.snapshot.messages.map(message => message.id === event.data.message_id
+        ? { ...message, tool_calls: [...(message.tool_calls ?? []).filter(call => call.id !== tool.id), tool] } : message) });
+      return;
+    }
     if (event.event === "message.started") {
       if (!this.snapshot.messages.some((message) => message.id === event.data.message_id)) {
         this.update({

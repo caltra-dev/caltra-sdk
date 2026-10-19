@@ -10,7 +10,24 @@ interface ApiHarness {
   releaseHistory: () => void;
 }
 
-async function installApiHarness(page: Page, delayedHistory = false, historyCount = 1): Promise<ApiHarness> {
+async function installApiHarness(page: Page, delayedHistory = false, historyCount = 1, keepEventsOpen = false, toolCalls: object[] = []): Promise<ApiHarness> {
+  if (keepEventsOpen) {
+    // A finite route.fulfill body closes SSE and intentionally triggers runtime recovery.
+    // Keep this transport open so appearance tests measure only appearance changes.
+    await page.addInitScript(() => {
+      const fetch = window.fetch.bind(window);
+      window.fetch = (input, init) => {
+        const url = new URL(input instanceof Request ? input.url : String(input), location.href);
+        if (!url.pathname.endsWith("/events")) return fetch(input, init);
+        if (init?.signal?.aborted) return Promise.reject(new DOMException("Aborted", "AbortError"));
+        const body = new ReadableStream<Uint8Array>({ start(controller) {
+          controller.enqueue(new TextEncoder().encode(": connected\n\n"));
+          init?.signal?.addEventListener("abort", () => controller.close(), { once: true });
+        } });
+        return Promise.resolve(new Response(body, { headers: { "Content-Type": "text/event-stream" } }));
+      };
+    });
+  }
   let releaseHistory = () => undefined;
   const historyGate = delayedHistory ? new Promise<void>((resolve) => { releaseHistory = resolve; }) : Promise.resolve();
   let releaseCreate = () => undefined;
@@ -67,7 +84,7 @@ async function installApiHarness(page: Page, delayedHistory = false, historyCoun
 
     if (request.method() === "GET" && url.pathname.endsWith("/messages")) {
       await historyGate;
-      await json(route, { data: delayedHistory ? Array.from({ length: historyCount }, (_, index) => ({ id: `5da952ec-2d4b-4fb5-9cc9-${String(index).padStart(12, "0")}`, role: "assistant", status: "completed", text: "Saved **conversation**", created_at: "2026-10-19T12:00:00.000Z" })) : [], next_cursor: null });
+      await json(route, { data: delayedHistory ? Array.from({ length: historyCount }, (_, index) => ({ id: `5da952ec-2d4b-4fb5-9cc9-${String(index).padStart(12, "0")}`, role: "assistant", status: "completed", text: "Saved **conversation**", tool_calls: toolCalls, created_at: "2026-10-19T12:00:00.000Z" })) : [], next_cursor: null });
       return;
     }
 
@@ -181,6 +198,7 @@ for (const viewport of [
   { width: 430, height: 932 },
   { width: 768, height: 1024 },
   { width: 1440, height: 900 },
+  { width: 1920, height: 1080 },
 ]) {
   test(`places the toast safely at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
@@ -216,7 +234,7 @@ for (const viewport of [
       expect(overlaps).toBe(false);
     }
 
-    if (viewport.width === 1440) {
+    if (viewport.width === 1920) {
       await expect(region).toHaveAttribute("data-placement", "header");
       await page.locator("[data-success-toast-avoid]").evaluateAll((elements) => {
         for (const element of elements) {
@@ -253,7 +271,8 @@ for (const viewport of [{ width: 360, height: 800 }, { width: 1280, height: 900 
     const input = page.getByRole("textbox", { name: "Message", exact: true });
     await input.fill("Keep this draft");
     await input.press("Shift+Enter");
-    await page.getByLabel("Appearance").selectOption("custom");
+    await page.getByLabel("Theme", { exact: true }).selectOption("brand");
+    await page.getByLabel("Language", { exact: true }).selectOption("it");
     await expect(page.getByRole("textbox", { name: "Messaggio", exact: true })).toHaveValue("Keep this draft\n");
     await expect(page.locator(".caltra-chat__markdown strong")).toHaveText("conversation");
     const composer = await page.locator(".caltra-chat__composer").boundingBox();
@@ -279,3 +298,101 @@ for (const viewport of [{ width: 360, height: 800 }, { width: 1280, height: 900 
     await expect(page.getByRole("textbox", { name: "Message", exact: true })).toBeInViewport();
   });
 }
+
+
+for (const viewport of [{ width: 360, height: 800 }, { width: 1280, height: 900 }]) {
+  test(`switches palettes and modes without resetting history, draft or scroll at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.emulateMedia({ colorScheme: "dark" });
+    const api = await installApiHarness(page, true, 40, true);
+    let historyRequests = 0;
+    page.on("request", request => { if (new URL(request.url()).pathname.endsWith("/messages")) historyRequests++; });
+    await page.goto("/");
+    await startCreate(page);
+    api.releaseCreate();
+    const chat = page.locator(".caltra-chat");
+    await expect(chat).toHaveCSS("background-color", "rgb(9, 9, 11)");
+    await expect(chat).toHaveCSS("color-scheme", "dark");
+    api.releaseHistory();
+    await expect(page.locator(".caltra-chat__message")).toHaveCount(40);
+    await page.getByRole("textbox", { name: "Message", exact: true }).fill("Keep this draft");
+    const viewportElement = page.locator(".caltra-chat__viewport");
+    await viewportElement.evaluate(el => { el.scrollTop = 120; });
+    const originalScroll = await viewportElement.evaluate(el => el.scrollTop);
+    // Compare with the settled initial load; appearance must add no history requests.
+    const historyBeforeSwitching = historyRequests;
+    expect(historyBeforeSwitching).toBeGreaterThan(0);
+
+    await page.getByLabel("Color mode", { exact: true }).selectOption("light");
+    await expect(chat).toHaveCSS("background-color", "rgb(255, 255, 255)");
+    await expect(chat).toHaveCSS("color-scheme", "light");
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.getByLabel("Color mode", { exact: true }).selectOption("dark");
+    await expect(chat).toHaveCSS("background-color", "rgb(9, 9, 11)");
+    await page.getByLabel("Color mode", { exact: true }).selectOption("system");
+    await expect(chat).toHaveCSS("background-color", "rgb(255, 255, 255)");
+    await page.emulateMedia({ colorScheme: "dark" });
+    await expect(chat).toHaveCSS("background-color", "rgb(9, 9, 11)");
+
+    await page.getByLabel("Theme", { exact: true }).selectOption("ocean");
+    await expect(chat).toHaveCSS("background-color", "rgb(15, 23, 42)");
+    await page.getByLabel("Theme", { exact: true }).selectOption("brand");
+    await expect(chat).toHaveCSS("background-color", "rgb(28, 20, 16)");
+    await page.getByLabel("Color mode", { exact: true }).selectOption("light");
+    await expect(chat).toHaveCSS("background-color", "rgb(255, 250, 245)");
+    await expect(page.locator(".caltra-chat__composer")).toHaveCSS("border-radius", "12px");
+    await expect(page.locator(".session-rail")).toHaveCSS("background-color", "rgba(24, 24, 17, 0.96)");
+    await expect(page.getByRole("textbox", { name: "Message", exact: true })).toHaveValue("Keep this draft");
+    await expect(page.locator(".caltra-chat__message")).toHaveCount(40);
+    expect(historyRequests).toBe(historyBeforeSwitching);
+    expect(await viewportElement.evaluate(el => el.scrollTop)).toBeCloseTo(originalScroll, 0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width);
+    await expect(page.getByLabel("Color mode", { exact: true })).toBeInViewport();
+    await page.screenshot({ path: `test-results/theme-controls-${viewport.width}.png` });
+  });
+}
+
+
+test("copy shows a checkmark for three seconds, resets on repeated copy, and copies text", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  const api = await installApiHarness(page, true, 1, true);
+  await page.goto("/"); await startCreate(page); api.releaseCreate(); api.releaseHistory();
+  const copy = page.locator(".caltra-chat__copy");
+  await copy.click();
+  await expect(copy).toHaveAttribute("aria-label", "Copied");
+  await expect(copy.locator("svg rect")).toHaveCount(0);
+  await expect(copy.locator("svg path")).toHaveAttribute("d", "m20 6-11 11-5-5");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("Saved **conversation**");
+  await page.waitForTimeout(1800);
+  await expect(copy).toHaveAttribute("data-copied", "true");
+  await copy.click();
+  await page.waitForTimeout(1800);
+  await expect(copy).toHaveAttribute("data-copied", "true");
+  await expect(copy).toHaveAttribute("aria-label", "Copy", { timeout: 2500 });
+  await expect(copy.locator("svg rect")).toHaveCount(1);
+});
+
+
+for (const width of [360, 1280]) test(`tool cards expose arguments/results/errors without horizontal overflow at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  const api = await installApiHarness(page, true, 1, true, [
+    { id: "echo", name: "demo.echo", arguments: { text: "hello" }, status: "completed", result: { text: "hello" } },
+    { id: "fail", name: "demo.fail", arguments: {}, status: "failed", result: { message: "Intentional demo failure", detail: "x".repeat(500) } },
+    { id: "running", name: "records.read", arguments: { recordId: "demo" }, status: "running" },
+  ]);
+  await page.goto("/"); await startCreate(page); api.releaseCreate(); api.releaseHistory();
+  const cards = page.locator(".caltra-chat__tool");
+  await expect(cards).toHaveCount(3);
+  await expect(cards.nth(0)).toHaveAttribute("data-state", "completed");
+  await expect(cards.nth(1)).toHaveAttribute("data-state", "failed");
+  await expect(cards.nth(2)).toHaveAttribute("data-state", "running");
+  await cards.nth(1).locator("summary").focus(); await page.keyboard.press("Enter");
+  await expect(cards.nth(1)).toHaveAttribute("open", "");
+  await expect(cards.nth(1).locator("pre").last()).toContainText("Intentional demo failure");
+  for (const mode of ["dark", "light"]) {
+    await page.getByLabel("Color mode", { exact: true }).selectOption(mode);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await expect(page.getByRole("textbox", { name: "Message", exact: true })).toBeInViewport();
+  }
+  await page.screenshot({ path: `test-results/tool-cards-${width}.png` });
+});

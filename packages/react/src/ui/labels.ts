@@ -17,6 +17,8 @@ export interface CaltraChatLabels {
   messageFailed: string;
   assistant: string;
   user: string;
+  toolRunning: string; toolCompleted: string; toolFailed: string;
+  toolArguments: string; toolResult: string; toolError: string;
 }
 
 export const defaultCaltraChatLabels: CaltraChatLabels = {
@@ -37,4 +39,6 @@ export const defaultCaltraChatLabels: CaltraChatLabels = {
   messageFailed: "This message could not be completed.",
   assistant: "Assistant",
   user: "You",
+  toolRunning: "Running…", toolCompleted: "Completed", toolFailed: "Failed",
+  toolArguments: "Arguments", toolResult: "Result", toolError: "Error",
 };

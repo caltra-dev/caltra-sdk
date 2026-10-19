@@ -8,7 +8,7 @@ The styled entry point is new in **0.9.0 (not published yet)**.
 After 0.9.0 is published:
 
 ```bash
-npm install @caltra/client@0.8.2 @caltra/react@0.9.0 @assistant-ui/react@0.15.16 react react-dom
+npm install @caltra/client@0.8.3 @caltra/react@0.9.0 @assistant-ui/react@0.15.16 react react-dom
 ```
 
 ```tsx
@@ -32,6 +32,45 @@ History is unknown until the first successful response. Only confirmed empty his
 the welcome. Recovery retains loaded messages; changing the client or session resets the chat.
 Keep the same client instance for the same authenticated identity. Keep the component mounted
 and use `hidden` when collapsing a panel to retain its draft and connection.
+
+## Themes and color mode
+
+`CaltraChat` defaults to `theme="assistant-ui"` and `colorMode="system"`. The assistant-ui
+preset uses the neutral light/dark palette and text-chat composition of assistant-ui's
+standard Thread, adapted to Caltra's supported actions and scoped CSS. `ocean` is a second
+Caltra preset with blue accents. Neither requires a stylesheet import.
+
+```tsx
+<CaltraChat client={client} sessionId={sessionId} theme="ocean" colorMode="dark" />
+```
+
+`colorMode` accepts `light`, `dark`, or `system`. System follows the browser's
+`prefers-color-scheme`, including changes while mounted. CSS resolves the palette before
+hydration; switching modes or themes does not reconnect, reload history, or clear a draft.
+Theme scope is one chat, so multiple chats can use different appearances on the same page.
+The surrounding application chooses its own color mode independently.
+
+Create reusable custom themes from typed tokens:
+
+```tsx
+import { createCaltraTheme, caltraThemes } from "@caltra/react/themes";
+
+const brand = createCaltraTheme({
+  name: "brand",
+  radius: "0.75rem",
+  light: { accent: "#9a3412", accentForeground: "#ffffff" },
+  dark: { accent: "#fdba74", accentForeground: "#431407" },
+}, caltraThemes["assistant-ui"]);
+
+<CaltraChat client={client} sessionId={sessionId} theme={brand} colorMode="system" />
+```
+
+Omitted tokens inherit from the chosen base; defaults are immutable. Colors include
+`background`, `foreground`, `muted`, `mutedForeground`, `accent`, `accentForeground`, `border`,
+and `error`. `fontFamily`, `radius`, and `contentWidth` apply to both modes. The themes entry
+contains only data/types/helpers and does not import CSS. Existing `--caltra-*` CSS overrides
+still take precedence; a fixed override applies in both modes, so use theme tokens for
+mode-specific branding. `labels` and component slots remain independent of appearance.
 
 ## Customize
 
@@ -126,6 +165,22 @@ rules with your own CSS class. No `!important` is needed:
 Keep a visible scroll affordance where needed; `none` hides the scrollbar.
 `--caltra-scrollbar-size` controls width/height only in older WebKit browsers
 without the standard properties. The theme does not alter overflow, layout,
-scroll anchoring, keyboard navigation or touch input. Use `scrollbar.css` together
-with your own components or an optional packaged UI; it has no React dependency
+scroll anchoring, keyboard navigation or touch input. The styled UI loads the scrollbar rules automatically. Import `scrollbar.css` explicitly
+when using your own components; it has no React dependency
 at runtime.
+
+## Tool calls
+
+The styled chat renders server-executed tools as collapsible cards with running, completed,
+and failed states. Open a card to inspect its arguments and result. Opening details never
+executes or retries a tool. Both light and dark palettes apply to these cards.
+
+Replace the default card with `components={{ Tool: MyToolRenderer }}`. This slot receives
+assistant-ui `ToolCallMessagePartProps` (including `toolName`, `args`, `result`, `isError`, and
+`status`). Use stable component references. The default is also exported as `CaltraTool`.
+Tool labels are included in `labels` for localization.
+
+Client 0.8.3 opts in to structured tool history and tool-start events. Deploy the matching
+Caltra API support before publishing this client version; older clients keep their existing
+text-only wire format. The API exposes public tool arguments/results, never raw model metadata
+or reasoning. A successful copy uses assistant-ui's standard three-second checkmark feedback.

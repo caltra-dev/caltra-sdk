@@ -157,3 +157,27 @@ describe("CaltraSessionStore", () => {
     await store.stop();
   });
 });
+
+
+it("keeps a live tool identity until durable completion replaces it with its result", async () => {
+  const message = { id: assistantMessageId, role: "assistant", status: "completed", text: "", created_at: "2026-10-19T12:00:00Z" };
+  let finish!: () => void;
+  const gate = new Promise<void>(resolve => { finish = resolve; });
+  const ids = { message_id: assistantMessageId, session_id: sessionId, turn_id: turnId };
+  const client = {
+    getSessionById: vi.fn(async () => ({ id: sessionId })),
+    openSessionEvents: vi.fn(async () => ({ async *[Symbol.asyncIterator]() {
+      yield { event: "message.started", id: "start", data: ids };
+      yield { event: "tool.started", id: "tool", data: { ...ids, tool_call_id: "call-1", tool_name: "demo.echo" } };
+      await gate;
+      yield { event: "message.completed", id: "end", data: ids };
+      await new Promise(() => undefined);
+    }, close: async () => {} })),
+    listSessionMessages: vi.fn().mockResolvedValueOnce({ data: [] }).mockResolvedValue({ data: [{ ...message, tool_calls: [{ id: "call-1", name: "demo.echo", arguments: { text: "hello" }, status: "completed", result: { text: "hello" } }] }] }),
+  };
+  const store = new CaltraSessionStore(client as never, sessionId); await store.start();
+  await vi.waitFor(() => expect(store.getSnapshot().messages[0]?.tool_calls?.[0]?.status).toBe("running"));
+  finish();
+  await vi.waitFor(() => expect(store.getSnapshot().messages[0]?.tool_calls?.[0]).toMatchObject({ status: "completed", result: { text: "hello" } }));
+  expect(store.getSnapshot().messages).toHaveLength(1); await store.stop();
+});

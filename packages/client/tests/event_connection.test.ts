@@ -24,6 +24,7 @@ describe("CaltraSessionEventConnection", () => {
         session_id: sessionId,
         turn_id: turnId,
       })}\n\n`,
+      `id: tool:1\nevent: tool.started\ndata: ${JSON.stringify({ message_id: messageId, session_id: sessionId, turn_id: turnId, tool_call_id: "call-1", tool_name: "execute_action" })}\n\n`,
       `id: metadata:1\nevent: session.updated\ndata: ${JSON.stringify({
         session_id: sessionId,
       })}\n\n`,
@@ -64,9 +65,11 @@ describe("CaltraSessionEventConnection", () => {
       "message.started",
       "message.delta",
       "message.completed",
+      "tool.started",
       "session.updated",
     ]);
     expect(events[1]).toMatchObject({ data: { delta: "Hello" }, id: "stream:0" });
-    expect(events[3]).toMatchObject({ data: { session_id: sessionId }, id: "metadata:1" });
+    expect(events[3]).toMatchObject({ data: { tool_call_id: "call-1", tool_name: "execute_action" } });
+    expect(events[4]).toMatchObject({ data: { session_id: sessionId }, id: "metadata:1" });
   });
 });

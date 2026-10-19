@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { CaltraApiError } from "@caltra/client";
+import { createCaltraTheme } from "../src/themes/index.js";
 import { CaltraChat } from "../src/ui/chat.js";
 
 beforeAll(() => {
@@ -21,9 +22,9 @@ function fixture() {
     getSessionById: vi.fn(async (id: string) => ({ id })),
     sendMessage: vi.fn(async () => ({ message_id: "sent", turn_id: "turn" })),
   };
-  return { client, resolve: async (text?: string) => {
+  return { client, resolve: async (text?: string, tool_calls?: unknown[]) => {
     await waitFor(() => expect(releases.length).toBeGreaterThan(0));
-    await act(async () => { releases.shift()!({ data: text ? [{ id: text, role: "assistant", text, status: "completed", created_at: new Date().toISOString() }] : [], next_cursor: null }); });
+    await act(async () => { releases.shift()!({ data: text ? [{ id: text, role: "assistant", text, tool_calls, status: "completed", created_at: new Date().toISOString() }] : [], next_cursor: null }); });
   } };
 }
 
@@ -47,8 +48,8 @@ describe("CaltraChat", () => {
     const rendered = render(<CaltraChat client={f.client as never} sessionId="session" />);
     await f.resolve();
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "Keep this draft" } });
-    rendered.rerender(<CaltraChat client={f.client as never} sessionId="session" hidden labels={{ welcomeTitle: "Ciao" }} style={{ "--caltra-accent": "blue" }} />);
-    rendered.rerender(<CaltraChat client={f.client as never} sessionId="session" labels={{ welcomeTitle: "Ciao" }} />);
+    rendered.rerender(<CaltraChat client={f.client as never} sessionId="session" hidden theme="ocean" colorMode="dark" labels={{ welcomeTitle: "Ciao" }} style={{ "--caltra-accent": "blue" }} />);
+    rendered.rerender(<CaltraChat client={f.client as never} sessionId="session" theme="assistant-ui" colorMode="system" labels={{ welcomeTitle: "Ciao" }} />);
     expect(screen.getByText("Ciao")).toBeTruthy();
     expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("Keep this draft");
     expect(f.client.openSessionEvents).toHaveBeenCalledOnce();
@@ -76,4 +77,43 @@ describe("CaltraChat", () => {
     await f.resolve("Recovered history");
     expect(screen.getByText("Recovered history")).toBeTruthy();
   });
+});
+
+
+it("keeps independent themes scoped to each chat and lets explicit CSS overrides win", async () => {
+  const first = fixture();
+  const second = fixture();
+  const branded = createCaltraTheme({ name: "brand", dark: { background: "#123456" } });
+  const view = render(<>
+    <CaltraChat client={first.client as never} sessionId="first" theme={branded} colorMode="dark" style={{ "--caltra-background": "#abcdef" }} />
+    <CaltraChat client={second.client as never} sessionId="second" colorMode="light" />
+  </>);
+  await first.resolve("First");
+  await second.resolve("Second");
+  const roots = view.container.querySelectorAll<HTMLElement>(".caltra-chat");
+  expect(roots[0]!.style.getPropertyValue("--caltra-theme-dark-background")).toBe("#123456");
+  expect(roots[0]!.style.getPropertyValue("--caltra-background")).toBe("#abcdef");
+  expect(roots[1]!.style.getPropertyValue("--caltra-theme-dark-background")).toBe("#09090b");
+  expect(roots[1]!.style.getPropertyValue("--caltra-background")).toBe("");
+  expect(roots[0]!.getAttribute("data-color-mode")).toBe("dark");
+  expect(roots[1]!.getAttribute("data-color-mode")).toBe("light");
+  expect(document.documentElement.getAttribute("style")).toBeNull();
+});
+
+
+it("renders inspectable tool progress, results and failures without executing from the UI", async () => {
+  const f = fixture();
+  render(<CaltraChat client={f.client as never} sessionId="tools" />);
+  await f.resolve("Tool results", [
+    { id: "one", name: "demo.echo", arguments: { text: "hello" }, status: "completed", result: { text: "hello" } },
+    { id: "two", name: "demo.fail", arguments: {}, status: "failed", result: { message: "Intentional failure" } },
+    { id: "three", name: "records.read", arguments: {}, status: "running" },
+  ]);
+  expect(screen.getByText("demo.echo")).toBeTruthy();
+  expect(screen.getByText("Completed")).toBeTruthy();
+  expect(screen.getByText("Failed")).toBeTruthy();
+  expect(screen.getByText("Running…")).toBeTruthy();
+  fireEvent.click(screen.getByText("demo.fail"));
+  expect(screen.getByText(/Intentional failure/)).toBeTruthy();
+  expect(f.client.sendMessage).not.toHaveBeenCalled();
 });

@@ -49,6 +49,8 @@ const MessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
   status: z.enum(["streaming", "completed", "failed", "cancelled"]),
   text: z.string(),
+  tool_calls: z.array(z.object({ id: z.string(), name: z.string(), arguments: z.record(z.string(), z.unknown()),
+    status: z.enum(["running", "completed", "failed", "cancelled"]), result: z.unknown().optional() }).strict()).optional(),
 }).strict();
 
 const SubmissionSchema = z.object({
@@ -147,7 +149,7 @@ export class CaltraClient {
     input: CaltraPageInput = {},
   ): Promise<CaltraPage<CaltraSessionMessage>> {
     return await this.getPage(
-      `/sessions/${encodeURIComponent(sessionId)}/messages`,
+      `/sessions/${encodeURIComponent(sessionId)}/messages?include_tools=true`,
       input,
       PageSchema(MessageSchema),
     );
@@ -164,7 +166,7 @@ export class CaltraClient {
     options: { signal?: AbortSignal } = {},
   ): Promise<CaltraSessionEventConnection> {
     const response = await this.fetchImplementation(this.url(
-      `/sessions/${encodeURIComponent(sessionId)}/events?include_metadata=true`,
+      `/sessions/${encodeURIComponent(sessionId)}/events?include_metadata=true&include_tools=true`,
     ), {
       headers: await this.headers({ accept: "text/event-stream" }),
       method: "GET",

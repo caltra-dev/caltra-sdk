@@ -49,8 +49,9 @@ The supported options are `--api-key`, `--caltra-url`, `--workspace-id`, and `--
 ## Packaged chat preview
 
 The demo imports `CaltraChat` from `@caltra/react/ui`, which loads its CSS automatically. Default styling uses the
-SDK's neutral theme. The Appearance selector demonstrates an Italian translation and theme
-variables while preserving the session and draft. Selecting a session writes `?session=<id>`
+SDK's assistant-ui preset. Independent Theme, Color mode (System/Light/Dark), and Language
+selectors demonstrate both presets, a custom brand, and Italian labels while preserving
+the session, transcript, scroll position, and draft. Selecting a session writes `?session=<id>`
 so reloading that URL exercises loading the saved transcript directly; IDs are resolved only
 within the authorized session list.
 
@@ -69,5 +70,12 @@ The Caltra development stack now seeds a `Local deterministic model` and starts 
 provider. Try `/help`, `/echo Hello`, `/capabilities records`, `/tool <capability-id>`, and
 `/call <versioned-action-id> {"recordId":"demo"}`. This exercises real hosted execution,
 authorization, streaming, and history without LLM tokens. Tool calls are real; the default
-records backend contains isolated development data and grants only `records.read`. This is
+records backend contains isolated development data and grants `records.read`, `demo.echo`, and `demo.fail`. This is
 a deterministic test provider, not evidence of live AI generation.
+
+Use `/capabilities` or `/capabilities ""` to list the authorized demo tools. Load a returned
+capability with `/tool <capability-id>`, then copy its current versioned action ID into
+`/call <action-id> {"text":"Hello"}` for `demo.echo` or `/call <action-id> {}` for `demo.fail`.
+Echo waits 1.5 seconds to make progress visible; failure intentionally returns an error.
+The seed is idempotent, grants demo tools to the development workspace audience, and keeps
+`records.update` ungranted. Do not hard-code action IDs: manifest publication versions them.

@@ -86,6 +86,9 @@ export class CaltraSessionEventConnection implements AsyncIterable<CaltraSession
     if (event === "message.started" || event === "message.completed") {
       return { data: EventDataSchema.parse(value), event, id: message.id ?? "" };
     }
+    if (event === "tool.started") {
+      return { data: EventDataSchema.extend({ tool_call_id: z.string().min(1), tool_name: z.string().min(1) }).parse(value), event, id: message.id ?? "" };
+    }
     if (event === "session.updated") {
       return { data: SessionUpdatedDataSchema.parse(value), event, id: message.id ?? "" };
     }

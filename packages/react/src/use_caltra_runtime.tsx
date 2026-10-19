@@ -48,7 +48,14 @@ export function useCaltraRuntime(options: UseCaltraRuntimeOptions): UseCaltraRun
   }, [store]);
 
   const messages = useMemo<ThreadMessageLike[]>(() => snapshot.messages.map((message) => ({
-    content: [{ type: "text", text: message.text }],
+    content: [
+      ...(message.text ? [{ type: "text" as const, text: message.text }] : []),
+      ...(message.tool_calls ?? []).map(tool => ({ type: "tool-call" as const, toolCallId: tool.id, toolName: tool.name,
+        args: tool.arguments as import("@assistant-ui/react").ToolCallMessagePart["args"], argsText: JSON.stringify(tool.arguments),
+        ...(tool.status === "running" ? {} : { result: tool.result ?? null }),
+        isError: tool.status === "failed" || tool.status === "cancelled",
+      })),
+    ],
     createdAt: new Date(message.created_at),
     id: message.id,
     role: message.role,

@@ -54,12 +54,18 @@ export interface CaltraSessionCreateIfMissing extends CaltraSessionLookup {
   createIfMissing: { agentIdentityExternalId: string; autoName?: boolean };
 }
 
+export interface CaltraToolCall {
+  id: string; name: string; arguments: Record<string, unknown>;
+  status: "running" | "completed" | "failed" | "cancelled"; result?: unknown;
+}
+
 export interface CaltraSessionMessage {
   created_at: string;
   id: string;
   role: "user" | "assistant";
   status: "streaming" | "completed" | "failed" | "cancelled";
   text: string;
+  tool_calls?: CaltraToolCall[];
 }
 
 interface CaltraSessionEventData {
@@ -92,7 +98,13 @@ export interface CaltraSessionUpdatedEvent {
   id: string;
 }
 
+export interface CaltraToolStartedEvent {
+  event: "tool.started"; id: string;
+  data: CaltraSessionEventData & { tool_call_id: string; tool_name: string };
+}
+
 export type CaltraSessionEvent =
+  | CaltraToolStartedEvent
   | CaltraMessageStartedEvent
   | CaltraMessageDeltaEvent
   | CaltraMessageCompletedEvent

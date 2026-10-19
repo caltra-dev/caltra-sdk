@@ -17,6 +17,8 @@ export type {
   CaltraSessionCreateIfMissing,
   CaltraSessionEvent,
   CaltraSessionMessage,
+  CaltraToolCall,
+  CaltraToolStartedEvent,
   CaltraSessionLookup,
   CaltraTokenConfiguration,
 } from "./types.js";
