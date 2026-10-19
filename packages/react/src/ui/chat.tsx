@@ -94,6 +94,7 @@ export function CaltraHistoryLoading({ labels }: CaltraChatSlotProps) {
 
 export function CaltraMessage({ labels }: CaltraChatSlotProps) {
   const role = useAuiState((state) => state.message.role);
+  const isCopied = useAuiState((state) => state.message.isCopied);
   const emptyCompleted = useAuiState((state) => state.message.role === "assistant"
     && state.message.status?.type === "complete"
     && !state.message.content.some((part) => part.type !== "text" || part.text !== ""));
@@ -108,9 +109,13 @@ export function CaltraMessage({ labels }: CaltraChatSlotProps) {
       </AuiIf>
     </div>
     {role === "assistant" && <ActionBarPrimitive.Root className="caltra-chat__actions" hideWhenRunning>
-      <ActionBarPrimitive.Copy className="caltra-chat__copy" aria-label={labels.copy}>
-        <AuiIf condition={(state) => !state.message.isCopied}>{labels.copy}</AuiIf>
-        <AuiIf condition={(state) => state.message.isCopied}>{labels.copied}</AuiIf>
+      <ActionBarPrimitive.Copy className="caltra-chat__copy" aria-label={isCopied ? labels.copied : labels.copy} title={isCopied ? labels.copied : labels.copy}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+          {isCopied ? <path d="m9 12 2 2 4-4" /> : <>
+            <rect width="14" height="14" x="8" y="8" rx="2" />
+            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+          </>}
+        </svg>
       </ActionBarPrimitive.Copy>
     </ActionBarPrimitive.Root>}
   </MessagePrimitive.Root>;

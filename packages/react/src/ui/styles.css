@@ -42,7 +42,7 @@
 .caltra-chat__markdown a { color: var(--caltra-accent, #18181b); text-decoration: underline; text-underline-offset: 3px; }
 .caltra-chat__markdown img { max-width: 100%; }
 .caltra-chat__actions { margin-top: .25rem; }
-.caltra-chat__copy { background: transparent; border: 0; border-radius: .5rem; color: var(--caltra-muted-foreground, #71717a); padding: .35rem .5rem; min-height: 44px; font-size: .8rem !important; }
+.caltra-chat__copy { display: inline-grid; place-items: center; background: transparent; border: 0; border-radius: .5rem; color: var(--caltra-muted-foreground, #71717a); padding: 0; width: 44px; height: 44px; }
 .caltra-chat__copy:hover { background: var(--caltra-muted, #f4f4f5); }
 .caltra-chat__footer { position: sticky; bottom: 0; margin-top: auto; padding: 1.5rem 0 max(1rem, env(safe-area-inset-bottom)); background: var(--caltra-background, #fff); }
 .caltra-chat__composer { display: flex; align-items: flex-end; gap: .5rem; padding: .5rem; border: 1px solid var(--caltra-border, #e4e4e7); border-radius: var(--caltra-radius, 1.25rem); background: var(--caltra-background, #fff); box-shadow: 0 2px 8px #00000005; }

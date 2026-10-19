@@ -22,7 +22,7 @@ export function Assistant({ client, sessionId }: { client: CaltraClient; session
 ```
 
 No Tailwind, shadcn setup, copied component source, or host CSS reset is required. The defaults
-include a welcome, loading skeleton, Markdown transcript, copy action, scroll-to-bottom button,
+include a welcome, loading skeleton, Markdown transcript, copy icon with checkmark feedback and localized accessible labels/tooltips, scroll-to-bottom button,
 text composer, connection recovery and retry. Enter sends; Shift+Enter inserts a newline.
 Use `submitMode="ctrlEnter"` or `"none"` to change keyboard submission.
 
