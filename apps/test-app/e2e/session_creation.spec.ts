@@ -373,7 +373,7 @@ test("copy shows a checkmark for three seconds, resets on repeated copy, and cop
 });
 
 
-for (const width of [360, 1280]) test(`tool cards expose arguments/results/errors without horizontal overflow at ${width}px`, async ({ page }) => {
+for (const width of [360, 1280]) test(`upstream tool fallback exposes arguments/results/errors without horizontal overflow at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 900 });
   const api = await installApiHarness(page, true, 1, true, [
     { id: "echo", name: "demo.echo", arguments: { text: "hello" }, status: "completed", result: { text: "hello" } },
@@ -381,13 +381,14 @@ for (const width of [360, 1280]) test(`tool cards expose arguments/results/error
     { id: "running", name: "records.read", arguments: { recordId: "demo" }, status: "running" },
   ]);
   await page.goto("/"); await startCreate(page); api.releaseCreate(); api.releaseHistory();
-  const cards = page.locator(".caltra-chat__tool");
+  const cards = page.locator(".aui-tool-fallback-root");
   await expect(cards).toHaveCount(3);
-  await expect(cards.nth(0)).toHaveAttribute("data-state", "completed");
-  await expect(cards.nth(1)).toHaveAttribute("data-state", "failed");
-  await expect(cards.nth(2)).toHaveAttribute("data-state", "running");
-  await cards.nth(1).locator("summary").focus(); await page.keyboard.press("Enter");
-  await expect(cards.nth(1)).toHaveAttribute("open", "");
+  await expect(cards.nth(0).getByRole("button")).toHaveAttribute("aria-expanded", "false");
+  await expect(cards.nth(0).locator(".lucide-check")).toHaveCount(1);
+  await expect(cards.nth(1).locator(".lucide-circle-x")).toHaveCount(1);
+  await expect(cards.nth(2).locator(".animate-spin")).toHaveCount(1);
+  await cards.nth(1).getByRole("button").focus(); await page.keyboard.press("Enter");
+  await expect(cards.nth(1).getByRole("button")).toHaveAttribute("aria-expanded", "true");
   await expect(cards.nth(1).locator("pre").last()).toContainText("Intentional demo failure");
   for (const mode of ["dark", "light"]) {
     await page.getByLabel("Color mode", { exact: true }).selectOption(mode);

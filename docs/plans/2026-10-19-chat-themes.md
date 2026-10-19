@@ -19,3 +19,12 @@ The assistant-ui preset follows the neutral shadcn palette and text-chat layout 
 ## Tool and copy follow-up
 
 User requested real tool rendering and seeded capabilities during preview review. Add opt-in structured `tool_calls` history and `tool.started` SSE with only public call identity, preserving older strict clients. Correlate results within the same tenant, workspace, session and turn. Map this contract to assistant-ui tool parts and provide a collapsible fallback plus a Tool slot. Seed read, echo (brief running state), and intentional failure examples under development configuration. Verify three-second upstream copy feedback, tool success/failure/running states, responsive themes, and durable reload through real provider commands.
+
+## Follow-up: upstream tool fallback
+
+Replace the bespoke tool cards with the upstream ToolFallback from the matching
+assistant-ui release. Vendor the source and Base UI support components, retain
+`components.Tool` and the `CaltraTool` export, and ship scoped CSS equivalents of
+the upstream styles. Verify keyboard expansion, running/success/error states,
+long results on mobile, themes, and a real deterministic call in the existing
+Sprite. Commit after validation and retain preview review before merge.

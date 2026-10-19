@@ -1,4 +1,4 @@
-/** All built-in chat copy, including accessible names, can be localized together. */
+/** Chat copy and accessible names. The upstream tool fallback uses its own labels. */
 export interface CaltraChatLabels {
   chat: string;
   welcomeTitle: string;
@@ -17,6 +17,7 @@ export interface CaltraChatLabels {
   messageFailed: string;
   assistant: string;
   user: string;
+  /** Available for custom tool renderers; upstream ToolFallback retains its own labels. */
   toolRunning: string; toolCompleted: string; toolFailed: string;
   toolArguments: string; toolResult: string; toolError: string;
 }

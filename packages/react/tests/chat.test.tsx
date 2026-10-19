@@ -108,11 +108,16 @@ it("renders inspectable tool progress, results and failures without executing fr
     { id: "one", name: "demo.echo", arguments: { text: "hello" }, status: "completed", result: { text: "hello" } },
     { id: "two", name: "demo.fail", arguments: {}, status: "failed", result: { message: "Intentional failure" } },
     { id: "three", name: "records.read", arguments: {}, status: "running" },
+    { id: "four", name: "cancelled.read", arguments: {}, status: "cancelled" },
   ]);
   expect(screen.getByText("demo.echo")).toBeTruthy();
-  expect(screen.getByText("Completed")).toBeTruthy();
-  expect(screen.getByText("Failed")).toBeTruthy();
-  expect(screen.getByText("Running…")).toBeTruthy();
+  const triggers = screen.getAllByRole("button", { name: /Used tool:/ });
+  expect(triggers).toHaveLength(3);
+  expect(triggers[0]!.getAttribute("aria-expanded")).toBe("false");
+  expect(triggers[0]!.querySelector(".lucide-check")).toBeTruthy();
+  expect(triggers[1]!.querySelector(".lucide-circle-x")).toBeTruthy();
+  expect(triggers[2]!.querySelector(".animate-spin")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Cancelled tool: cancelled.read" })).toBeTruthy();
   fireEvent.click(screen.getByText("demo.fail"));
   expect(screen.getByText(/Intentional failure/)).toBeTruthy();
   expect(f.client.sendMessage).not.toHaveBeenCalled();

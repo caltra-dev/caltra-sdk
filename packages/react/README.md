@@ -171,14 +171,17 @@ at runtime.
 
 ## Tool calls
 
-The styled chat renders server-executed tools as collapsible cards with running, completed,
-and failed states. Open a card to inspect its arguments and result. Opening details never
-executes or retries a tool. Both light and dark palettes apply to these cards.
+The styled chat uses Assistant UI's upstream `ToolFallback`, vendored from the
+release matching our installed runtime. It shows a compact collapsed tool row
+with a status icon; expanding it reveals arguments, results, and available errors.
+The SDK bundles scoped styling for light/dark themes, so no Tailwind setup is required.
+Opening a tool's details never executes or retries it.
 
-Replace the default card with `components={{ Tool: MyToolRenderer }}`. This slot receives
-assistant-ui `ToolCallMessagePartProps` (including `toolName`, `args`, `result`, `isError`, and
-`status`). Use stable component references. The default is also exported as `CaltraTool`.
-Tool labels are included in `labels` for localization.
+Replace it with `components={{ Tool: MyToolRenderer }}`. This slot receives
+assistant-ui `ToolCallMessagePartProps`. The upstream default is also exported
+as `CaltraTool`. It retains upstream English labels; use the custom slot for
+localized tool presentation. The existing tool label fields remain available to
+custom renderers. See [source provenance](src/ui/assistant-ui/README.md).
 
 Client 0.8.3 opts in to structured tool history and tool-start events. Deploy the matching
 Caltra API support before publishing this client version; older clients keep their existing

@@ -54,6 +54,8 @@ export function useCaltraRuntime(options: UseCaltraRuntimeOptions): UseCaltraRun
         args: tool.arguments as import("@assistant-ui/react").ToolCallMessagePart["args"], argsText: JSON.stringify(tool.arguments),
         ...(tool.status === "running" ? {} : { result: tool.result ?? null }),
         isError: tool.status === "failed" || tool.status === "cancelled",
+        // Keep per-tool lifecycle distinct from the enclosing assistant message.
+        artifact: { caltraToolStatus: tool.status },
       })),
     ],
     createdAt: new Date(message.created_at),

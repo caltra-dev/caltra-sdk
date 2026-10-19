@@ -96,18 +96,45 @@
   }
 }
 
-.caltra-chat__tool { margin: .75rem 0; border: 1px solid var(--caltra-resolved-border); border-radius: .75rem; font-size: .875rem; overflow: hidden; }
-.caltra-chat__tool summary { display: flex; align-items: center; gap: .65rem; cursor: pointer; min-height: 44px; padding: .75rem; list-style: none; }
-.caltra-chat__tool summary::-webkit-details-marker { display: none; }
-.caltra-chat__tool summary::after { content: "⌄"; flex-shrink: 0; }
-.caltra-chat__tool[open] summary::after { transform: rotate(180deg); }
-.caltra-chat__tool summary > svg { flex-shrink: 0; }
-.caltra-chat__tool-name { min-width: 0; overflow-wrap: anywhere; }
-.caltra-chat__tool-status { margin-left: auto; color: var(--caltra-resolved-muted-foreground); white-space: nowrap; }
-.caltra-chat__tool[data-state="failed"] summary { color: var(--caltra-resolved-error); }
-.caltra-chat__tool-details { border-top: 1px solid var(--caltra-resolved-border); padding: .75rem; }
-.caltra-chat__tool h3 { margin: 0 0 .5rem; font-size: inherit; font-weight: 500; }
-.caltra-chat__tool pre { max-width: 100%; max-height: 20rem; overflow: auto; padding: .75rem; margin: 0 0 .75rem; background: var(--caltra-resolved-muted); border-radius: .5rem; font-size: .8rem; }
-.caltra-chat__tool-spinner { animation: caltra-tool-spin 1s linear infinite; }
+/* Upstream ToolFallback utility styles, scoped and mapped to Caltra theme tokens.
+   Source/provenance: ./assistant-ui/README.md. No consumer Tailwind setup needed. */
+.caltra-chat .aui-tool-fallback-root { width: 100%; min-width: 0; }
+.caltra-chat .aui-tool-fallback-trigger { display: flex; align-items: center; gap: .5rem; width: fit-content; max-width: 100%; padding: .375rem 0; border: 0; background: none; color: var(--caltra-resolved-muted-foreground); font-size: .875rem; line-height: 1.25rem; transform-origin: left; transition: color .15s, scale .15s; text-align: start; cursor: pointer; }
+.caltra-chat .aui-tool-fallback-trigger:hover { color: var(--caltra-resolved-foreground); }
+.caltra-chat .aui-tool-fallback-trigger:active { scale: .98; }
+.caltra-chat .aui-tool-fallback-trigger-icon, .caltra-chat .aui-tool-fallback-trigger-chevron { width: 1rem; height: 1rem; flex-shrink: 0; }
+.caltra-chat .aui-tool-fallback-trigger-icon.animate-spin { animation: caltra-tool-spin .6s linear infinite; }
+.caltra-chat .aui-tool-fallback-trigger-label-wrapper { position: relative; display: inline-block; min-width: 0; line-height: 1; overflow-wrap: anywhere; }
+.caltra-chat .aui-tool-fallback-trigger-label-wrapper.line-through { text-decoration: line-through; }
+.caltra-chat .aui-tool-fallback-trigger-shimmer { position: absolute; inset: 0; pointer-events: none; color: transparent; background: linear-gradient(90deg, transparent 0%, var(--caltra-resolved-foreground) 50%, transparent 100%); background-size: 200% 100%; background-clip: text; animation: caltra-tool-shimmer 2s linear infinite; }
+.caltra-chat .aui-tool-fallback-trigger-chevron { transform: rotate(-90deg); transition: transform var(--animation-duration) cubic-bezier(.32,.72,0,1); }
+.caltra-chat .aui-tool-fallback-trigger[data-panel-open] .aui-tool-fallback-trigger-chevron { transform: rotate(0); }
+.caltra-chat .aui-tool-fallback-duration { color: var(--caltra-resolved-muted-foreground); font-size: .75rem; line-height: 1rem; font-variant-numeric: tabular-nums; }
+.caltra-chat .aui-tool-fallback-content { position: relative; overflow: hidden; font-size: .875rem; line-height: 1.25rem; outline: none; height: var(--collapsible-panel-height); transition: height var(--animation-duration) cubic-bezier(.32,.72,0,1); }
+.caltra-chat .aui-tool-fallback-content[data-starting-style], .caltra-chat .aui-tool-fallback-content[data-ending-style] { height: 0; }
+.caltra-chat .aui-tool-fallback-content > div { display: flex; flex-direction: column; gap: .5rem; padding: .25rem 0 .5rem 1.5rem; }
+.caltra-chat .aui-tool-fallback-content pre { margin: 0; max-width: 100%; border-radius: .375rem; padding: .625rem; background: color-mix(in srgb, var(--caltra-resolved-muted) 50%, transparent); color: color-mix(in srgb, var(--caltra-resolved-foreground) 90%, transparent); font-size: .75rem; line-height: 1rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.caltra-chat .aui-tool-fallback-content p { margin: 0; overflow-wrap: anywhere; }
+.caltra-chat .aui-tool-fallback-result-header { color: var(--caltra-resolved-muted-foreground); font-size: .75rem; line-height: 1rem; font-weight: 500; }
+.caltra-chat pre.aui-tool-fallback-result-content { margin-top: .25rem; }
+.caltra-chat .aui-tool-fallback-error { color: var(--caltra-resolved-muted-foreground); }
+.caltra-chat .aui-tool-fallback-error-header { font-weight: 600; }
+.caltra-chat .aui-tool-fallback-args.opacity-60 { opacity: .6; }
+.caltra-chat .aui-tool-fallback-approval { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding-top: .25rem; }
+.caltra-chat .aui-tool-fallback-approval-confirm { display: flex; flex-direction: column; gap: .5rem; padding-top: .25rem; }
+.caltra-chat .aui-tool-fallback-approval-confirm > div:last-child { display: flex; align-items: center; gap: .5rem; }
+.caltra-chat .aui-tool-fallback-approval-confirm-title { font-weight: 600; }
+.caltra-chat .aui-tool-fallback-approval-confirm-description { color: var(--caltra-resolved-muted-foreground); }
+.caltra-chat .aui-tool-fallback-approval-confirm-grants { display: flex; flex-direction: column; gap: .25rem; margin: 0; padding: 0; list-style: none; }
+.caltra-chat .aui-tool-fallback-approval-confirm-grant { background: var(--caltra-resolved-muted); border-radius: .25rem; padding: .125rem .375rem; font-size: .75rem; }
+.caltra-chat .aui-tool-fallback-root [data-slot="button"] { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; gap: .25rem; height: 1.75rem; border: 1px solid transparent; border-radius: .5rem; padding: 0 .625rem; font-size: .8rem; font-weight: 500; white-space: nowrap; background: var(--caltra-resolved-accent); color: var(--caltra-resolved-accent-foreground); cursor: pointer; transition: opacity .15s, scale .15s; }
+.caltra-chat .aui-tool-fallback-root [data-slot="button"].text-foreground { color: var(--caltra-resolved-foreground); background: color-mix(in srgb, var(--caltra-resolved-muted) 70%, transparent); }
+.caltra-chat .aui-tool-fallback-root [data-slot="button"]:hover { opacity: .8; }
+.caltra-chat .aui-tool-fallback-root [data-slot="button"]:active { scale: .98; }
+.caltra-chat .aui-tool-fallback-root [data-slot="button"]:disabled { pointer-events: none; opacity: .5; }
 @keyframes caltra-tool-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .caltra-chat__tool-spinner { animation: none; } }
+@keyframes caltra-tool-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .caltra-chat .aui-tool-fallback-root *, .caltra-chat .aui-tool-fallback-content { animation: none !important; transition: none !important; }
+  .caltra-chat .aui-tool-fallback-trigger-shimmer { display: none; }
+}

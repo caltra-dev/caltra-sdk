@@ -12,6 +12,8 @@ import { caltraThemes, type CaltraColorMode, type CaltraTheme, type CaltraThemeN
 import { themeStyle, type CaltraChatStyle } from "./theme_style.js";
 import { defaultCaltraChatLabels, type CaltraChatLabels } from "./labels.js";
 
+import { ToolFallback } from "./assistant-ui/tool-fallback.js";
+
 const ToolContext = createContext<{ labels: CaltraChatLabels; Tool?: ComponentType<ToolCallMessagePartProps> }>({ labels: defaultCaltraChatLabels });
 
 export interface CaltraChatSlotProps { labels: CaltraChatLabels; }
@@ -139,25 +141,21 @@ function ToolRenderer(props: ToolCallMessagePartProps) {
   return Tool ? <Tool {...props} /> : <CaltraTool {...props} />;
 }
 
-/** A server-executed tool is inspectable here; opening details never invokes or retries it. */
-export function CaltraTool({ toolName, args, result, isError, status }: ToolCallMessagePartProps) {
-  const { labels } = useContext(ToolContext);
-  const failed = isError || status.type === "incomplete";
-  const running = result === undefined && !failed;
-  const state = failed ? "failed" : running ? "running" : "completed";
-  return <details className="caltra-chat__tool" data-state={state}>
-    <summary>
-      <svg className={running ? "caltra-chat__tool-spinner" : undefined} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-        {running ? <path d="M12 3a9 9 0 1 1-9 9" /> : failed ? <path d="m6 6 12 12M6 18 18 6" /> : <path d="m20 6-11 11-5-5" />}
-      </svg>
-      <span className="caltra-chat__tool-name">{toolName}</span>
-      <span className="caltra-chat__tool-status">{failed ? labels.toolFailed : running ? labels.toolRunning : labels.toolCompleted}</span>
-    </summary>
-    <div className="caltra-chat__tool-details">
-      <h3>{labels.toolArguments}</h3><pre>{JSON.stringify(args, null, 2)}</pre>
-      {result !== undefined && <><h3>{failed ? labels.toolError : labels.toolResult}</h3><pre>{typeof result === "string" ? result : JSON.stringify(result, null, 2)}</pre></>}
-    </div>
-  </details>;
+/** The upstream assistant-ui ToolFallback; retained under the existing public name. */
+export function CaltraTool(props: ToolCallMessagePartProps) {
+  const artifact = props.artifact;
+  const lifecycle = artifact && typeof artifact === "object" && "caltraToolStatus" in artifact
+    ? artifact.caltraToolStatus : undefined;
+  // assistant-ui 0.15.16 derives a completed part from any result, even isError.
+  // Normalize Caltra's durable per-call status at the boundary, not in upstream UI.
+  const status: ToolCallMessagePartProps["status"] = lifecycle === "cancelled"
+    ? { type: "incomplete", reason: "cancelled" }
+    : lifecycle === "failed" || props.isError
+      ? { type: "incomplete", reason: "error" }
+      : lifecycle === "running"
+        ? { type: "running" }
+        : props.status;
+  return <ToolFallback {...props} status={status} />;
 }
 
 function CaltraMarkdown() {
