@@ -30,3 +30,5 @@ The package is ESM-only and requires `@caltra/client`. See the [Caltra SDK repos
 
 Authentication belongs to `@caltra/client`. Its default same-origin authorization route can be
 installed with `@caltra/server/fastify`, then the resulting client is passed to this adapter.
+
+Caltra owns the linear transcript supplied to assistant-ui. The adapter replaces the message repository when history changes, so pending IDs that become persisted IDs do not create edit/regeneration branches. Streaming and terminal message statuses remain explicit.

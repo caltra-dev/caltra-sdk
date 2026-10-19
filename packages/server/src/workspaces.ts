@@ -18,10 +18,8 @@ export class CaltraWorkspacesClient {
     private readonly apiKey: string,
     private readonly apiUrl: string,
     private readonly fetchImplementation: typeof fetch,
-    private readonly environmentId?: string,
     private readonly workspaceNamespace?: string,
   ) {
-    if (environmentId !== undefined) z.string().uuid().parse(environmentId);
     if (workspaceNamespace !== undefined) z.string().min(1).max(100).regex(/^[a-zA-Z0-9_-]+$/u).parse(workspaceNamespace);
   }
 
@@ -39,7 +37,6 @@ export class CaltraWorkspacesClient {
         body: JSON.stringify({
           ...(createIfMissing ? { create_if_missing: createIfMissing } : {}),
           external_id: this.workspaceNamespace ? `${this.workspaceNamespace}:${input.externalId}` : input.externalId,
-          ...(this.environmentId ? { environment_id: this.environmentId } : {}),
         }),
         headers,
         method: "POST",

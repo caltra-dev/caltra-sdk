@@ -75,29 +75,19 @@ Agent provisioning requires `agents:provision`. It creates or reuses the user’
 Use `caltra.agentIdentities.get(...)` when you need a separate identity with its own instructions and access relationships. That operation requires `agent-identities:provision`.
 
 
-### Pinning development workspaces to a hosted environment
+### Isolating application instances
 
 ```ts
-const caltra = CaltraServerClient.forEnvironment({
+const caltra = new CaltraServerClient({
   apiKey: process.env.CALTRA_API_KEY!,
-  environmentId: "60000000-0000-4000-8000-000000000001",
   workspaceNamespace: "myapp-local",
 });
 ```
 
-`environmentId` asserts the environment already bound to the API key. It cannot
-expand or switch the key’s authority. Create separate keys in each environment’s
-settings. The assertion is sent for every workspace resolution, including client
-authorization; a mismatch is rejected and the SDK never retries without it. This
-requires the hosted API’s environment-scoped credential support. An older API
-rejects the request rather than silently provisioning in production.
+The API key determines access scope. There is no environment selector in the SDK
+or server/client API. Create the appropriate key in Caltra's environment settings;
+the integration supplies only that key. Obsolete environment fields are rejected.
 
-`workspaceNamespace` prefixes server wire external IDs as `namespace:externalId`.
-Use a distinct namespace for local development and each preview. Browser workspace
-IDs and the host application's authorization checks stay unchanged. Returned
-workspace documents contain the actual namespaced external ID. Both options are
-optional; omitting them uses the key’s own environment and unprefixed external IDs.
-
-`forEnvironment` requires an explicit environment. Integrations that must fail
-closed with stale installed dependencies can require this entry point; older SDKs
-do not expose it.
+`workspaceNamespace` optionally prefixes workspace external IDs as `namespace:externalId`.
+Use distinct namespaces for development instances and previews sharing a key.
+Browser workspace IDs and host-application authorization checks stay unchanged.

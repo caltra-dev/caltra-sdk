@@ -1,7 +1,9 @@
 import {
+  ExportedMessageRepository,
   type AppendMessage,
   type AssistantRuntime,
   type ThreadMessageLike,
+  type ThreadMessage,
   useExternalStoreRuntime,
 } from "@assistant-ui/react";
 import type { CaltraClient } from "@caltra/client";
@@ -47,13 +49,22 @@ export function useCaltraRuntime(options: UseCaltraRuntimeOptions): UseCaltraRun
     createdAt: new Date(message.created_at),
     id: message.id,
     role: message.role,
+    ...(message.role === "assistant" ? {
+      status: message.status === "streaming"
+        ? { type: "running" as const }
+        : message.status === "completed"
+          ? { type: "complete" as const, reason: "stop" as const }
+          : { type: "incomplete" as const, reason: message.status === "cancelled" ? "cancelled" as const : "error" as const },
+    } : {}),
   })), [snapshot.messages]);
 
-  const runtime = useExternalStoreRuntime({
-    convertMessage: (message) => message,
+  // Caltra owns a linear transcript. Replace the repository so removed optimistic
+  // IDs cannot survive as phantom edit/regeneration branches in assistant-ui.
+  const messageRepository = useMemo(() => ExportedMessageRepository.fromArray(messages), [messages]);
+  const runtime = useExternalStoreRuntime<ThreadMessage>({
     isRunning: snapshot.isRunning,
     isSendDisabled: snapshot.connection !== "connected",
-    messages,
+    messageRepository,
     onNew,
   });
 

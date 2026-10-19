@@ -20,7 +20,6 @@ describe("CaltraClientAuthorizationsClient", () => {
     });
     const client = new CaltraServerClient({
       apiKey: "csk_live_test",
-      environmentId: "60000000-0000-4000-8000-000000000001",
       workspaceNamespace: "piria-local",
       apiUrl: "https://api.example.test/",
       fetch: fetchImplementation as typeof fetch,
@@ -49,9 +48,9 @@ describe("CaltraClientAuthorizationsClient", () => {
     });
 
     expect(fetchImplementation).toHaveBeenCalledTimes(2);
-    expect(JSON.parse(String(fetchImplementation.mock.calls[0]![1]?.body))).toMatchObject({
+    expect(JSON.parse(String(fetchImplementation.mock.calls[0]![1]?.body))).toEqual({
       external_id: "piria-local:piria-organization-1",
-      environment_id: "60000000-0000-4000-8000-000000000001",
+      create_if_missing: { name: "Acme" },
     });
     expect(fetchImplementation.mock.calls[1]![0].toString()).toBe(
       `https://api.example.test/server/v1/workspaces/${workspaceId}/client-authorizations`,

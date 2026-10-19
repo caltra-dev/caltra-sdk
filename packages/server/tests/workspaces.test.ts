@@ -4,6 +4,14 @@ import { CaltraServerClient, CaltraServerError } from "../src/index.js";
 const workspaceId = "40000000-0000-4000-8000-000000000001";
 
 describe("CaltraWorkspacesClient", () => {
+  it("rejects obsolete selectors rather than silently ignoring them", () => {
+    expect(() => new CaltraServerClient({
+      apiKey: "test-key",
+      // @ts-expect-error Environment selectors are not part of the integration API.
+      environmentId: "local",
+    })).toThrow();
+  });
+
   it("returns null when lookup-only does not find the external workspace", async () => {
     const client = new CaltraServerClient({
       apiKey: "caltra_test_key",
@@ -58,29 +66,27 @@ describe("CaltraWorkspacesClient", () => {
     expect(headers.get("content-type")).toBe("application/json");
   });
 
-  it("rejects empty environment or namespace configuration instead of dropping it", () => {
-    expect(() => new CaltraServerClient({ apiKey: "test", environmentId: "" })).toThrow();
-    expect(() => CaltraServerClient.forEnvironment({ apiKey: "test", environmentId: "" })).toThrow();
+  it("rejects empty namespace configuration", () => {
     expect(() => new CaltraServerClient({ apiKey: "test", workspaceNamespace: "" })).toThrow();
   });
 
   it.each([
-    [403, "environment_not_allowed"],
-    [409, "workspace_environment_mismatch"],
+    [403, "workspace_not_allowed"],
+    [409, "workspace_conflict"],
     [400, "invalid_request"],
-  ])("never retries without the environment after %s %s", async (status, code) => {
+  ])("preserves request scope and errors after %s %s", async (status, code) => {
     const fetchImplementation = vi.fn(async () => Response.json({
-      code, detail: "Explicit environment rejected", request_id: "request-env",
-      retryable: false, status, title: "Environment rejected", type: "about:blank",
+      code, detail: "Request rejected", request_id: "request-env",
+      retryable: false, status, title: "Request rejected", type: "about:blank",
     }, { status }));
-    const client = CaltraServerClient.forEnvironment({
-      apiKey: "caltra_test_key", environmentId: "60000000-0000-4000-8000-000000000001",
+    const client = new CaltraServerClient({
+      apiKey: "caltra_test_key",
       workspaceNamespace: "piria-local", fetch: fetchImplementation as typeof fetch,
     });
     await expect(client.workspaces.get({ externalId: "customer" })).rejects.toMatchObject({ code, status });
     expect(fetchImplementation).toHaveBeenCalledTimes(1);
     expect(JSON.parse(String(fetchImplementation.mock.calls[0]![1]?.body))).toEqual({
-      external_id: "piria-local:customer", environment_id: "60000000-0000-4000-8000-000000000001",
+      external_id: "piria-local:customer",
     });
   });
 
