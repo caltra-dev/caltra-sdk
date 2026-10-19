@@ -1,3 +1,5 @@
+import "@caltra/react/scrollbar.css";
+
 import {
   AssistantRuntimeProvider,
   AuiIf,
@@ -32,7 +34,7 @@ export function Chat({ client, session }: ChatProps) {
         </header>
 
         <ThreadPrimitive.Root className="thread-root">
-          <ThreadPrimitive.Viewport className="thread-viewport">
+          <ThreadPrimitive.Viewport className="thread-viewport caltra-scrollbar">
             <AuiIf condition={(state) => state.thread.isEmpty}>
               <div className="thread-empty">
                 <span>LINE OPEN</span>

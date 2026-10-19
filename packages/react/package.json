@@ -3,7 +3,9 @@
   "version": "0.8.2",
   "description": "assistant-ui runtime adapter for Caltra sessions",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "**/*.css"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/caltra-dev/caltra-sdk.git",
@@ -20,10 +22,11 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./scrollbar.css": "./dist/scrollbar.css"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && cp src/scrollbar.css dist/scrollbar.css",
     "prebuild": "npm run build --workspace=@caltra/client",
     "pretest": "npm run build --workspace=@caltra/client",
     "pretypecheck": "npm run build --workspace=@caltra/client",
