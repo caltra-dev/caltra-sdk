@@ -1,11 +1,11 @@
 # `@caltra/react`
 
 Ready-to-use Caltra chat with scoped standard styling, plus a headless assistant-ui runtime.
-The styled entry point is new in **0.9.0 (not published yet)**.
+The styled entry point is available starting in **0.9.0**.
 
 ## Styled chat
 
-After 0.9.0 is published:
+Install the styled chat and its peer dependencies:
 
 ```bash
 npm install @caltra/client@0.8.3 @caltra/react@0.9.0 @assistant-ui/react@0.15.16 react react-dom
