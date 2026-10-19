@@ -83,3 +83,49 @@ transcript; pending IDs becoming persisted IDs do not create edit/regeneration b
 Authentication belongs to `@caltra/client`. Create authorization codes in your authenticated
 backend using `@caltra/server`; never expose a server API key in browser code. See the
 [repository guide](../../README.md) and `apps/test-app` for the full integration.
+
+## Optional native scrollbar theme (since 0.8.3)
+
+Version 0.8.3 adds an explicitly imported stylesheet; importing the runtime hook
+alone does not load CSS. It changes only elements with `caltra-scrollbar` or
+`caltra-chat__viewport`, with no global reset or JavaScript scroll handlers:
+
+```tsx
+import "@caltra/react/scrollbar.css";
+
+<ThreadPrimitive.Viewport className="caltra-scrollbar">
+  {/* Your existing thread content */}
+</ThreadPrimitive.Viewport>
+```
+
+The default is a thin, rounded native thumb in light gray on a transparent track.
+It uses `--caltra-border` when provided. Hover darkens it slightly; focusing the
+composer does not darken the scrollbar. The browser/OS controls native visibility
+and exact geometry. Forced-color mode uses system colors.
+
+Set variables on the viewport or an ancestor, or override the zero-specificity
+rules with your own CSS class. No `!important` is needed:
+
+```css
+.my-chat {
+  --caltra-scrollbar-thumb: var(--input-border, #d4d4d8);
+  --caltra-scrollbar-thumb-hover: #bfc0c7;
+  --caltra-scrollbar-track: transparent;
+  --caltra-scrollbar-width: thin;
+  --caltra-scrollbar-size: 8px;
+}
+
+/* Alternatively, retain the browser's default appearance for one viewport. */
+.my-native-viewport {
+  scrollbar-width: auto;
+  scrollbar-color: auto;
+}
+```
+
+`--caltra-scrollbar-width` accepts the native `auto`, `thin`, or `none` keywords.
+Keep a visible scroll affordance where needed; `none` hides the scrollbar.
+`--caltra-scrollbar-size` controls width/height only in older WebKit browsers
+without the standard properties. The theme does not alter overflow, layout,
+scroll anchoring, keyboard navigation or touch input. Use `scrollbar.css` together
+with your own components or an optional packaged UI; it has no React dependency
+at runtime.

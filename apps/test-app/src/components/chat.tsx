@@ -1,3 +1,4 @@
+import "@caltra/react/scrollbar.css";
 import type { CaltraClient, CaltraSession } from "@caltra/client";
 import { CaltraChat, type CaltraChatLabels } from "@caltra/react/ui";
 import { useState } from "react";

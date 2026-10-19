@@ -28,10 +28,11 @@
       "types": "./dist/ui/index.d.ts",
       "import": "./dist/ui/index.js"
     },
-    "./styles.css": "./dist/ui/styles.css"
+    "./styles.css": "./dist/ui/styles.css",
+    "./scrollbar.css": "./dist/scrollbar.css"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && cp src/ui/styles.css dist/ui/styles.css",
+    "build": "tsc -p tsconfig.json && cp src/ui/styles.css dist/ui/styles.css && cp src/scrollbar.css dist/scrollbar.css",
     "prebuild": "npm run build --workspace=@caltra/client",
     "pretest": "npm run build --workspace=@caltra/client",
     "pretypecheck": "npm run build --workspace=@caltra/client",

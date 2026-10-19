@@ -1,0 +1,48 @@
+/* Opt-in native scrollbars. Defaults stay overridable by ordinary consumer CSS. */
+:where(.caltra-scrollbar, .caltra-chat__viewport) {
+  scrollbar-width: var(--caltra-scrollbar-width, thin);
+  scrollbar-color: var(--caltra-scrollbar-thumb, var(--caltra-border, #d4d4d8)) var(--caltra-scrollbar-track, transparent);
+}
+
+@media (hover: hover) {
+  :where(.caltra-scrollbar, .caltra-chat__viewport):where(:hover) {
+    scrollbar-color: var(--caltra-scrollbar-thumb-hover, color-mix(in srgb, var(--caltra-scrollbar-thumb, var(--caltra-border, #d4d4d8)), currentColor 12%)) var(--caltra-scrollbar-track, transparent);
+  }
+}
+
+/* Older WebKit browsers use a pixel size instead of standard width keywords. */
+@supports not (scrollbar-width: thin) {
+  :where(.caltra-scrollbar, .caltra-chat__viewport)::-webkit-scrollbar {
+    width: var(--caltra-scrollbar-size, 8px);
+    height: var(--caltra-scrollbar-size, 8px);
+  }
+
+  :where(.caltra-scrollbar, .caltra-chat__viewport)::-webkit-scrollbar-track {
+    background: var(--caltra-scrollbar-track, transparent);
+  }
+
+  :where(.caltra-scrollbar, .caltra-chat__viewport)::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-color: var(--caltra-scrollbar-thumb, var(--caltra-border, #d4d4d8));
+    background-clip: padding-box;
+  }
+
+  :where(.caltra-scrollbar, .caltra-chat__viewport)::-webkit-scrollbar-thumb:where(:hover) {
+    background-color: var(--caltra-scrollbar-thumb-hover, color-mix(in srgb, var(--caltra-scrollbar-thumb, var(--caltra-border, #d4d4d8)), currentColor 12%));
+  }
+}
+
+@media (forced-colors: active) {
+  :where(.caltra-scrollbar, .caltra-chat__viewport) {
+    scrollbar-color: auto;
+  }
+
+  :where(.caltra-scrollbar, .caltra-chat__viewport)::-webkit-scrollbar-thumb {
+    background-color: CanvasText;
+  }
+
+  :where(.caltra-scrollbar, .caltra-chat__viewport)::-webkit-scrollbar-track {
+    background: Canvas;
+  }
+}
