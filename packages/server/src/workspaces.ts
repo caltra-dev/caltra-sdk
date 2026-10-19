@@ -12,7 +12,7 @@ const WorkspaceSchema = z.object({
   name: z.string().min(1).max(160),
 }).strict();
 
-/** Resolves customer tenant identifiers to stable Caltra workspaces for one API-key organization. */
+/** Resolves customer tenant identifiers to stable Caltra workspaces within the API key environment. */
 export class CaltraWorkspacesClient {
   constructor(
     private readonly apiKey: string,

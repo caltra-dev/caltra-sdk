@@ -65,7 +65,7 @@ describe("CaltraWorkspacesClient", () => {
   });
 
   it.each([
-    [404, "environment_not_found"],
+    [403, "environment_not_allowed"],
     [409, "workspace_environment_mismatch"],
     [400, "invalid_request"],
   ])("never retries without the environment after %s %s", async (status, code) => {

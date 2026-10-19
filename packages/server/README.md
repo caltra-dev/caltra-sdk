@@ -68,7 +68,7 @@ fields preserve the names already stored in Caltra.
 
 Without `createIfMissing`, `workspaces.get()` returns `null` when the external ID is unknown. With
 `createIfMissing`, concurrent calls converge on the same workspace for the API key's Caltra
-organization.
+environment. The same external ID in another environment identifies a separate workspace.
 
 Agent provisioning requires `agents:provision`. It creates or reuses the user’s hosted agent without creating an agent identity. Add `syncName` to update an existing agent’s display name; creation is idempotent for the same workspace and user. Caltra must expose the agent provisioning API before deploying this SDK version to consumers.
 
@@ -85,18 +85,18 @@ const caltra = CaltraServerClient.forEnvironment({
 });
 ```
 
-`environmentId` is an existing environment in the API-key organization. It is
-sent for every workspace resolution, including client authorization. An unknown
-environment or workspace belonging to another environment is an error; the SDK
-never retries without the target. This requires the hosted API's explicit
-`environment_id` support. An older API rejects the request rather than silently
-provisioning in production.
+`environmentId` asserts the environment already bound to the API key. It cannot
+expand or switch the key’s authority. Create separate keys in each environment’s
+settings. The assertion is sent for every workspace resolution, including client
+authorization; a mismatch is rejected and the SDK never retries without it. This
+requires the hosted API’s environment-scoped credential support. An older API
+rejects the request rather than silently provisioning in production.
 
 `workspaceNamespace` prefixes server wire external IDs as `namespace:externalId`.
 Use a distinct namespace for local development and each preview. Browser workspace
 IDs and the host application's authorization checks stay unchanged. Returned
 workspace documents contain the actual namespaced external ID. Both options are
-optional; omitting them preserves existing behavior.
+optional; omitting them uses the key’s own environment and unprefixed external IDs.
 
 `forEnvironment` requires an explicit environment. Integrations that must fail
 closed with stale installed dependencies can require this entry point; older SDKs
