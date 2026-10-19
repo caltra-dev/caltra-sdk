@@ -26,3 +26,9 @@ The optional stylesheet is unpublished source. Do not claim it is available from
 - All 5 new Playwright tests passed: desktop/mobile keyboard scrolling and isolation, inherited tokens, plain CSS overrides (including hover), and forced colors.
 - The updated Piria preview at application commit `0219b1d8` was checked in authenticated Chrome using the retained conversation. The idle scrollbar computed color exactly matched `--input` (`oklch(0.82 0.014 255)`); hover was a subtle 12% mix. User-entered messages were preserved.
 - Piria continues using its local CSS until a released SDK package provides the optional export. The SDK demo consumes the new export in source. No SDK publication or production deployment was performed.
+
+## Approved release
+
+The user accepted the lighter input-border-gray preview and authorized merging, SDK publication, and Piria deployment. Release `@caltra/react@0.8.3` through the existing package-selective workflow, verify the registry export, then replace Piria's temporary CSS with the published import and product token overrides.
+
+Release validation on the Sprite passed all workspace typechecks, builds, 84 unit tests and 5 scrollbar browser tests. The 0.8.3 packed archive includes the CSS export. Client and server package versions are unchanged.

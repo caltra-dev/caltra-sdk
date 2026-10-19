@@ -33,9 +33,9 @@ installed with `@caltra/server/fastify`, then the resulting client is passed to 
 
 Caltra owns the linear transcript supplied to assistant-ui. The adapter replaces the message repository when history changes, so pending IDs that become persisted IDs do not create edit/regeneration branches. Streaming and terminal message statuses remain explicit.
 
-## Optional native scrollbar theme (unreleased)
+## Optional native scrollbar theme (since 0.8.3)
 
-The next release adds an explicitly imported stylesheet; importing the runtime hook
+Version 0.8.3 adds an explicitly imported stylesheet; importing the runtime hook
 alone does not load CSS. It changes only elements with `caltra-scrollbar` or
 `caltra-chat__viewport`, with no global reset or JavaScript scroll handlers:
 
