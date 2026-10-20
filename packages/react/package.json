@@ -1,6 +1,6 @@
 {
   "name": "@caltra/react",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Styled React chat and assistant-ui runtime adapter for Caltra sessions",
   "type": "module",
   "sideEffects": [

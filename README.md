@@ -111,7 +111,7 @@ const created = await agent.sessions.create();
 const events = await client.openSessionEvents(created.id);
 ```
 
-React applications can use the styled chat directly (new in the unreleased 0.9.0):
+React applications can use the styled chat directly (available since 0.9.0; loading and Markdown improvements in 0.9.1):
 
 ```tsx
 import { CaltraChat } from "@caltra/react/ui";
