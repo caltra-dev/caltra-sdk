@@ -134,3 +134,38 @@ it("renders inspectable tool progress, results and failures without executing fr
   expect(screen.getByText(/Intentional failure/)).toBeTruthy();
   expect(f.client.sendMessage).not.toHaveBeenCalled();
 });
+
+it.each(["Enter", "click"])("sends from repaired completed history using %s", async (method) => {
+  const f = fixture();
+  render(<CaltraChat client={f.client as never} sessionId="repaired" />);
+  await f.resolve("Completed saved answer");
+  const input = screen.getByRole("textbox");
+  fireEvent.change(input, { target: { value: "Next question" } });
+  fireEvent.keyDown(input, { key: "Enter", shiftKey: true });
+  expect(f.client.sendMessage).not.toHaveBeenCalled();
+  if (method === "Enter") fireEvent.keyDown(input, { key: "Enter" });
+  else fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+  await waitFor(() => expect(f.client.sendMessage).toHaveBeenCalledWith("repaired", { text: "Next question" }));
+});
+
+it("swaps native Send for Stop and preserves running UI on failure until a successful retry", async () => {
+  const message = { id: "partial", role: "assistant", text: "Partial answer", status: "streaming", created_at: new Date().toISOString() };
+  const f = fixture();
+  f.client.listSessionMessages.mockResolvedValue({ data: [message] });
+  const cancelSession = vi.fn().mockRejectedValueOnce(new Error("Cancelled request failed")).mockImplementation(async () => {
+    f.client.listSessionMessages.mockResolvedValue({ data: [{ ...message, status: "cancelled" }] });
+    return { turn_id: "turn" };
+  });
+  render(<CaltraChat client={{ ...f.client, cancelSession } as never} sessionId="running" />);
+  const stop = await screen.findByRole("button", { name: "Stop generating" });
+  expect(screen.queryByRole("button", { name: "Send message" })).toBeNull();
+  fireEvent.click(stop);
+  await screen.findByRole("alert");
+  expect(await screen.findByText("Partial answer")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Stop generating" })).toBeTruthy();
+  fireEvent.click(stop);
+  await screen.findByRole("button", { name: "Send message" });
+  expect(cancelSession).toHaveBeenCalledTimes(2);
+  expect(cancelSession).toHaveBeenLastCalledWith("running");
+  expect(screen.queryByRole("button", { name: "Stop generating" })).toBeNull();
+});

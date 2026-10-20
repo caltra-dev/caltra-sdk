@@ -42,3 +42,7 @@ provider-neutral client-authorization contract.
 The package is ESM-only. See the [Caltra SDK repository](https://github.com/caltra-dev/caltra-sdk) for development and integration-app instructions.
 
 Provision the user’s hosted agent through the server SDK before opening the browser. External session IDs are unique within that agent. Use `agent.sessions.create()` for a new independent conversation. Session documents include `agent`; their optional `agentIdentity` execution profile may be `null`.
+
+### Cancellation
+
+`await client.cancelSession(sessionId)` cancels the active turn in an owned active session and returns `{ turn_id: string | null }`; null means already idle. It uses the browser token's `messages:create` permission. Callers should refetch messages after success. API errors propagate normally. Requires the server's `POST /client/v1/sessions/:session_id/cancel` endpoint.

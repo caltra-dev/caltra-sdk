@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  ActionBarPrimitive, AssistantRuntimeProvider, AuiIf, ComposerPrimitive,
+  ActionBarPrimitive, AssistantRuntimeProvider, AuiIf,
   MessagePrimitive, ThreadPrimitive, useAuiState, type ToolCallMessagePartProps,
 } from "@assistant-ui/react";
 import { createContext, useContext, useMemo, useState, type ComponentType } from "react";
@@ -12,6 +12,7 @@ import { defaultCaltraChatLabels, type CaltraChatLabels } from "./labels.js";
 
 import { ToolFallback } from "./assistant-ui/tool-fallback.js";
 import { MarkdownText } from "./assistant-ui/markdown-text.js";
+import { Composer } from "./assistant-ui/composer.js";
 
 const ToolContext = createContext<{ labels: CaltraChatLabels; Tool?: ComponentType<ToolCallMessagePartProps> }>({ labels: defaultCaltraChatLabels });
 
@@ -161,10 +162,7 @@ export function CaltraTool(props: ToolCallMessagePartProps) {
 }
 
 export function CaltraComposer({ labels, submitMode }: CaltraComposerProps) {
-  return <ComposerPrimitive.Root className="caltra-chat__composer">
-    <ComposerPrimitive.Input className="caltra-chat__input" aria-label={labels.messageInput} placeholder={labels.placeholder} rows={1} submitMode={submitMode} />
-    <ComposerPrimitive.Send className="caltra-chat__send" aria-label={labels.send}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 19V5m-7 7 7-7 7 7" /></svg></ComposerPrimitive.Send>
-  </ComposerPrimitive.Root>;
+  return <Composer labels={labels} submitMode={submitMode} />;
 }
 
 export function CaltraConnection({ labels, connection, error, historyLoaded, retry }: CaltraConnectionProps) {

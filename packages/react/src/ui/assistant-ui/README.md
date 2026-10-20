@@ -29,3 +29,5 @@ When updating, compare against the matching upstream release, review the source
 and its dependencies, update this pin and license, and recheck keyboard expansion,
 scroll lock, running/error/cancelled states, reduced motion, light/dark mode,
 and narrow panels. Do not redesign the upstream fallback in this boundary.
+
+`composer.tsx` adapts the same pinned upstream `thread.tsx` Composer and ComposerAction: Input, Send/Cancel, button variants, tooltips and icons retain upstream semantics and scoped styling. Labels and submitMode remain SDK inputs. Attachment/dropzone and voice controls are omitted because the adapter is text-only. No host CSS is required. The skeleton reserves the same 94px initial shell height (40px input, 8px gap, 28px actions, 16px padding and 2px border).

@@ -198,3 +198,22 @@ it("preserves a message request ID across retries", async () => {
   await client.sendMessage(sessionId, { text: "New flooring", requestId });
   expect(bodies).toEqual([{ text: "New flooring", request_id: requestId }, { text: "New flooring", request_id: requestId }]);
 });
+
+it("cancels with the browser token and decodes active and already-idle responses", async () => {
+  const turnId = "60000000-0000-4000-8000-000000000001";
+  let active = true;
+  const fetchImplementation = vi.fn(async (input: URL | RequestInfo, init?: RequestInit) => {
+    if (String(input).endsWith("/caltra/v1/auth/authenticate")) return Response.json({
+      client_token: "client-token", expires_at: new Date(Date.now() + 600_000).toISOString(),
+      refresh_after: new Date(Date.now() + 540_000).toISOString(),
+    });
+    expect(String(input)).toBe(`https://api.example.test/client/v1/sessions/${sessionId}/cancel`);
+    expect(new Headers(init?.headers).get("authorization")).toBe("Bearer client-token");
+    expect(init).toMatchObject({ method: "POST", body: "{}" });
+    return Response.json({ turn_id: active ? turnId : null });
+  });
+  const client = new CaltraClient({ apiUrl: "https://api.example.test", authorizationCodeProvider: async () => "cac_test", fetch: fetchImplementation });
+  await expect(client.cancelSession(sessionId)).resolves.toEqual({ turn_id: turnId });
+  active = false;
+  await expect(client.cancelSession(sessionId)).resolves.toEqual({ turn_id: null });
+});

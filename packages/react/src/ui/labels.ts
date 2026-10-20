@@ -6,6 +6,7 @@ export interface CaltraChatLabels {
   placeholder: string;
   messageInput: string;
   send: string;
+  stop?: string;
   copy: string;
   copied: string;
   scrollToBottom: string;
@@ -29,6 +30,7 @@ export const defaultCaltraChatLabels: CaltraChatLabels = {
   placeholder: "Write a message…",
   messageInput: "Message",
   send: "Send message",
+  stop: "Stop generating",
   copy: "Copy",
   copied: "Copied",
   scrollToBottom: "Scroll to bottom",

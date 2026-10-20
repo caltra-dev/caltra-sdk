@@ -181,3 +181,57 @@ it("keeps a live tool identity until durable completion replaces it with its res
   await vi.waitFor(() => expect(store.getSnapshot().messages[0]?.tool_calls?.[0]).toMatchObject({ status: "completed", result: { text: "hello" } }));
   expect(store.getSnapshot().messages).toHaveLength(1); await store.stop();
 });
+
+it("uses repaired completed history after reconnect without changing the running-state rule", async () => {
+  const stale = { id: assistantMessageId, role: "assistant", status: "streaming", text: "Saved answer", created_at: "2026-10-19T12:00:00Z" };
+  const client = {
+    openSessionEvents: vi.fn(async () => new StubEventConnection([])),
+    getSessionById: vi.fn(async () => ({ id: sessionId })),
+    listSessionMessages: vi.fn().mockResolvedValueOnce({ data: [stale] })
+      .mockResolvedValue({ data: [{ ...stale, status: "completed" }] }),
+  };
+  const store = new CaltraSessionStore(client as never, sessionId);
+  await store.start();
+  expect(store.getSnapshot().isRunning).toBe(true);
+  await store.reconnect();
+  expect(store.getSnapshot()).toMatchObject({ isRunning: false, messages: [{ ...stale, status: "completed" }] });
+  await store.stop();
+});
+
+it("cancels over HTTP while SSE recovers and trusts the refreshed persisted status", async () => {
+  const message = { id: assistantMessageId, role: "assistant", status: "streaming", text: "Partial", created_at: "2026-10-19T12:00:00Z" };
+  const client = {
+    openSessionEvents: vi.fn().mockResolvedValueOnce(new StubEventConnection([])).mockImplementation(() => new Promise(() => undefined)),
+    getSessionById: vi.fn(async () => ({ id: sessionId })),
+    listSessionMessages: vi.fn().mockResolvedValueOnce({ data: [message] })
+      .mockResolvedValue({ data: [{ ...message, status: "cancelled" }] }),
+    cancelSession: vi.fn(async () => ({ turn_id: turnId })),
+  };
+  const store = new CaltraSessionStore(client as never, sessionId);
+  await store.start();
+  const reconnect = store.reconnect().catch(() => undefined);
+  await vi.waitFor(() => expect(client.openSessionEvents).toHaveBeenCalledTimes(2));
+  await store.cancel();
+  expect(client.cancelSession).toHaveBeenCalledWith(sessionId);
+  expect(store.getSnapshot()).toMatchObject({ isRunning: false, messages: [{ ...message, status: "cancelled" }] });
+  await store.stop(); await reconnect;
+});
+
+it("keeps a running turn and partial text on cancellation failure, then supports retry", async () => {
+  const message = { id: assistantMessageId, role: "assistant", status: "streaming", text: "Partial", created_at: "2026-10-19T12:00:00Z" };
+  const failure = new Error("Cancellation failed");
+  const client = {
+    openSessionEvents: vi.fn(async () => new StubEventConnection([])),
+    getSessionById: vi.fn(async () => ({ id: sessionId })),
+    listSessionMessages: vi.fn().mockResolvedValueOnce({ data: [message] }).mockResolvedValue({ data: [{ ...message, status: "cancelled" }] }),
+    cancelSession: vi.fn().mockRejectedValueOnce(failure).mockResolvedValue({ turn_id: turnId }),
+  };
+  const store = new CaltraSessionStore(client as never, sessionId);
+  await store.start();
+  await expect(store.cancel()).rejects.toBe(failure);
+  expect(store.getSnapshot()).toMatchObject({ error: failure, isRunning: true, messages: [message] });
+  expect(client.listSessionMessages).toHaveBeenCalledOnce();
+  await store.cancel();
+  expect(store.getSnapshot()).toMatchObject({ error: null, isRunning: false });
+  await store.stop();
+});

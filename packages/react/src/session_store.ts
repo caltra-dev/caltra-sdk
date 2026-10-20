@@ -124,6 +124,18 @@ export class CaltraSessionStore {
     }
   }
 
+  /** Cancellation uses HTTP even while SSE reconnects; history remains authoritative. */
+  async cancel(): Promise<void> {
+    try {
+      await this.client.cancelSession(this.sessionId);
+      await this.refresh();
+      this.update({ error: null });
+    } catch (error) {
+      this.update({ error: this.toError(error) });
+      throw error;
+    }
+  }
+
   private async run(signal: AbortSignal): Promise<void> {
     let attempt = 0;
     while (!signal.aborted) {

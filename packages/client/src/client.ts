@@ -161,6 +161,14 @@ export class CaltraClient {
     });
   }
 
+  /** Cancels the session's active turn; an idle session returns a null turn_id. */
+  async cancelSession(sessionId: string): Promise<{ turn_id: string | null }> {
+    return await this.request(`/sessions/${encodeURIComponent(sessionId)}/cancel`,
+      z.object({ turn_id: z.string().uuid().nullable() }).strict(), {
+        method: "POST", body: "{}", headers: { "content-type": "application/json" },
+      });
+  }
+
   async openSessionEvents(
     sessionId: string,
     options: { signal?: AbortSignal } = {},

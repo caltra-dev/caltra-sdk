@@ -25,7 +25,8 @@ CSS-capable bundler. No separate stylesheet import, Tailwind, shadcn setup, copi
 source, or host CSS reset is required. The explicit `@caltra/react/styles.css` export remains
 available for compatibility. The headless `@caltra/react` entry does not import CSS. The defaults
 include a welcome, skeleton-only loading state (the loading label is screen-reader-only), Markdown transcript, copy icon with checkmark feedback and localized accessible labels/tooltips, scroll-to-bottom button,
-text composer, connection recovery and retry. Enter sends; Shift+Enter inserts a newline.
+upstream text composer, connection recovery and retry. Enter sends; Shift+Enter inserts a newline.
+While a turn runs, the native Stop control calls `CaltraClient.cancelSession`, then reloads persisted history. A failed cancellation preserves the running state and exposes the existing error alert; Stop can be retried. HTTP cancellation also works while the event stream reconnects. The adapter does not infer turn completion from stale message history.
 Initial loading fills the panel with 16px gutters and reserves the composer's bottom
 position. The real composer becomes available after history resolves, in the same
 position for both saved and empty conversations. Bootstrap integrations may render

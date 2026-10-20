@@ -79,6 +79,9 @@ export function useCaltraRuntime(options: UseCaltraRuntimeOptions): UseCaltraRun
     isSendDisabled: snapshot.connection !== "connected",
     messageRepository,
     onNew,
+    // assistant-ui calls this from its native Cancel primitive. The store exposes
+    // failures via the existing alert; avoid an unhandled event-handler rejection.
+    onCancel: async () => { await store.cancel().catch(() => undefined); },
   });
 
   return {
