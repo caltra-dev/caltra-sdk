@@ -1,6 +1,6 @@
 {
   "name": "@caltra/client",
-  "version": "0.8.3",
+  "version": "0.9.0",
   "description": "Framework-neutral browser client for the Caltra Client API",
   "type": "module",
   "sideEffects": false,
