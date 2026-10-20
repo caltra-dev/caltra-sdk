@@ -4,8 +4,6 @@ import {
   ActionBarPrimitive, AssistantRuntimeProvider, AuiIf, ComposerPrimitive,
   MessagePrimitive, ThreadPrimitive, useAuiState, type ToolCallMessagePartProps,
 } from "@assistant-ui/react";
-import { MarkdownTextPrimitive } from "@assistant-ui/react-markdown";
-import remarkGfm from "remark-gfm";
 import { createContext, useContext, useMemo, useState, type ComponentType } from "react";
 import { useCaltraRuntime, type UseCaltraRuntimeOptions, type UseCaltraRuntimeResult } from "../use_caltra_runtime.js";
 import { caltraThemes, type CaltraColorMode, type CaltraTheme, type CaltraThemeName } from "../themes/index.js";
@@ -13,6 +11,7 @@ import { themeStyle, type CaltraChatStyle } from "./theme_style.js";
 import { defaultCaltraChatLabels, type CaltraChatLabels } from "./labels.js";
 
 import { ToolFallback } from "./assistant-ui/tool-fallback.js";
+import { MarkdownText } from "./assistant-ui/markdown-text.js";
 
 const ToolContext = createContext<{ labels: CaltraChatLabels; Tool?: ComponentType<ToolCallMessagePartProps> }>({ labels: defaultCaltraChatLabels });
 
@@ -70,9 +69,9 @@ function ChatSession({ client, sessionId, labels: overrides, components = {}, cl
     <ToolContext.Provider value={{ labels, Tool: components.Tool }}>
     <ThreadPrimitive.Root className={`caltra-chat${className ? ` ${className}` : ""}`} style={{ ...themeStyle(resolvedTheme), ...style }} data-theme={resolvedTheme.name} data-color-mode={colorMode} hidden={hidden} aria-label={labels.chat}>
       <Connection labels={labels} connection={caltra.connection} error={caltra.error} historyLoaded={caltra.historyLoaded} retry={caltra.reconnect} />
-      <ThreadPrimitive.Viewport className="caltra-chat__viewport" autoScroll>
+      {!caltra.historyLoaded && caltra.connection !== "failed" && <Loading labels={labels} />}
+      <ThreadPrimitive.Viewport className="caltra-chat__viewport" autoScroll hidden={!caltra.historyLoaded && caltra.connection !== "failed"}>
         <div className="caltra-chat__content">
-          {!caltra.historyLoaded && caltra.connection !== "failed" && <Loading labels={labels} />}
           {caltra.historyLoaded && <>
             <AuiIf condition={(state) => state.thread.messages.length === 0 && !state.thread.isLoading}>
               <Welcome labels={labels} />
@@ -102,7 +101,10 @@ export function CaltraWelcome({ labels }: CaltraChatSlotProps) {
 export function CaltraHistoryLoading({ labels }: CaltraChatSlotProps) {
   return <div className="caltra-chat__loading" role="status" data-caltra-state="loading">
     <span className="caltra-chat__sr-only">{labels.loading}</span>
-    <div className="caltra-chat__skeleton" aria-hidden="true"><i /><i /><i /></div>
+    <div className="caltra-chat__skeleton" aria-hidden="true">
+      {[0, 1, 2, 3].map(group => <div className="caltra-chat__skeleton-message" key={group}><i /><i /><i /></div>)}
+    </div>
+    <div className="caltra-chat__skeleton-composer" aria-hidden="true"><i /><span /></div>
   </div>;
 }
 
@@ -118,7 +120,7 @@ export function CaltraMessage({ labels }: CaltraChatSlotProps) {
   return <MessagePrimitive.Root className="caltra-chat__message" data-role={role}>
     <span className="caltra-chat__sr-only">{role === "user" ? labels.user : labels.assistant}</span>
     <div className="caltra-chat__message-body">
-      <MessagePrimitive.Parts components={{ Text: CaltraMarkdown, tools: { Fallback: ToolRenderer } }} />
+      <MessagePrimitive.Parts components={{ Text: MarkdownText, tools: { Fallback: ToolRenderer } }} />
       <AuiIf condition={(state) => state.message.status?.type === "incomplete"}>
         <p className="caltra-chat__message-error" role="alert">{labels.messageFailed}</p>
       </AuiIf>
@@ -156,10 +158,6 @@ export function CaltraTool(props: ToolCallMessagePartProps) {
         ? { type: "running" }
         : props.status;
   return <ToolFallback {...props} status={status} />;
-}
-
-function CaltraMarkdown() {
-  return <MarkdownTextPrimitive className="caltra-chat__markdown" remarkPlugins={[remarkGfm]} />;
 }
 
 export function CaltraComposer({ labels, submitMode }: CaltraComposerProps) {

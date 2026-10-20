@@ -29,6 +29,18 @@ function fixture() {
 }
 
 describe("CaltraChat", () => {
+  it("renders upstream MarkdownText headings, lists, quotations and code controls", async () => {
+    const f = fixture();
+    const rendered = render(<CaltraChat client={f.client as never} sessionId="markdown" />);
+    await f.resolve("# Title\n\n## Section\n\nParagraph.\n\n- First\n- Second\n\n1. Step\n\n> Quote\n\n```js\nconst value = 1;\n```");
+    expect(screen.getByRole("heading", { level: 1, name: "Title" }).className).toContain("aui-md-h1");
+    expect(screen.getByRole("heading", { level: 2, name: "Section" }).className).toContain("aui-md-h2");
+    expect(rendered.container.querySelector("ul.aui-md-ul")).toBeTruthy();
+    expect(rendered.container.querySelector("ol.aui-md-ol")).toBeTruthy();
+    expect(rendered.container.querySelector("blockquote.aui-md-blockquote")).toBeTruthy();
+    expect(rendered.container.querySelector(".aui-code-header-root")).toBeTruthy();
+  });
+
   it("never shows a welcome while existing history is pending, including a session switch", async () => {
     const f = fixture();
     const rendered = render(<CaltraChat client={f.client as never} sessionId="first" />);

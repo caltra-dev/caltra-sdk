@@ -1,8 +1,15 @@
-# Assistant UI ToolFallback provenance
+# Assistant UI component provenance
 
 `tool-fallback.tsx`, `collapsible.tsx`, and `button.tsx` are vendored from
 [assistant-ui commit 75e3ef71beb5dc99f6fc624624d3d61b307c8599](https://github.com/assistant-ui/assistant-ui/tree/75e3ef71beb5dc99f6fc624624d3d61b307c8599/packages/ui/src),
 the `@assistant-ui/react@0.15.16` release used by this SDK. See `LICENSE`.
+
+`markdown-text.tsx`, `tooltip-icon-button.tsx` and the Base UI `tooltip.tsx` use the
+same upstream commit. MarkdownText is the upstream styled component, not only the
+headless MarkdownTextPrimitive. Logic and markup are preserved; imports target local
+modules. The portaled tooltip receives SDK-specific CSS scope classes. Scoped CSS
+equivalents retain the upstream typography, spacing, lists, quotations and code
+header controls without requiring the consuming application to compile Tailwind.
 
 `CaltraTool` adapts the durable per-call lifecycle to upstream `status` props;
 otherwise assistant-ui 0.15.16 treats even an error result as completed.

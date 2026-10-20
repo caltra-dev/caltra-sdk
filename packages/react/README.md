@@ -26,6 +26,13 @@ source, or host CSS reset is required. The explicit `@caltra/react/styles.css` e
 available for compatibility. The headless `@caltra/react` entry does not import CSS. The defaults
 include a welcome, skeleton-only loading state (the loading label is screen-reader-only), Markdown transcript, copy icon with checkmark feedback and localized accessible labels/tooltips, scroll-to-bottom button,
 text composer, connection recovery and retry. Enter sends; Shift+Enter inserts a newline.
+Initial loading fills the panel with 16px gutters and reserves the composer's bottom
+position. The real composer becomes available after history resolves, in the same
+position for both saved and empty conversations. Bootstrap integrations may render
+`CaltraHistoryLoading` inside the SDK's `caltra-chat` root to use the same presentation.
+Markdown uses the upstream assistant-ui `MarkdownText` component, including heading
+hierarchy, paragraph/list/blockquote spacing and the standard code-copy header. The
+SDK bundles its styling; consumers need no Markdown or Tailwind overrides.
 Use `submitMode="ctrlEnter"` or `"none"` to change keyboard submission.
 
 History is unknown until the first successful response. Only confirmed empty history displays
