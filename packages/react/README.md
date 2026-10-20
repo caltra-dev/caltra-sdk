@@ -24,7 +24,7 @@ The `@caltra/react/ui` entry automatically imports its scoped CSS through your a
 CSS-capable bundler. No separate stylesheet import, Tailwind, shadcn setup, copied component
 source, or host CSS reset is required. The explicit `@caltra/react/styles.css` export remains
 available for compatibility. The headless `@caltra/react` entry does not import CSS. The defaults
-include a welcome, loading skeleton, Markdown transcript, copy icon with checkmark feedback and localized accessible labels/tooltips, scroll-to-bottom button,
+include a welcome, skeleton-only loading state (the loading label is screen-reader-only), Markdown transcript, copy icon with checkmark feedback and localized accessible labels/tooltips, scroll-to-bottom button,
 text composer, connection recovery and retry. Enter sends; Shift+Enter inserts a newline.
 Use `submitMode="ctrlEnter"` or `"none"` to change keyboard submission.
 

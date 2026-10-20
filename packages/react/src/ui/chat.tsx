@@ -101,7 +101,7 @@ export function CaltraWelcome({ labels }: CaltraChatSlotProps) {
 
 export function CaltraHistoryLoading({ labels }: CaltraChatSlotProps) {
   return <div className="caltra-chat__loading" role="status" data-caltra-state="loading">
-    <span>{labels.loading}</span>
+    <span className="caltra-chat__sr-only">{labels.loading}</span>
     <div className="caltra-chat__skeleton" aria-hidden="true"><i /><i /><i /></div>
   </div>;
 }

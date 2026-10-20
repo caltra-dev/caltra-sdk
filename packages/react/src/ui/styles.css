@@ -64,7 +64,7 @@
 .caltra-chat__connection button { min-height: 44px; padding: .4rem .75rem; background: var(--caltra-resolved-background); border: 1px solid var(--caltra-resolved-border); color: inherit; border-radius: .5rem; }
 .caltra-chat__message-error { font-size: .85rem; color: var(--caltra-resolved-error); }
 .caltra-chat__loading { color: var(--caltra-resolved-muted-foreground); padding: 1rem 0; font-size: .875rem; }
-.caltra-chat__skeleton { display: grid; gap: .75rem; padding-top: 1.5rem; }
+.caltra-chat__skeleton { display: grid; gap: .75rem; }
 .caltra-chat__skeleton i { display: block; height: .85rem; width: 85%; border-radius: .35rem; background: var(--caltra-resolved-muted); }
 .caltra-chat__skeleton i:nth-child(2) { width: 95%; }
 .caltra-chat__skeleton i:nth-child(3) { width: 60%; }
