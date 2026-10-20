@@ -62,6 +62,8 @@ await caltra.agents.get({
 });
 ```
 
+Enable built-in web research with `capabilities: ["web_search"]` on `caltra.agents.get()`. Caltra injects web search and page-reading tools using its Exa integration; callers do not provide a search API key. Omit `capabilities` to preserve the existing UI setting, or pass an empty array to disable all capabilities. Settings apply on the next turn. Tool requests and provider-reported costs appear under Usage → Tools.
+
 No agent identity profile is created. Omitting `syncName` preserves the existing name. Names must contain 1–160 characters.
 
 ## Local integration application

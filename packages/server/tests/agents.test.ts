@@ -18,3 +18,13 @@ it("sends stable project identity and trusted instructions on agent lookup", asy
   } });
   await client.agents.get({ workspaceId: "workspace", owner: { tenantUserExternalId: "user" }, externalId: "project-123", instructions: "Plan the project.", createIfMissing: { name: "Project planning" } });
 });
+
+it.each([undefined, [], ["web_search"]] as const)("preserves capability omission versus explicit synchronization: %j", async capabilities => {
+  const client = new CaltraServerClient({ apiKey: "test", apiUrl: "https://caltra.example", fetch: async (_input, init) => {
+    const body = JSON.parse(String(init?.body));
+    expect(Object.hasOwn(body, "capabilities")).toBe(capabilities !== undefined);
+    expect(body.capabilities).toEqual(capabilities);
+    return Response.json({ id: "10000000-0000-4000-8000-000000000001", name: "Research" });
+  } });
+  await client.agents.get({ workspaceId: "workspace", owner: { tenantUserExternalId: "user" }, ...(capabilities === undefined ? {} : { capabilities: [...capabilities] }) });
+});

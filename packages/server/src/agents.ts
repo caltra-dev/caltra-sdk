@@ -6,6 +6,8 @@ export interface CaltraAgentLookup {
   owner: { tenantUserExternalId: string };
   syncName?: string;
   instructions?: string;
+  /** Synchronizes capabilities when provided; omit to preserve UI settings, or pass [] to disable all. */
+  capabilities?: Array<"web_search" | "background_execution" | "display_artifacts" | "interactive_approval" | "receive_external_events">;
   externalId?: string;
 }
 export interface CaltraAgentCreateIfMissing extends CaltraAgentLookup {
@@ -22,7 +24,7 @@ export class CaltraAgentsClient {
     const createIfMissing = "createIfMissing" in input ? input.createIfMissing : undefined;
     const response = await this.fetchImplementation(`${this.apiUrl}/server/v1/workspaces/${encodeURIComponent(input.workspaceId)}/agents/get`, {
       method: "POST", headers: { authorization: `Bearer ${this.apiKey}`, "content-type": "application/json" },
-      body: JSON.stringify({ ...(input.externalId !== undefined ? { external_id: input.externalId } : {}), ...(input.instructions !== undefined ? { instructions: input.instructions } : {}), owner: { tenant_user_external_id: input.owner.tenantUserExternalId },
+      body: JSON.stringify({ ...(input.capabilities !== undefined ? { capabilities: input.capabilities } : {}), ...(input.externalId !== undefined ? { external_id: input.externalId } : {}), ...(input.instructions !== undefined ? { instructions: input.instructions } : {}), owner: { tenant_user_external_id: input.owner.tenantUserExternalId },
         ...(createIfMissing ? { create_if_missing: createIfMissing } : {}), ...(input.syncName ? { sync_name: input.syncName } : {}) }),
     });
     if (!response.ok) {
