@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { CaltraApiError } from "@caltra/client";
+import { CaltraApiError, CaltraSessionRuntime, type CaltraSessionMessage } from "@caltra/client";
 import { createCaltraTheme } from "../src/themes/index.js";
 import { CaltraChat } from "../src/ui/chat.js";
 
@@ -29,6 +29,42 @@ function fixture() {
 }
 
 describe("CaltraChat", () => {
+  it("keeps previous copy controls mounted through thinking, answer streaming, and a running tool gap", async () => {
+    const f = fixture();
+    const history: CaltraSessionMessage[] = ["First answer", "Second answer"].map(text => ({
+      id: text, role: "assistant", text, status: "completed", created_at: "2026-10-21T00:00:00Z",
+    }));
+    let messages = history;
+    let running = false;
+    f.client.listSessionMessages.mockImplementation(async () => ({ data: messages, next_cursor: null }));
+    f.client.getSessionById.mockImplementation(async id => ({ id, is_running: running }));
+    const runtime = new CaltraSessionRuntime(f.client as never, "stable-actions");
+    await runtime.start();
+    render(<CaltraChat runtime={runtime} reasoningDisplay="collapsed" />);
+    const savedButtons = screen.getAllByRole("button", { name: "Copy", exact: true });
+    expect(savedButtons).toHaveLength(2);
+
+    running = true;
+    const active: CaltraSessionMessage = { id: "active", role: "assistant", text: "", status: "streaming",
+      reasoning: { status: "streaming" }, created_at: "2026-10-21T00:01:00Z" };
+    messages = [...history, active];
+    await act(async () => { await runtime.refresh(); await runtime.refreshMetadata(); });
+    expect(screen.getByRole("button", { name: "Stop generating" })).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "Copy", exact: true })).toEqual(savedButtons);
+
+    // The active response gets Copy only after completion; earlier controls never unmount.
+    messages = [...history, { ...active, text: "New answer", reasoning: { status: "completed" } }];
+    await act(async () => runtime.refresh());
+    expect(screen.getAllByRole("button", { name: "Copy", exact: true })).toEqual(savedButtons);
+    messages = [...history, { ...active, text: "New answer", status: "completed", reasoning: { status: "completed" } }];
+    await act(async () => runtime.refresh());
+    const completedButtons = screen.getAllByRole("button", { name: "Copy", exact: true });
+    expect(completedButtons).toHaveLength(3);
+    expect(completedButtons.slice(0, 2)).toEqual(savedButtons);
+    expect(screen.getByRole("button", { name: "Stop generating" })).toBeTruthy();
+    await runtime.stop();
+  });
+
   it("renders upstream MarkdownText headings, lists, quotations and code controls", async () => {
     const f = fixture();
     const rendered = render(<CaltraChat client={f.client as never} sessionId="markdown" />);
