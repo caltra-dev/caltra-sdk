@@ -265,7 +265,7 @@ Browser deployment prerequisite: activate the Caltra API/worker capability relea
 
 ## Thinking display
 
-The next SDK release adds a `reasoningDisplay` presentation prop:
+Version 0.13.0 adds a `reasoningDisplay` presentation prop:
 
 ```tsx
 <CaltraChat client={client} sessionId={sessionId} reasoningDisplay="auto" />
