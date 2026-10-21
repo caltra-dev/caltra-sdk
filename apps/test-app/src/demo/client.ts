@@ -1,4 +1,4 @@
-import { CaltraClient, CaltraSessionEventConnection, type CaltraSession, type CaltraSessionMessage, type CaltraSessionEvent } from "@caltra/client";
+import { CaltraClient, CaltraSessionEventConnection, type CaltraSession, type CaltraSessionMessage, type CaltraSessionEvent, type CaltraPageInput } from "@caltra/client";
 
 export const demoSessionId = "70000000-0000-4000-8000-000000000001";
 const turnId = "70000000-0000-4000-8000-000000000002";
@@ -13,6 +13,9 @@ export class DemoClient extends CaltraClient {
   messages: CaltraSessionMessage[] = Array.from({ length: 36 }, (_, index) => ({
     id: `80000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
     created_at: createdAt, role: index % 2 ? "assistant" : "user", status: "completed",
+    ...(index === 33 || index === 35 ? { tool_calls: [{ id: `saved-tool-${index}`, name: index === 33 ? "demo.echo" : "demo.fail",
+      status: index === 33 ? "completed" as const : "failed" as const, arguments: { text: "Loaded on expansion" },
+      result: index === 33 ? { text: "Lazy details loaded" } : { status: "failed", message: "Intentional sample failure" } }] } : {}),
     text: `Saved message ${index + 1}\n\nThis is deterministic sample history. Scroll up to read it while new steps arrive. Your reading position should remain unchanged.`,
   }));
 
@@ -24,7 +27,19 @@ export class DemoClient extends CaltraClient {
       agentIdentity: null, agent: { id: demoSessionId, name: "Demo" }, created_at: createdAt,
       updated_at: createdAt, external_id: null, status: "active" };
   }
-  override async listSessionMessages() { return { data: structuredClone(this.messages), next_cursor: null }; }
+  override async listSessionMessages(_sessionId: string, input: CaltraPageInput = {}) {
+    const end = input.cursor ? Number(input.cursor) : this.messages.length;
+    const start = Math.max(0, end - (input.limit ?? 20));
+    const data = structuredClone(this.messages.slice(start, end)).map(message => ({ ...message,
+      ...(message.tool_calls ? { tool_calls: message.tool_calls.map(({ id, name, status }) => ({ id, name, status })) } : {}) }));
+    return { data, next_cursor: start ? String(start) : null };
+  }
+  override async getSessionToolDetails(_sessionId: string, messageId: string, toolCallId: string) {
+    await new Promise(resolve => setTimeout(resolve, 350));
+    const tool = this.messages.find(message => message.id === messageId)?.tool_calls?.find(call => call.id === toolCallId);
+    if (!tool) throw new Error("Sample tool not found.");
+    return { ...structuredClone(tool), arguments: tool.arguments ?? {} };
+  }
   override async openSessionEvents(_id: string, options: { signal?: AbortSignal } = {}) {
     let controller: ReadableStreamDefaultController<Uint8Array>;
     const stream = new ReadableStream<Uint8Array>({

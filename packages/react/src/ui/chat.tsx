@@ -4,7 +4,7 @@ import {
   ActionBarPrimitive, AssistantRuntimeProvider, AuiIf,
   ComposerPrimitive, MessagePrimitive, ThreadPrimitive, useAuiState, type ToolCallMessagePartProps,
 } from "@assistant-ui/react";
-import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ComponentType, type ComponentPropsWithoutRef } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useMemo, useState, useSyncExternalStore, type ComponentType, type ComponentPropsWithoutRef } from "react";
 import { CaltraSessionRuntime } from "@caltra/client";
 import { useAssistantUiRuntime } from "@caltra/assistant-ui";
 import { type UseCaltraRuntimeOptions, type UseCaltraRuntimeResult } from "../use_caltra_runtime.js";
@@ -12,11 +12,12 @@ import { caltraThemes, type CaltraColorMode, type CaltraTheme, type CaltraThemeN
 import { themeStyle, type CaltraChatStyle } from "./theme_style.js";
 import { defaultCaltraChatLabels, type CaltraChatLabels } from "./labels.js";
 
+import { LazyTool } from "./lazy_tool.js";
 import { ToolFallback } from "./assistant-ui/tool-fallback.js";
 import { MarkdownText } from "./assistant-ui/markdown-text.js";
 import { Composer } from "./assistant-ui/composer.js";
 
-const ToolContext = createContext<{ labels: CaltraChatLabels; Tool?: ComponentType<ToolCallMessagePartProps> }>({ labels: defaultCaltraChatLabels });
+const ToolContext = createContext<{ labels: CaltraChatLabels; session?: CaltraSessionRuntime; Tool?: ComponentType<ToolCallMessagePartProps> }>({ labels: defaultCaltraChatLabels });
 
 export interface CaltraChatSlotProps { labels: CaltraChatLabels; }
 export type CaltraComposerInputProps = Omit<ComponentPropsWithoutRef<typeof ComposerPrimitive.Input>, "children" | "asChild" | "submitOnEnter">;
@@ -87,23 +88,42 @@ function ChatSession(props: CaltraChatProps) {
   const runtime = useAssistantUiRuntime(session);
   const caltra = { ...snapshot, runtime, reconnect: () => session.reconnect() };
   const viewport = slotProps.viewport ?? {};
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const scrollAnchor = useRef<{ height: number; top: number } | null>(null);
+  useLayoutEffect(() => {
+    if (!caltra.loadingOlder && scrollAnchor.current && viewportRef.current) {
+      viewportRef.current.scrollTop = scrollAnchor.current.top + viewportRef.current.scrollHeight - scrollAnchor.current.height;
+      scrollAnchor.current = null;
+    }
+  }, [caltra.loadingOlder]);
+  const loadOlder = async () => {
+    if (caltra.loadingOlder) return;
+    if (viewportRef.current) scrollAnchor.current = { height: viewportRef.current.scrollHeight, top: viewportRef.current.scrollTop };
+    await session.loadOlder().catch(() => undefined);
+  };
   const resolvedTheme = typeof theme === "string" ? caltraThemes[theme] : theme;
   const labels = useMemo(() => ({ ...defaultCaltraChatLabels, ...overrides }), [overrides]);
   const { Welcome = CaltraWelcome, Loading = CaltraHistoryLoading, Message = CaltraMessage,
     Composer = CaltraComposer, Connection = CaltraConnection } = components;
 
   return <AssistantRuntimeProvider runtime={caltra.runtime}>
-    <ToolContext.Provider value={{ labels, Tool: components.Tool }}>
+    <ToolContext.Provider value={{ labels, session, Tool: components.Tool }}>
     <ThreadPrimitive.Root className={`caltra-chat${className ? ` ${className}` : ""}`} style={{ ...themeStyle(resolvedTheme), ...style }} data-theme={resolvedTheme.name} data-color-mode={colorMode} hidden={hidden} aria-label={labels.chat}>
       <Connection labels={labels} connection={caltra.connection} error={caltra.error} historyLoaded={caltra.historyLoaded} retry={caltra.reconnect} />
       {!caltra.historyLoaded && caltra.connection !== "failed" && <Loading labels={labels} />}
-      <ThreadPrimitive.Viewport {...viewport}
+      <ThreadPrimitive.Viewport {...viewport} ref={viewportRef}
         className={`caltra-chat__viewport${viewport.className ? ` ${viewport.className}` : ""}`}
         autoScroll={viewport.autoScroll ?? true}
         scrollToBottomOnRunStart={viewport.scrollToBottomOnRunStart ?? false}
         hidden={!caltra.historyLoaded && caltra.connection !== "failed"}>
         <div className="caltra-chat__content">
           {caltra.historyLoaded && <>
+            {caltra.hasOlderMessages && <div className="caltra-chat__history-pagination">
+              <button type="button" disabled={caltra.loadingOlder} aria-busy={caltra.loadingOlder} onClick={() => { void loadOlder(); }}>
+                {labels.loadOlder}
+              </button>
+              {caltra.olderError && <p role="alert">{labels.olderFailed}</p>}
+            </div>}
             <AuiIf condition={(state) => state.thread.messages.length === 0 && !state.thread.isLoading}>
               <Welcome labels={labels} />
             </AuiIf>
@@ -176,6 +196,7 @@ function ToolRenderer(props: ToolCallMessagePartProps) {
 
 /** The upstream assistant-ui ToolFallback; retained under the existing public name. */
 export function CaltraTool(props: ToolCallMessagePartProps) {
+  const { session, labels } = useContext(ToolContext);
   const artifact = props.artifact;
   const lifecycle = artifact && typeof artifact === "object" && "caltraToolStatus" in artifact
     ? artifact.caltraToolStatus : undefined;
@@ -188,6 +209,11 @@ export function CaltraTool(props: ToolCallMessagePartProps) {
       : lifecycle === "running"
         ? { type: "running" }
         : props.status;
+  if (session && artifact && typeof artifact === "object" && "caltraToolDetailsLoaded" in artifact
+    && artifact.caltraToolDetailsLoaded === false && "caltraMessageId" in artifact && typeof artifact.caltraMessageId === "string") {
+    return <LazyTool {...props} status={status} session={session} messageId={artifact.caltraMessageId}
+      lifecycle={String(lifecycle)} labels={labels} />;
+  }
   return <ToolFallback {...props} status={status} />;
 }
 

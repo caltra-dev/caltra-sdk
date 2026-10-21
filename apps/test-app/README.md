@@ -91,3 +91,12 @@ Run `npm run test:e2e -w @caltra/test-app -- e2e/runtime-scroll.spec.ts` on the 
 Private Fly sign-in can return to the demo app root without the query string. If that happens, reopen the full `/?demo=runtime` link after signing in to enter the in-memory preview.
 
 Scroll regression assertions track a visible message's viewport-relative position. The upstream Copy action bars hide while streaming and reappear between steps, so native scroll anchoring can correctly change scrollTop while keeping the same text stationary. A fixed scrollTop assertion alone is insufficient during those layout changes.
+
+## Lazy transcript inspection preview
+
+The pending release makes `/?demo=runtime` a deterministic paginated fixture: 36 messages,
+with a 20-message initial page and Load older messages for the preceding page. The latest
+messages include collapsed `demo.echo` and `demo.fail` cards; expanding a card simulates a
+350 ms detail fetch, then displays the saved arguments/result. Reopening it uses the runtime
+cache. Stream steps also exercises a running tool becoming completed while its panel is open.
+This is explicitly simulated data; API authorization and SQL plans are validated separately.

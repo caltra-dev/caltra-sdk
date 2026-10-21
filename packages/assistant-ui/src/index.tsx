@@ -27,11 +27,11 @@ export function useAssistantUiRuntime(store: CaltraSessionRuntime): AssistantRun
     content: [
       ...(message.text ? [{ type: "text" as const, text: message.text }] : []),
       ...(message.tool_calls ?? []).map(tool => ({ type: "tool-call" as const, toolCallId: tool.id, toolName: tool.name,
-        args: tool.arguments as import("@assistant-ui/react").ToolCallMessagePart["args"], argsText: JSON.stringify(tool.arguments),
+        args: (tool.arguments ?? {}) as import("@assistant-ui/react").ToolCallMessagePart["args"], argsText: tool.arguments === undefined ? "" : JSON.stringify(tool.arguments),
         ...(tool.status === "running" ? {} : { result: tool.result ?? null }),
         isError: tool.status === "failed" || tool.status === "cancelled",
         // Keep per-tool lifecycle distinct from the enclosing assistant message.
-        artifact: { caltraToolStatus: tool.status },
+        artifact: { caltraToolStatus: tool.status, caltraToolDetailsLoaded: tool.arguments !== undefined, caltraMessageId: message.id },
       })),
     ],
     createdAt: new Date(message.created_at),

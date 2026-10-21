@@ -57,7 +57,9 @@ export interface CaltraSessionCreateIfMissing extends CaltraSessionLookup {
 }
 
 export interface CaltraToolCall {
-  id: string; name: string; arguments: Record<string, unknown>;
+  id: string; name: string;
+  /** Absent on summary pages; load details when the call is inspected. */
+  arguments?: Record<string, unknown>;
   status: "running" | "completed" | "failed" | "cancelled"; result?: unknown;
 }
 

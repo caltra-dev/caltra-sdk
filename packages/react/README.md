@@ -38,6 +38,20 @@ Use `submitMode="ctrlEnter"` or `"none"` to change keyboard submission.
 
 History is unknown until the first successful response. Only confirmed empty history displays
 the welcome. Recovery retains loaded messages; changing the client or session resets the chat.
+
+Transcript startup opens and begins consuming the session event stream before fetching the
+latest 20 messages and session metadata. This subscription-before-snapshot order closes the
+startup gap without a duplicate initial history request. Events continue to be consumed while
+history is pending. History merges by message ID, stream events deduplicate by event ID,
+and completed canonical text replaces provisional text without appending it twice.
+HTTP reconciliation never blocks consumption of subsequent events.
+
+The shared chat offers **Load older messages** above the transcript. Each activation fetches
+one cursor page, preserves already loaded messages and the scroll position, and shows a
+retryable local error on failure. There is no automatic traversal of older cursors on mount.
+The headless result exposes `hasOlderMessages`, `loadingOlder`, `olderError`, and `loadOlder()`.
+Use the `loadOlder` and `olderFailed` labels to localize the pagination control and error.
+
 Keep the same client instance for the same authenticated identity. Keep the component mounted
 and use `hidden` when collapsing a panel to retain its draft and connection.
 
@@ -191,7 +205,20 @@ as `CaltraTool`. It retains upstream English labels; use the custom slot for
 localized tool presentation. The existing tool label fields remain available to
 custom renderers. See [source provenance](src/ui/assistant-ui/README.md).
 
-Client 0.8.3 opts in to structured tool history and tool-start events. Deploy the matching
+The pending lazy-details release requests `include_tools=summary` for history: tool ID, name
+and status arrive with the page, while arguments/results are omitted. Opening the default tool
+card calls `getSessionToolDetails(sessionId, messageId, toolCallId)` once. The session runtime
+caches and deduplicates requests per call/lifecycle state, retries failed reads, and refreshes
+details when a running call becomes terminal. The panel uses upstream ToolFallback parts;
+its source files are unchanged. Closing/reopening a completed call reuses its cached details.
+The custom `components.Tool` slot remains caller-owned; headless integrations can use
+`runtime.getToolDetails(messageId, toolCallId)`. `CaltraToolCall.arguments` is optional on
+summary pages. A tool's displayed status does not depend on downloading its result.
+
+Deploy the API supporting summary pages and the scoped detail endpoint before publishing
+this SDK change. Legacy `include_tools=true` still returns full details.
+
+Client 0.8.3 originally opted in to structured tool history and tool-start events. Deploy the matching
 Caltra API support before publishing this client version; older clients keep their existing
 text-only wire format. The API exposes public tool arguments/results, never raw model metadata
 or reasoning. A successful copy uses assistant-ui's standard three-second checkmark feedback.

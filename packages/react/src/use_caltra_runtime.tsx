@@ -8,6 +8,10 @@ export interface UseCaltraRuntimeResult {
   connection: CaltraConnectionState;
   error: Error | null;
   historyLoaded: boolean;
+  hasOlderMessages: boolean;
+  loadingOlder: boolean;
+  olderError: Error | null;
+  loadOlder(): Promise<void>;
   refresh(): Promise<void>;
   reconnect(): Promise<void>;
   runtime: AssistantRuntime;
@@ -23,5 +27,6 @@ export function useCaltraRuntime({ client, sessionId }: UseCaltraRuntimeOptions)
   const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
   const runtime = useAssistantUiRuntime(session);
   return { connection: snapshot.connection, error: snapshot.error, historyLoaded: snapshot.historyLoaded,
-    refresh: () => session.refresh(), reconnect: () => session.reconnect(), runtime };
+    hasOlderMessages: snapshot.hasOlderMessages, loadingOlder: snapshot.loadingOlder, olderError: snapshot.olderError,
+    loadOlder: () => session.loadOlder(), refresh: () => session.refresh(), reconnect: () => session.reconnect(), runtime };
 }

@@ -206,3 +206,8 @@
   .caltra-chat[data-color-mode="system"] [data-slot="aui_composer-shell"] { border-color: color-mix(in oklab, var(--caltra-resolved-muted-foreground) 15%, transparent); }
   .caltra-chat[data-color-mode="system"] [data-slot="aui_composer-shell"]:focus-within { border-color: color-mix(in oklab, var(--caltra-resolved-muted-foreground) 30%, transparent); }
 }
+.caltra-chat__history-pagination { display: grid; justify-items: center; gap: .5rem; padding: .75rem; }
+.caltra-chat__history-pagination button { border: 1px solid var(--caltra-resolved-border); border-radius: var(--caltra-radius, .5rem); background: var(--caltra-resolved-background); color: var(--caltra-resolved-foreground); padding: .5rem .75rem; cursor: pointer; }
+.caltra-chat__history-pagination button:disabled { opacity: .6; cursor: wait; }
+.caltra-chat__history-pagination button:focus-visible { outline: 2px solid var(--caltra-resolved-accent); outline-offset: 2px; }
+.caltra-chat__history-pagination p { color: var(--caltra-resolved-error); }

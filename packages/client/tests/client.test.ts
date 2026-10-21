@@ -217,3 +217,22 @@ it("cancels with the browser token and decodes active and already-idle responses
   active = false;
   await expect(client.cancelSession(sessionId)).resolves.toEqual({ turn_id: null });
 });
+
+it("requests lightweight pages and fetches encoded tool details separately", async () => {
+  const tool = { id: "call/with spaces", name: "demo.echo", status: "completed" };
+  const fetchImplementation = vi.fn(async (input: URL | RequestInfo) => {
+    const url = new URL(String(input));
+    if (url.pathname.endsWith("/auth/authenticate")) return Response.json({ client_token: "test-token", expires_at: new Date(Date.now()+600000).toISOString(), refresh_after: new Date(Date.now()+500000).toISOString() });
+    if (url.pathname.endsWith("/messages")) {
+      expect(url.searchParams.get("include_tools")).toBe("summary");
+      expect(url.searchParams.get("limit")).toBe("20");
+      return Response.json({ data: [{ id: agentIdentityId, role: "assistant", status: "completed", created_at: "2026-10-21T00:00:00Z", text: "", tool_calls: [tool] }], next_cursor: null });
+    }
+    expect(url.pathname).toBe(`/client/v1/sessions/${sessionId}/messages/${agentIdentityId}/tools/call%2Fwith%20spaces`);
+    return Response.json({ ...tool, arguments: { text: "hello" }, result: "hello" });
+  });
+  const client = new CaltraClient({ apiUrl: "https://api.example.test", authorizationCodeProvider: async () => "test-code", fetch: fetchImplementation as typeof fetch });
+  expect((await client.listSessionMessages(sessionId, { limit: 20 })).data[0].tool_calls).toEqual([tool]);
+  expect(fetchImplementation).toHaveBeenCalledTimes(2);
+  expect((await client.getSessionToolDetails(sessionId, agentIdentityId, tool.id)).result).toBe("hello");
+});

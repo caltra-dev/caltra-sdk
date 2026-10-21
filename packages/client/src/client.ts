@@ -45,14 +45,16 @@ const SessionSchema = z.object({
   updated_at: z.string(),
 }).strict();
 
+const ToolSchema = z.object({ id: z.string(), name: z.string(), arguments: z.record(z.string(), z.unknown()).optional(),
+  status: z.enum(["running", "completed", "failed", "cancelled"]), result: z.unknown().optional() }).strict();
+
 const MessageSchema = z.object({
   created_at: z.string(),
   id: z.string().uuid(),
   role: z.enum(["user", "assistant"]),
   status: z.enum(["streaming", "completed", "failed", "cancelled"]),
   text: z.string(),
-  tool_calls: z.array(z.object({ id: z.string(), name: z.string(), arguments: z.record(z.string(), z.unknown()),
-    status: z.enum(["running", "completed", "failed", "cancelled"]), result: z.unknown().optional() }).strict()).optional(),
+  tool_calls: z.array(ToolSchema).optional(),
 }).strict();
 
 const SubmissionSchema = z.object({
@@ -156,9 +158,17 @@ export class CaltraClient {
     input: CaltraPageInput = {},
   ): Promise<CaltraPage<CaltraSessionMessage>> {
     return await this.getPage(
-      `/sessions/${encodeURIComponent(sessionId)}/messages?include_tools=true`,
+      `/sessions/${encodeURIComponent(sessionId)}/messages?include_tools=summary`,
       input,
       PageSchema(MessageSchema),
+    );
+  }
+
+  /** Loads one call's arguments/result without executing or retrying the tool. */
+  async getSessionToolDetails(sessionId: string, messageId: string, toolCallId: string) {
+    return await this.request(
+      `/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}/tools/${encodeURIComponent(toolCallId)}`,
+      ToolSchema.required({ arguments: true }), { method: "GET" },
     );
   }
 

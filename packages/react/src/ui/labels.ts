@@ -11,6 +11,10 @@ export interface CaltraChatLabels {
   copied: string;
   scrollToBottom: string;
   loading: string;
+  toolDetailsLoading?: string;
+  toolDetailsFailed?: string;
+  loadOlder?: string;
+  olderFailed?: string;
   connecting: string;
   recovering: string;
   connectionFailed: string;
@@ -35,6 +39,10 @@ export const defaultCaltraChatLabels: CaltraChatLabels = {
   copied: "Copied",
   scrollToBottom: "Scroll to bottom",
   loading: "Loading conversation…",
+  toolDetailsLoading: "Loading tool details…",
+  toolDetailsFailed: "Could not load tool details.",
+  loadOlder: "Load older messages",
+  olderFailed: "Older messages could not be loaded. Try again.",
   connecting: "Connecting…",
   recovering: "Reconnecting… Your conversation is still here.",
   connectionFailed: "The conversation could not connect. Please try again.",

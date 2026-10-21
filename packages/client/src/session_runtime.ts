@@ -2,6 +2,7 @@ import {
   type CaltraSessionEvent,
   type CaltraSessionMessage,
   type CaltraSession,
+  type CaltraToolCall,
 } from "./types.js";
 import type { CaltraClient } from "./client.js";
 import { CaltraApiError } from "./error.js";
@@ -17,6 +18,9 @@ export interface CaltraSessionSnapshot {
   /** Queued/running turn or pending submission. Older servers fall back to message activity. */
   isRunning: boolean;
   messages: readonly CaltraSessionMessage[];
+  hasOlderMessages: boolean;
+  loadingOlder: boolean;
+  olderError: Error | null;
 }
 
 export interface CaltraSessionRuntimeOptions {
@@ -25,10 +29,21 @@ export interface CaltraSessionRuntimeOptions {
 
 /** Minimal transport contract; useful for deterministic fixtures and custom transports. */
 export type CaltraSessionTransport = Pick<CaltraClient,
-  "openSessionEvents" | "listSessionMessages" | "getSessionById" | "sendMessage" | "cancelSession" | "invalidateToken">;
+  "openSessionEvents" | "listSessionMessages" | "getSessionById" | "sendMessage" | "cancelSession" | "invalidateToken"> & Partial<Pick<CaltraClient, "getSessionToolDetails">>;
 
 /** Owns reconnectable session state while keeping React and assistant-ui as presentation layers. */
 export class CaltraSessionRuntime {
+  private readonly pageSize = 20;
+  private olderCursor: string | null = null;
+  private olderPromise?: Promise<void>;
+  private hasLoadedOlder = false;
+  private historyRequest = 0;
+  private appliedHistoryRequest = 0;
+  private readonly eventIds = new Set<string>();
+  private readonly canonicalMessages = new Set<string>();
+  private refreshPending?: Promise<void>;
+  private refreshAgain = false;
+  private readonly toolDetails = new Map<string, Promise<CaltraToolCall>>();
   private abortController?: AbortController;
   private connection?: Awaited<ReturnType<CaltraClient["openSessionEvents"]>>;
   private readonly listeners = new Set<() => void>();
@@ -46,6 +61,9 @@ export class CaltraSessionRuntime {
     historyLoaded: false,
     isRunning: false,
     messages: [],
+    hasOlderMessages: false,
+    loadingOlder: false,
+    olderError: null,
   };
 
   constructor(
@@ -75,12 +93,16 @@ export class CaltraSessionRuntime {
 
   async stop(): Promise<void> {
     this.generation += 1;
+    this.update({ messages: this.snapshot.messages.filter(message => !this.pendingSends.has(message.id)) });
     this.pendingSends.clear();
+    this.toolDetails.clear();
     const connection = this.connection;
     this.abortController?.abort();
     this.abortController = undefined;
     this.connection = undefined;
     this.readyPromise = undefined;
+    this.olderPromise = undefined;
+    this.update({ loadingOlder: false });
     this.rejectReady?.(new Error("The Caltra session connection was stopped."));
     this.rejectReady = undefined;
     this.resolveReady = undefined;
@@ -89,9 +111,88 @@ export class CaltraSessionRuntime {
 
   async refresh(): Promise<void> {
     const generation = this.generation;
-    const page = await this.client.listSessionMessages(this.sessionId, { limit: 100 });
-    if (generation !== this.generation) return;
-    this.update({ historyLoaded: true, messages: page.data, isRunning: page.data.some((message) => message.status === "streaming") });
+    const request = ++this.historyRequest;
+    const page = await this.client.listSessionMessages(this.sessionId, { limit: this.pageSize });
+    if (generation !== this.generation || request < this.appliedHistoryRequest) return;
+    this.appliedHistoryRequest = request;
+    const existingIds = new Set(this.snapshot.messages.map(message => message.id));
+    if (!this.hasLoadedOlder || !page.data.some(message => existingIds.has(message.id))) {
+      // A reconnect can introduce more than one page of unseen messages. Start
+      // pagination at that new gap instead of skipping it with the old cursor.
+      this.olderCursor = page.next_cursor ?? null;
+    }
+    const messages = this.mergeHistory(page.data, false, !page.next_cursor);
+    this.update({ historyLoaded: true, messages, hasOlderMessages: this.olderCursor !== null,
+      isRunning: messages.some(message => message.status === "streaming") });
+  }
+
+  /** Fetches exactly one older page. Concurrent callers share the same request. */
+  async loadOlder(): Promise<void> {
+    if (this.olderPromise) return await this.olderPromise;
+    if (!this.snapshot.historyLoaded || !this.olderCursor) return;
+    const generation = this.generation;
+    const cursor = this.olderCursor;
+    this.update({ loadingOlder: true, olderError: null });
+    const pending = (async () => {
+      try {
+        const page = await this.client.listSessionMessages(this.sessionId, { limit: this.pageSize, cursor });
+        if (generation !== this.generation) return;
+        this.hasLoadedOlder = true;
+        this.olderCursor = page.next_cursor ?? null;
+        this.update({ messages: this.mergeHistory(page.data, true), hasOlderMessages: this.olderCursor !== null });
+      } catch (error) {
+        if (generation === this.generation) this.update({ olderError: this.toError(error) });
+        throw error;
+      } finally {
+        if (generation === this.generation) {
+          this.olderPromise = undefined;
+          this.update({ loadingOlder: false });
+        }
+      }
+    })();
+    this.olderPromise = pending;
+    return await pending;
+  }
+
+  private mergeHistory(history: readonly CaltraSessionMessage[], older: boolean, complete = false): CaltraSessionMessage[] {
+    const existing = new Map(this.snapshot.messages.map(message => [message.id, message]));
+    const merged = history.map(message => {
+      const live = existing.get(message.id);
+      // Caltra commits canonical text at message completion; in-flight transcript
+      // rows do not include token deltas. Never append deltas to canonical text.
+      if (message.status !== "streaming") {
+        this.canonicalMessages.add(message.id);
+        return older && live ? live : message;
+      }
+      return live ? { ...message, ...live, created_at: message.created_at } : message;
+    });
+    const ids = new Set(history.map(message => message.id));
+    const retained = this.snapshot.messages.filter(message => !ids.has(message.id)
+      && !(complete && !older && this.canonicalMessages.has(message.id)));
+    if (older) return [...merged, ...retained];
+    // Older loaded pages precede the newest page; new stream/optimistic messages
+    // belong after it. Preserve their relative order without sorting timestamps.
+    const firstOverlap = this.snapshot.messages.findIndex(message => ids.has(message.id));
+    const retainedIds = new Set(retained.map(message => message.id));
+    const before = firstOverlap < 0 ? (this.hasLoadedOlder ? retained : [])
+      : this.snapshot.messages.slice(0, firstOverlap).filter(message => retainedIds.has(message.id));
+    const beforeIds = new Set(before.map(message => message.id));
+    return [...before, ...merged, ...retained.filter(message => !beforeIds.has(message.id))];
+  }
+
+  /** Deduplicates expansions and caches per lifecycle state; a finished tool gets fresh details. */
+  async getToolDetails(messageId: string, toolId: string): Promise<CaltraToolCall> {
+    const tool = this.snapshot.messages.find(message => message.id === messageId)?.tool_calls?.find(call => call.id === toolId);
+    if (!tool) throw new Error("The tool call is not available.");
+    if (tool.arguments !== undefined) return tool;
+    const key = JSON.stringify([messageId, toolId, tool.status]);
+    const cached = this.toolDetails.get(key);
+    if (cached) return cached;
+    if (!this.client.getSessionToolDetails) throw new Error("This transport does not support tool details.");
+    const pending = this.client.getSessionToolDetails(this.sessionId, messageId, toolId);
+    this.toolDetails.set(key, pending);
+    try { return await pending; }
+    catch (error) { if (this.toolDetails.get(key) === pending) this.toolDetails.delete(key); throw error; }
   }
 
   async refreshMetadata(): Promise<void> {
@@ -127,9 +228,9 @@ export class CaltraSessionRuntime {
         ...(this.snapshot.session?.is_running === undefined ? {} : {
           session: { ...this.snapshot.session, is_running: true },
         }),
-        messages: this.snapshot.messages.map((message) => message.id === temporaryId
-          ? { ...message, id: submitted.message_id }
-          : message),
+        messages: this.snapshot.messages.some(message => message.id === submitted.message_id)
+          ? this.snapshot.messages.filter(message => message.id !== temporaryId)
+          : this.snapshot.messages.map(message => message.id === temporaryId ? { ...message, id: submitted.message_id } : message),
       });
     } catch (error) {
       if (generation !== this.generation) throw error;
@@ -171,6 +272,8 @@ export class CaltraSessionRuntime {
         const connection = await this.client.openSessionEvents(this.sessionId, { signal });
         if (signal.aborted) { await connection.close().catch(() => undefined); return; }
         this.connection = connection;
+        const consuming = this.consume(connection, signal);
+        void consuming.catch(() => undefined);
         await Promise.all([this.refresh(), this.refreshMetadata()]);
         if (signal.aborted) return;
         this.update({ connection: "connected", error: null });
@@ -178,10 +281,12 @@ export class CaltraSessionRuntime {
         this.resolveReady = undefined;
         this.rejectReady = undefined;
         attempt = 0;
-        await this.consume(this.connection, signal);
+        await consuming;
         if (!signal.aborted) throw new Error("The Caltra event stream closed.");
       } catch (error) {
         if (signal.aborted) return;
+        await this.connection?.close().catch(() => undefined);
+        this.connection = undefined;
         const currentError = this.toError(error);
         if (error instanceof CaltraApiError && error.status === 401) {
           await this.client.invalidateToken();
@@ -208,21 +313,28 @@ export class CaltraSessionRuntime {
   }
 
   private async apply(event: CaltraSessionEvent): Promise<void> {
+    if (event.id) {
+      if (this.eventIds.has(event.id)) return;
+      this.eventIds.add(event.id);
+      // Bound transport deduplication independently from loaded history.
+      if (this.eventIds.size > 10_000) this.eventIds.delete(this.eventIds.values().next().value!);
+    }
     if (event.event === "session.updated") {
-      await Promise.all([this.refreshMetadata(), this.refresh()]);
+      this.scheduleRefresh();
       return;
     }
     // Message activity is only a hint to refresh persisted turn state. A completed
     // message may be followed by tools or another model request in the same turn.
     if (this.snapshot.session?.is_running !== undefined
-      && (event.event === "message.started" || event.event === "message.completed")) await this.refreshMetadata();
+      && (event.event === "message.started" || event.event === "message.completed")) this.scheduleRefresh();
     if (event.event === "tool.started") {
-      const tool = { id: event.data.tool_call_id, name: event.data.tool_name, arguments: {}, status: "running" as const };
+      const tool = { id: event.data.tool_call_id, name: event.data.tool_name, status: "running" as const };
       this.update({ isRunning: true, messages: this.snapshot.messages.map(message => message.id === event.data.message_id
         ? { ...message, tool_calls: [...(message.tool_calls ?? []).filter(call => call.id !== tool.id), tool] } : message) });
       return;
     }
     if (event.event === "message.started") {
+      if (this.canonicalMessages.has(event.data.message_id)) return;
       if (!this.snapshot.messages.some((message) => message.id === event.data.message_id)) {
         this.update({
           isRunning: true,
@@ -240,6 +352,7 @@ export class CaltraSessionRuntime {
       return;
     }
     if (event.event === "message.delta") {
+      if (this.canonicalMessages.has(event.data.message_id)) return;
       const existing = this.snapshot.messages.some((message) => message.id === event.data.message_id);
       const messages = existing
         ? this.snapshot.messages.map((message) => message.id === event.data.message_id
@@ -261,7 +374,24 @@ export class CaltraSessionRuntime {
         ? { ...message, status: "completed" }
         : message),
     });
-    await this.refresh();
+    this.scheduleRefresh();
+  }
+
+  /** Slow HTTP reconciliation must never prevent consumption of later events. */
+  private scheduleRefresh(): void {
+    if (this.refreshPending) { this.refreshAgain = true; return; }
+    const generation = this.generation;
+    const pending = (async () => {
+      do {
+        this.refreshAgain = false;
+        try { await Promise.all([this.refresh(), this.refreshMetadata()]); }
+        catch (error) {
+          if (generation === this.generation) this.update({ error: this.toError(error) });
+        }
+      } while (this.refreshAgain && generation === this.generation);
+    })();
+    this.refreshPending = pending;
+    void pending.finally(() => { if (this.refreshPending === pending) this.refreshPending = undefined; });
   }
 
   private update(update: Partial<CaltraSessionSnapshot>): void {
