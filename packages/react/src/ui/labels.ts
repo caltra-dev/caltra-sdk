@@ -1,5 +1,6 @@
 /** Chat copy and accessible names. The upstream tool fallback uses its own labels. */
 export interface CaltraChatLabels {
+  thinking?: string; thought?: string; reasoningLoading?: string; reasoningFailed?: string;
   chat: string;
   welcomeTitle: string;
   welcomeDescription: string;
@@ -28,6 +29,7 @@ export interface CaltraChatLabels {
 }
 
 export const defaultCaltraChatLabels: CaltraChatLabels = {
+  thinking: "Thinking…", thought: "Thinking", reasoningLoading: "Loading thinking…", reasoningFailed: "Could not load thinking.",
   chat: "Conversation",
   welcomeTitle: "How can I help you today?",
   welcomeDescription: "",

@@ -55,6 +55,7 @@ const MessageSchema = z.object({
   status: z.enum(["streaming", "completed", "failed", "cancelled"]),
   text: z.string(),
   tool_calls: z.array(ToolSchema).optional(),
+  reasoning: z.object({ status: z.enum(["streaming", "completed"]) }).strict().optional(),
 }).strict();
 
 const SubmissionSchema = z.object({
@@ -158,7 +159,7 @@ export class CaltraClient {
     input: CaltraPageInput = {},
   ): Promise<CaltraPage<CaltraSessionMessage>> {
     return await this.getPage(
-      `/sessions/${encodeURIComponent(sessionId)}/messages?include_tools=summary`,
+      `/sessions/${encodeURIComponent(sessionId)}/messages?include_tools=summary&include_reasoning_metadata=true`,
       input,
       PageSchema(MessageSchema),
     );
@@ -170,6 +171,27 @@ export class CaltraClient {
       `/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}/tools/${encodeURIComponent(toolCallId)}`,
       ToolSchema.required({ arguments: true }), { method: "GET" },
     );
+  }
+
+  /** Retrieves only displayable reasoning with a stream watermark for race-free reconciliation. */
+  async getSessionReasoning(sessionId: string, messageId: string, options: { signal?: AbortSignal } = {}) {
+    return await this.request(
+      `/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}/reasoning`,
+      z.object({ message_id: z.string().uuid(), stream_id: z.string().uuid().nullable(), sequence: z.number().int().min(-1),
+        status: z.enum(["streaming", "completed", "failed", "cancelled"]),
+        parts: z.array(z.object({ position: z.number().int().nonnegative(), text: z.string(), status: z.enum(["streaming", "completed"]) }).strict()),
+      }).strict(), { method: "GET", signal: options.signal },
+    );
+  }
+
+  /** Opens an independent reasoning subscription; callers must fetch a snapshot after connecting. */
+  async openSessionReasoningEvents(sessionId: string, messageId: string, options: { signal?: AbortSignal } = {}) {
+    const response = await this.fetchImplementation(this.url(
+      `/sessions/${encodeURIComponent(sessionId)}/messages/${encodeURIComponent(messageId)}/reasoning/events`,
+    ), { method: "GET", signal: options.signal, headers: await this.headers({ accept: "text/event-stream" }) });
+    if (!response.ok) throw await CaltraApiError.fromResponse(response);
+    if (!response.headers.get("content-type")?.includes("text/event-stream")) throw new Error("Caltra did not return a reasoning event stream.");
+    return new CaltraSessionEventConnection(response);
   }
 
   async getSessionById(sessionId: string): Promise<CaltraSession> {
@@ -191,7 +213,7 @@ export class CaltraClient {
     options: { signal?: AbortSignal } = {},
   ): Promise<CaltraSessionEventConnection> {
     const response = await this.fetchImplementation(this.url(
-      `/sessions/${encodeURIComponent(sessionId)}/events?include_metadata=true&include_tools=true`,
+      `/sessions/${encodeURIComponent(sessionId)}/events?include_metadata=true&include_tools=true&include_reasoning_metadata=true`,
     ), {
       headers: await this.headers({ accept: "text/event-stream" }),
       method: "GET",

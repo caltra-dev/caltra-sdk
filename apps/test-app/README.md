@@ -64,7 +64,9 @@ For the combined Caltra/SDK branch preview, run this demo beside the isolated Ca
 its seeded local `dogfood_assistant.server_api_key`, workspace
 `40000000-0000-4000-8000-000000000001` and tenant external ID
 `10000000-0000-4000-8000-000000000001`. Route the demo's server authorization call to local
-port 4001 and browser API calls through the same-origin gateway. The existing dogfood seed
+port 4001 with `CALTRA_API_URL=http://127.0.0.1:4001` and set `CALTRA_BROWSER_API_URL`
+to the private Sprite URL for browser API calls through the same-origin gateway. Route
+`/api/client-authorization` to this demo's Vite server. The existing dogfood seed
 provides saved session `90000000-0000-4000-8000-000000000001` and empty conversations.
 The Caltra development stack now seeds a `Local deterministic model` and starts its loopback
 provider. Try `/help`, `/echo Hello`, `/capabilities records`, `/tool <capability-id>`, and
@@ -100,3 +102,11 @@ messages include collapsed `demo.echo` and `demo.fail` cards; expanding a card s
 350 ms detail fetch, then displays the saved arguments/result. Reopening it uses the runtime
 cache. Stream steps also exercises a running tool becoming completed while its panel is open.
 This is explicitly simulated data; API authorization and SQL plans are validated separately.
+
+## Thinking display preview
+
+The live SDK demo has a Thinking display selector (Hidden, Auto, Collapsed, Expanded).
+Use the local deterministic model and send `/think Thinking demo complete` to stream a clearly
+labeled simulated reasoning summary through the real worker/API. Auto expands during thinking
+and collapses when it ends; expand again or reload to inspect the saved summary. Collapsed
+opens no reasoning-text connection until clicked. Hidden opens none. Mode changes retain drafts.

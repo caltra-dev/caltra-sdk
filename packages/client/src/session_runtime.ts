@@ -1,3 +1,4 @@
+import { CaltraReasoningRuntime } from "./reasoning_runtime.js";
 import {
   type CaltraSessionEvent,
   type CaltraSessionMessage,
@@ -29,11 +30,12 @@ export interface CaltraSessionRuntimeOptions {
 
 /** Minimal transport contract; useful for deterministic fixtures and custom transports. */
 export type CaltraSessionTransport = Pick<CaltraClient,
-  "openSessionEvents" | "listSessionMessages" | "getSessionById" | "sendMessage" | "cancelSession" | "invalidateToken"> & Partial<Pick<CaltraClient, "getSessionToolDetails">>;
+  "openSessionEvents" | "listSessionMessages" | "getSessionById" | "sendMessage" | "cancelSession" | "invalidateToken"> & Partial<Pick<CaltraClient, "getSessionToolDetails" | "getSessionReasoning" | "openSessionReasoningEvents">>;
 
 /** Owns reconnectable session state while keeping React and assistant-ui as presentation layers. */
 export class CaltraSessionRuntime {
   private readonly pageSize = 20;
+  private readonly reasoningResources = new Set<CaltraReasoningRuntime>();
   private olderCursor: string | null = null;
   private olderAnchorId: string | null = null;
   private olderPromise?: Promise<void>;
@@ -80,6 +82,14 @@ export class CaltraSessionRuntime {
 
   readonly getSnapshot = (): CaltraSessionSnapshot => this.snapshot;
 
+  /** Creates an independent, inert reasoning resource. Its consumer owns start/stop. */
+  reasoning(messageId: string): CaltraReasoningRuntime {
+    return new CaltraReasoningRuntime(this.client, this.sessionId, messageId, (resource, active) => {
+      if (active) this.reasoningResources.add(resource);
+      else this.reasoningResources.delete(resource);
+    });
+  }
+
   async start(): Promise<void> {
     if (this.readyPromise) return await this.readyPromise;
     this.abortController = new AbortController();
@@ -93,6 +103,7 @@ export class CaltraSessionRuntime {
   }
 
   async stop(): Promise<void> {
+    const reasoningStops = [...this.reasoningResources].map(resource => resource.stop());
     this.generation += 1;
     this.update({ messages: this.snapshot.messages.filter(message => !this.pendingSends.has(message.id)) });
     this.pendingSends.clear();
@@ -107,7 +118,7 @@ export class CaltraSessionRuntime {
     this.rejectReady?.(new Error("The Caltra session connection was stopped."));
     this.rejectReady = undefined;
     this.resolveReady = undefined;
-    await connection?.close().catch(() => undefined);
+    await Promise.all([...reasoningStops, connection?.close().catch(() => undefined)]);
   }
 
   async refresh(): Promise<void> {
@@ -332,6 +343,16 @@ export class CaltraSessionRuntime {
       // Bound transport deduplication independently from loaded history.
       if (this.eventIds.size > 10_000) this.eventIds.delete(this.eventIds.values().next().value!);
     }
+    if (event.event === "reasoning.delta") return; // Text belongs exclusively to a separate resource.
+    if (event.event === "reasoning.updated") {
+      if (this.canonicalMessages.has(event.data.message_id)) return;
+      const existing = this.snapshot.messages.some(message => message.id === event.data.message_id);
+      const reasoning = { status: event.data.status };
+      this.update({ messages: existing
+        ? this.snapshot.messages.map(message => message.id === event.data.message_id ? { ...message, reasoning } : message)
+        : [...this.snapshot.messages, { id: event.data.message_id, created_at: new Date().toISOString(), role: "assistant", status: "streaming", text: "", reasoning }] });
+      return;
+    }
     if (event.event === "session.updated") {
       this.scheduleRefresh();
       return;
@@ -384,7 +405,7 @@ export class CaltraSessionRuntime {
     this.update({
       isRunning: false,
       messages: this.snapshot.messages.map((message) => message.id === event.data.message_id
-        ? { ...message, status: "completed" }
+        ? { ...message, status: "completed", ...(message.reasoning ? { reasoning: { status: "completed" } } : {}) }
         : message),
     });
     this.scheduleRefresh();

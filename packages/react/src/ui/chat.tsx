@@ -1,5 +1,7 @@
 "use client";
 
+import { CaltraReasoning, type CaltraReasoningDisplay, type CaltraReasoningProps } from "./reasoning.js";
+
 import {
   ActionBarPrimitive, AssistantRuntimeProvider, AuiIf,
   ComposerPrimitive, MessagePrimitive, ThreadPrimitive, useAuiState, type ToolCallMessagePartProps,
@@ -17,7 +19,7 @@ import { ToolFallback } from "./assistant-ui/tool-fallback.js";
 import { MarkdownText } from "./assistant-ui/markdown-text.js";
 import { Composer } from "./assistant-ui/composer.js";
 
-const ToolContext = createContext<{ labels: CaltraChatLabels; session?: CaltraSessionRuntime; Tool?: ComponentType<ToolCallMessagePartProps> }>({ labels: defaultCaltraChatLabels });
+const ToolContext = createContext<{ labels: CaltraChatLabels; session?: CaltraSessionRuntime; Tool?: ComponentType<ToolCallMessagePartProps>; reasoningDisplay?: CaltraReasoningDisplay; Reasoning?: ComponentType<CaltraReasoningProps> }>({ labels: defaultCaltraChatLabels });
 
 export interface CaltraChatSlotProps { labels: CaltraChatLabels; }
 export type CaltraComposerInputProps = Omit<ComponentPropsWithoutRef<typeof ComposerPrimitive.Input>, "children" | "asChild" | "submitOnEnter">;
@@ -41,6 +43,7 @@ export interface CaltraChatComponents {
   Composer?: ComponentType<CaltraComposerProps>;
   Connection?: ComponentType<CaltraConnectionProps>;
   Tool?: ComponentType<ToolCallMessagePartProps>;
+  Reasoning?: ComponentType<CaltraReasoningProps>;
 }
 
 export type CaltraChatSource =
@@ -48,6 +51,8 @@ export type CaltraChatSource =
   | { runtime: CaltraSessionRuntime; client?: never; sessionId?: never };
 
 export interface CaltraChatPresentationProps {
+  /** Fetching is disclosure-owned. Hidden opens no reasoning stream. */
+  reasoningDisplay?: CaltraReasoningDisplay;
   /** Upstream assistant-ui options, applied over Caltra's presentation defaults. */
   slotProps?: { viewport?: CaltraViewportProps; composerInput?: CaltraComposerInputProps };
   labels?: Partial<CaltraChatLabels>;
@@ -107,7 +112,7 @@ function ChatSession(props: CaltraChatProps) {
     Composer = CaltraComposer, Connection = CaltraConnection } = components;
 
   return <AssistantRuntimeProvider runtime={caltra.runtime}>
-    <ToolContext.Provider value={{ labels, session, Tool: components.Tool }}>
+    <ToolContext.Provider value={{ labels, session, Tool: components.Tool, reasoningDisplay: hidden ? "hidden" : (props.reasoningDisplay ?? "hidden"), Reasoning: components.Reasoning }}>
     <ThreadPrimitive.Root className={`caltra-chat${className ? ` ${className}` : ""}`} style={{ ...themeStyle(resolvedTheme), ...style }} data-theme={resolvedTheme.name} data-color-mode={colorMode} hidden={hidden} aria-label={labels.chat}>
       <Connection labels={labels} connection={caltra.connection} error={caltra.error} historyLoaded={caltra.historyLoaded} retry={caltra.reconnect} />
       {!caltra.historyLoaded && caltra.connection !== "failed" && <Loading labels={labels} />}
@@ -163,14 +168,17 @@ export function CaltraMessage({ labels }: CaltraChatSlotProps) {
   const role = useAuiState((state) => state.message.role);
   const isCopied = useAuiState((state) => state.message.isCopied);
   const hasCopyableText = useAuiState((state) => state.message.content.some(part => part.type === "text" && part.text.length > 0));
+  const { session, reasoningDisplay = "hidden" } = useContext(ToolContext);
+  const hasReasoning = useAuiState(state => Boolean(state.message.metadata.custom?.caltraReasoning));
   const emptyCompleted = useAuiState((state) => state.message.role === "assistant"
     && state.message.status?.type === "complete"
     && !state.message.content.some((part) => part.type !== "text" || part.text !== ""));
   // Text-only transcripts can retain an empty checkpoint for a server-side tool call.
-  if (emptyCompleted) return null;
+  if (emptyCompleted && (!hasReasoning || reasoningDisplay === "hidden")) return null;
   return <MessagePrimitive.Root className="caltra-chat__message" data-role={role}>
     <span className="caltra-chat__sr-only">{role === "user" ? labels.user : labels.assistant}</span>
     <div className="caltra-chat__message-body">
+      {session && hasReasoning && <ReasoningRenderer session={session} />}
       <MessagePrimitive.Parts components={{ Text: MarkdownText, tools: { Fallback: ToolRenderer } }} />
       <AuiIf condition={(state) => state.message.status?.type === "incomplete"}>
         <p className="caltra-chat__message-error" role="alert">{labels.messageFailed}</p>
@@ -233,4 +241,14 @@ export function CaltraConnection({ labels, connection, error, historyLoaded, ret
       void retry().catch(() => undefined).finally(() => setRetrying(false));
     }}>{labels.retry}</button>}
   </div>;
+}
+
+/** Adapts the text-free reasoning metadata to Caltra's separately loaded disclosure. */
+function ReasoningRenderer({ session }: { session: CaltraSessionRuntime }) {
+  const { labels, reasoningDisplay = "hidden", Reasoning = CaltraReasoning } = useContext(ToolContext);
+  const messageId = useAuiState(state => state.message.id);
+  const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
+  const metadata = snapshot.messages.find(message => message.id === messageId)?.reasoning;
+  if (!metadata) return null;
+  return <Reasoning session={session} messageId={messageId} status={metadata.status} display={reasoningDisplay} labels={labels} />;
 }

@@ -3,6 +3,7 @@ import { z } from "zod";
 const ServerEnvironmentSchema = z.object({
   CALTRA_API_KEY: z.string().min(1),
   CALTRA_API_URL: z.url().default("http://api.caltra"),
+  CALTRA_BROWSER_API_URL: z.url().optional(),
   CALTRA_TENANT_USER_EXTERNAL_ID: z.string().min(1).default("sdk-test-user"),
   CALTRA_WORKSPACE_ID: z.string().uuid(),
 });
@@ -11,6 +12,7 @@ const ServerEnvironmentSchema = z.object({
 export class TestAppServerConfig {
   readonly apiKey: string;
   readonly apiUrl: string;
+  readonly browserApiUrl: string;
   readonly tenantUserExternalId: string;
   readonly workspaceId: string;
 
@@ -20,6 +22,7 @@ export class TestAppServerConfig {
     const value = ServerEnvironmentSchema.parse({
       CALTRA_API_KEY: environment.npm_config_api_key ?? environment.CALTRA_API_KEY,
       CALTRA_API_URL: environment.npm_config_caltra_url ?? environment.CALTRA_API_URL,
+      CALTRA_BROWSER_API_URL: environment.CALTRA_BROWSER_API_URL,
       CALTRA_TENANT_USER_EXTERNAL_ID:
         environment.npm_config_tenant_user_external_id
         ?? environment.CALTRA_TENANT_USER_EXTERNAL_ID,
@@ -28,6 +31,7 @@ export class TestAppServerConfig {
     });
     this.apiKey = value.CALTRA_API_KEY;
     this.apiUrl = value.CALTRA_API_URL.replace(/\/+$/, "");
+    this.browserApiUrl = value.CALTRA_BROWSER_API_URL ?? this.apiUrl;
     this.tenantUserExternalId = value.CALTRA_TENANT_USER_EXTERNAL_ID;
     this.workspaceId = value.CALTRA_WORKSPACE_ID;
   }

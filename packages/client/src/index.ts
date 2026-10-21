@@ -27,3 +27,7 @@ export { CaltraAgentsClient, CaltraAgentSessionsClient } from "./agents.js";
 
 export { CaltraSessionRuntime } from "./session_runtime.js";
 export type { CaltraConnectionState, CaltraSessionSnapshot, CaltraSessionRuntimeOptions, CaltraSessionTransport } from "./session_runtime.js";
+
+export { CaltraReasoningRuntime } from "./reasoning_runtime.js";
+export type { CaltraReasoningState } from "./reasoning_runtime.js";
+export type { CaltraReasoningSnapshot, CaltraReasoningEvent, CaltraReasoningMetadataEvent } from "./types.js";

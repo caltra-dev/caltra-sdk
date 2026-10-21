@@ -6,3 +6,6 @@ export type { CaltraChatProps, CaltraChatSource, CaltraChatPresentationProps, Ca
 export { defaultCaltraChatLabels } from "./labels.js";
 export type { CaltraChatLabels } from "./labels.js";
 export type { CaltraChatStyle } from "./theme_style.js";
+
+export { CaltraReasoning } from "./reasoning.js";
+export type { CaltraReasoningDisplay, CaltraReasoningProps } from "./reasoning.js";

@@ -12,10 +12,12 @@ describe("TestAppAuthorizationProxy", () => {
     const config = new TestAppServerConfig({
       CALTRA_API_KEY: apiKey,
       CALTRA_API_URL: "http://api.caltra/",
+      CALTRA_BROWSER_API_URL: "https://preview.sprites.app",
       CALTRA_TENANT_USER_EXTERNAL_ID: "sdk-user",
       CALTRA_WORKSPACE_ID: "20000000-0000-4000-8000-000000000001",
     });
     const proxy = new TestAppAuthorizationProxy(config, fetchImplementation as typeof fetch);
+    expect(config.browserApiUrl).toBe("https://preview.sprites.app");
 
     const response = await proxy.create("http://localhost:5173");
 

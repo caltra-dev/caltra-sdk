@@ -34,6 +34,7 @@ export function useAssistantUiRuntime(store: CaltraSessionRuntime): AssistantRun
         artifact: { caltraToolStatus: tool.status, caltraToolDetailsLoaded: tool.arguments !== undefined, caltraMessageId: message.id },
       })),
     ],
+    metadata: { custom: { caltraReasoning: message.reasoning } },
     createdAt: new Date(message.created_at),
     id: message.id,
     role: message.role,
@@ -62,3 +63,5 @@ export function useAssistantUiRuntime(store: CaltraSessionRuntime): AssistantRun
 
   return runtime;
 }
+
+export { useCaltraReasoning } from "./use_reasoning.js";

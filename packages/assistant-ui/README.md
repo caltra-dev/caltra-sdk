@@ -27,3 +27,11 @@ The caller starts and stops the Caltra runtime. Multiple adapters or chats may o
 Use upstream `useAui`, `useAuiState` and primitives directly inside `AssistantRuntimeProvider`. The adapter maps messages, tools, loading, send and cancellation. It does not enable unsupported server features: attachments, editing/regeneration, tool answers and branch persistence require corresponding Caltra backend support.
 
 The adapter forwards the session runtime's authoritative turn state. `isRunning` remains true between messages and tools until the persisted turn completes, fails, or is cancelled. Servers without `is_running` retain legacy message-activity behavior. Turn completion does not prove a larger application workflow finished. For custom threads, use `scrollToBottomOnRunStart={false}` to preserve reading position when a new turn begins; CaltraChat applies this default automatically.
+
+## Optional thinking text
+
+The adapter carries availability/status in `message.metadata.custom.caltraReasoning`.
+Use `useCaltraReasoning(sessionRuntime, messageId, open)` inside your disclosure to load its
+separate stream and snapshot only while open. The hook returns `parts`, `loading`, `streaming`,
+`error`, and `retry()`. Render each part's `text` and use `position` as its stable key.
+Closing or unmounting stops this subscription and leaves the main session connected.

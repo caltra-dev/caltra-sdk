@@ -262,3 +262,36 @@ For a fully custom assistant-ui tree, use `useAssistantUiRuntime(sessionRuntime)
 The default viewport preserves the reading position when a new turn starts. Consumers can override upstream viewport options explicitly.
 
 Browser deployment prerequisite: activate the Caltra API/worker capability release before upgrading consumers. Client 0.10.0 sends `x-caltra-session-run-state`, which must be allowed by the API’s CORS policy. The runtime’s missing-field fallback applies only after transport succeeds.
+
+## Thinking display
+
+The next SDK release adds a `reasoningDisplay` presentation prop:
+
+```tsx
+<CaltraChat client={client} sessionId={sessionId} reasoningDisplay="auto" />
+```
+
+- `hidden` (default): no disclosure and no reasoning-text requests.
+- `auto`: opens while thinking streams, then collapses at the end of thinking. Users can reopen it.
+- `collapsed`: stays closed until expanded manually.
+- `expanded`: remains open.
+
+Changing display mode preserves the chat session and composer draft. Display is independent
+of model reasoning settings and model context. Only provider-returned displayable text is
+available; encrypted state and signatures remain internal.
+
+The main runtime has no reasoning options. Messages contain only availability/status metadata.
+Expanding opens a separate message-scoped reasoning stream, then fetches its snapshot; sequence
+watermarks avoid duplicating overlapping text. Collapsing disconnects that stream, retains cached
+text, and reopening catches up. Failure is local to the disclosure with a retry action.
+
+Custom consumers can use `useCaltraReasoning(sessionRuntime, messageId, open)` from
+`@caltra/assistant-ui`. It returns `parts`, `loading`, `streaming`, `error`, and `retry()`.
+The assistant-ui adapter exposes availability in `message.metadata.custom.caltraReasoning`.
+For framework-neutral use, `sessionRuntime.reasoning(messageId)` creates an inert independent
+resource with `start()`, `stop()`, `subscribe()`, and `getSnapshot()`. Stop it on disposal.
+Multiple consumers own independent subscriptions. The main runtime stops all active resources
+when it stops. `components.Reasoning` customizes the packaged disclosure.
+
+Deploy the matching API before upgrading the SDK: metadata query negotiation and the new
+reasoning snapshot/stream endpoints are required. Existing clients keep their text-only payloads.

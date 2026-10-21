@@ -70,6 +70,8 @@ export interface CaltraSessionMessage {
   status: "streaming" | "completed" | "failed" | "cancelled";
   text: string;
   tool_calls?: CaltraToolCall[];
+  /** Availability only; text is fetched through a separate reasoning resource. */
+  reasoning?: { status: "streaming" | "completed" };
 }
 
 interface CaltraSessionEventData {
@@ -107,7 +109,26 @@ export interface CaltraToolStartedEvent {
   data: CaltraSessionEventData & { tool_call_id: string; tool_name: string };
 }
 
+export interface CaltraReasoningSnapshot {
+  message_id: string; stream_id: string | null; sequence: number;
+  status: "streaming" | "completed" | "failed" | "cancelled";
+  parts: Array<{ position: number; text: string; status: "streaming" | "completed" }>;
+}
+
+export interface CaltraReasoningEvent {
+  event: "reasoning.delta"; id: string;
+  data: CaltraSessionEventData & { stream_id: string; sequence: number; position: number;
+    kind: "part_started" | "content_delta" | "part_completed"; delta: string | null };
+}
+
+export interface CaltraReasoningMetadataEvent {
+  event: "reasoning.updated"; id: string;
+  data: CaltraSessionEventData & { status: "streaming" | "completed" };
+}
+
 export type CaltraSessionEvent =
+  | CaltraReasoningEvent
+  | CaltraReasoningMetadataEvent
   | CaltraToolStartedEvent
   | CaltraMessageStartedEvent
   | CaltraMessageDeltaEvent

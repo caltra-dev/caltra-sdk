@@ -80,6 +80,13 @@ export class CaltraSessionEventConnection implements AsyncIterable<CaltraSession
   private parse(message: EventSourceMessage): CaltraSessionEvent {
     const event = message.event;
     const value: unknown = JSON.parse(message.data);
+    if (event === "reasoning.updated") {
+      return { data: EventDataSchema.extend({ status: z.enum(["streaming", "completed"]) }).strict().parse(value), event, id: message.id ?? "" };
+    }
+    if (event === "reasoning.delta") {
+      return { data: EventDataSchema.extend({ stream_id: z.string().uuid(), sequence: z.number().int().nonnegative(), position: z.number().int().nonnegative(),
+        kind: z.enum(["part_started", "content_delta", "part_completed"]), delta: z.string().nullable() }).strict().parse(value), event, id: message.id ?? "" };
+    }
     if (event === "message.delta") {
       return { data: DeltaDataSchema.parse(value), event, id: message.id ?? "" };
     }

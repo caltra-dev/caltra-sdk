@@ -1,9 +1,10 @@
 import type { CaltraClient, CaltraSession } from "@caltra/client";
-import { CaltraChat, type CaltraChatLabels } from "@caltra/react/ui";
+import { CaltraChat, type CaltraReasoningDisplay, type CaltraChatLabels } from "@caltra/react/ui";
 import { createCaltraTheme, type CaltraColorMode, type CaltraThemeName } from "@caltra/react/themes";
 import { useState } from "react";
 
 const italian: CaltraChatLabels = {
+  thinking: "Ragionamento…", thought: "Ragionamento", reasoningLoading: "Caricamento ragionamento…", reasoningFailed: "Impossibile caricare il ragionamento.",
   chat: "Conversazione", welcomeTitle: "Come posso aiutarti oggi?", welcomeDescription: "",
   placeholder: "Scrivi un messaggio…", messageInput: "Messaggio", send: "Invia messaggio",
   copy: "Copia", copied: "Copiato", scrollToBottom: "Vai in fondo", loading: "Caricamento conversazione…",
@@ -22,6 +23,7 @@ const brandTheme = createCaltraTheme({
 
 /** The demo consumes the packaged chat unchanged; customization is a live prop update. */
 export function Chat({ client, session }: { client: CaltraClient; session: CaltraSession }) {
+  const [reasoningDisplay, setReasoningDisplay] = useState<CaltraReasoningDisplay>("auto");
   const [theme, setTheme] = useState<CaltraThemeName | "brand">("assistant-ui");
   const [colorMode, setColorMode] = useState<CaltraColorMode>("system");
   const [language, setLanguage] = useState("en");
@@ -29,6 +31,11 @@ export function Chat({ client, session }: { client: CaltraClient; session: Caltr
     <header className="chat-header" data-success-toast-anchor>
       <div data-success-toast-avoid><span className="eyebrow">CALTRA REACT SDK</span><h1>{session.agent.name}</h1></div>
       <div className="demo-controls" data-success-toast-avoid>
+        <label className="demo-appearance">Thinking display
+          <select aria-label="Thinking display" value={reasoningDisplay} onChange={event => setReasoningDisplay(event.target.value as CaltraReasoningDisplay)}>
+            <option value="hidden">Hidden</option><option value="auto">Auto</option><option value="collapsed">Collapsed</option><option value="expanded">Expanded</option>
+          </select>
+        </label>
         <label className="demo-appearance">Theme
           <select aria-label="Theme" value={theme} onChange={(event) => setTheme(event.target.value as CaltraThemeName | "brand")}>
             <option value="assistant-ui">Assistant UI</option><option value="ocean">Ocean</option><option value="brand">Custom brand</option>
@@ -46,7 +53,7 @@ export function Chat({ client, session }: { client: CaltraClient; session: Caltr
         </label>
       </div>
     </header>
-    <CaltraChat client={client} sessionId={session.id} labels={language === "it" ? italian : undefined}
+    <CaltraChat reasoningDisplay={reasoningDisplay} client={client} sessionId={session.id} labels={language === "it" ? italian : undefined}
       theme={theme === "brand" ? brandTheme : theme} colorMode={colorMode} />
   </main>;
 }

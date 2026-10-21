@@ -10,7 +10,7 @@ export default defineConfig(({ command, mode }) => {
   if (command === "serve" && mode !== "test") {
     const environment = loadEnv(mode, process.cwd(), "");
     const config = new TestAppServerConfig(environment);
-    apiUrl = config.apiUrl;
+    apiUrl = config.browserApiUrl;
     plugins.push(new TestAppAuthorizationPlugin(new TestAppAuthorizationProxy(config)).toVitePlugin());
   }
   return {
