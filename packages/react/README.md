@@ -8,7 +8,7 @@ The styled entry point is available starting in **0.9.0**.
 Install the styled chat and its peer dependencies:
 
 ```bash
-npm install @caltra/client@0.10.0 @caltra/react@0.11.0 @assistant-ui/react@0.15.16 react react-dom
+npm install @caltra/client@0.11.0 @caltra/react@0.12.0 @assistant-ui/react@0.15.16 react react-dom
 ```
 
 ```tsx
@@ -205,7 +205,7 @@ as `CaltraTool`. It retains upstream English labels; use the custom slot for
 localized tool presentation. The existing tool label fields remain available to
 custom renderers. See [source provenance](src/ui/assistant-ui/README.md).
 
-The pending lazy-details release requests `include_tools=summary` for history: tool ID, name
+React 0.12.0 with client 0.11.0 requests `include_tools=summary` for history: tool ID, name
 and status arrive with the page, while arguments/results are omitted. Opening the default tool
 card calls `getSessionToolDetails(sessionId, messageId, toolCallId)` once. The session runtime
 caches and deduplicates requests per call/lifecycle state, retries failed reads, and refreshes
