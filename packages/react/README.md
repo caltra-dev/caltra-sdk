@@ -211,6 +211,7 @@ card calls `getSessionToolDetails(sessionId, messageId, toolCallId)` once. The s
 caches and deduplicates requests per call/lifecycle state, retries failed reads, and refreshes
 details when a running call becomes terminal. The panel uses upstream ToolFallback parts;
 its source files are unchanged. Closing/reopening a completed call reuses its cached details.
+While details load, the panel shows a mini spinner with an accessible loading label.
 The custom `components.Tool` slot remains caller-owned; headless integrations can use
 `runtime.getToolDetails(messageId, toolCallId)`. `CaltraToolCall.arguments` is optional on
 summary pages. A tool's displayed status does not depend on downloading its result.
