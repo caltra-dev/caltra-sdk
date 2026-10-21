@@ -148,3 +148,28 @@ it("keeps consuming new messages during a slow completion refresh", async () => 
   await vi.waitFor(() => expect(store.getSnapshot().messages.map(item => item.id)).toEqual(["first", "second"]));
   await store.stop();
 });
+
+it("keeps earlier history before a disjoint new page and preserves its new gap cursor", async () => {
+  const older = deferred<{ data: CaltraSessionMessage[]; next_cursor: null }>();
+  let latest = false;
+  const client = {
+    openSessionEvents: vi.fn(async () => connection()),
+    listSessionMessages: vi.fn(async (_id: string, input: { cursor?: string }) => {
+      if (input.cursor === "old-cursor") return older.promise;
+      if (input.cursor === "new-gap") return { data: [message("between")], next_cursor: "old-cursor" };
+      return latest ? { data: [message("new")], next_cursor: "new-gap" } : { data: [message("old")], next_cursor: "old-cursor" };
+    }),
+    getSessionById: vi.fn(async () => ({ id: "session" })),
+  };
+  const runtime = new CaltraSessionStore(client as never, "session");
+  await runtime.start();
+  const loading = runtime.loadOlder();
+  latest = true; await runtime.refresh();
+  expect(runtime.getSnapshot().messages.map(item => item.id)).toEqual(["old", "new"]);
+  older.resolve({ data: [message("oldest")], next_cursor: null }); await loading;
+  expect(runtime.getSnapshot().hasOlderMessages).toBe(true);
+  await runtime.loadOlder();
+  expect(client.listSessionMessages).toHaveBeenLastCalledWith("session", { limit: 20, cursor: "new-gap" });
+  expect(runtime.getSnapshot().messages.map(item => item.id)).toEqual(["oldest", "old", "between", "new"]);
+  await runtime.stop();
+});

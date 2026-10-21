@@ -35,6 +35,7 @@ export type CaltraSessionTransport = Pick<CaltraClient,
 export class CaltraSessionRuntime {
   private readonly pageSize = 20;
   private olderCursor: string | null = null;
+  private olderAnchorId: string | null = null;
   private olderPromise?: Promise<void>;
   private hasLoadedOlder = false;
   private historyRequest = 0;
@@ -120,6 +121,7 @@ export class CaltraSessionRuntime {
       // A reconnect can introduce more than one page of unseen messages. Start
       // pagination at that new gap instead of skipping it with the old cursor.
       this.olderCursor = page.next_cursor ?? null;
+      this.olderAnchorId = page.data[0]?.id ?? null;
     }
     const messages = this.mergeHistory(page.data, false, !page.next_cursor);
     this.update({ historyLoaded: true, messages, hasOlderMessages: this.olderCursor !== null,
@@ -132,14 +134,18 @@ export class CaltraSessionRuntime {
     if (!this.snapshot.historyLoaded || !this.olderCursor) return;
     const generation = this.generation;
     const cursor = this.olderCursor;
+    const anchor = this.olderAnchorId;
     this.update({ loadingOlder: true, olderError: null });
     const pending = (async () => {
       try {
         const page = await this.client.listSessionMessages(this.sessionId, { limit: this.pageSize, cursor });
         if (generation !== this.generation) return;
         this.hasLoadedOlder = true;
-        this.olderCursor = page.next_cursor ?? null;
-        this.update({ messages: this.mergeHistory(page.data, true), hasOlderMessages: this.olderCursor !== null });
+        if (this.olderCursor === cursor) {
+          this.olderCursor = page.next_cursor ?? null;
+          this.olderAnchorId = page.data[0]?.id ?? null;
+        }
+        this.update({ messages: this.mergeHistory(page.data, true, false, anchor), hasOlderMessages: this.olderCursor !== null });
       } catch (error) {
         if (generation === this.generation) this.update({ olderError: this.toError(error) });
         throw error;
@@ -154,7 +160,7 @@ export class CaltraSessionRuntime {
     return await pending;
   }
 
-  private mergeHistory(history: readonly CaltraSessionMessage[], older: boolean, complete = false): CaltraSessionMessage[] {
+  private mergeHistory(history: readonly CaltraSessionMessage[], older: boolean, complete = false, anchor: string | null = null): CaltraSessionMessage[] {
     const existing = new Map(this.snapshot.messages.map(message => [message.id, message]));
     const merged = history.map(message => {
       const live = existing.get(message.id);
@@ -169,12 +175,19 @@ export class CaltraSessionRuntime {
     const ids = new Set(history.map(message => message.id));
     const retained = this.snapshot.messages.filter(message => !ids.has(message.id)
       && !(complete && !older && this.canonicalMessages.has(message.id)));
-    if (older) return [...merged, ...retained];
+    if (older) {
+      // A reconnect can put the next cursor in a gap between previously loaded
+      // pages. Insert before its captured boundary, not before all older history.
+      const boundary = this.snapshot.messages.findIndex(message => message.id === anchor);
+      const index = boundary < 0 ? 0 : boundary;
+      return [...this.snapshot.messages.slice(0, index).filter(message => !ids.has(message.id)),
+        ...merged, ...this.snapshot.messages.slice(index).filter(message => !ids.has(message.id))];
+    }
     // Older loaded pages precede the newest page; new stream/optimistic messages
     // belong after it. Preserve their relative order without sorting timestamps.
     const firstOverlap = this.snapshot.messages.findIndex(message => ids.has(message.id));
     const retainedIds = new Set(retained.map(message => message.id));
-    const before = firstOverlap < 0 ? (this.hasLoadedOlder ? retained : [])
+    const before = firstOverlap < 0 ? retained.filter(message => this.canonicalMessages.has(message.id))
       : this.snapshot.messages.slice(0, firstOverlap).filter(message => retainedIds.has(message.id));
     const beforeIds = new Set(before.map(message => message.id));
     return [...before, ...merged, ...retained.filter(message => !beforeIds.has(message.id))];

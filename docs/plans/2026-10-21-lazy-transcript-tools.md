@@ -22,7 +22,7 @@ The tenant-role tool query reproduced at 17,131.897 ms. Its 62 lateral result sc
 ## Validation (2026-10-21)
 
 - API TypeScript check passed on Sprite; 47 selected API tests passed on an isolated PostgreSQL 17 cluster, including actual tenant-client RLS, newest retry selection, reused call ID in a different turn, cursor behavior and revoked group membership.
-- SDK client/adapter/React type checks passed; 52 selected SDK tests passed on Sprite, covering lazy opening, terminal status, retries/cache, lifecycle invalidation, pagination, streaming overlap, reconnect and running state.
+- SDK client/adapter/React type checks passed; 53 selected SDK tests passed on Sprite, covering lazy opening, terminal status, retries/cache, lifecycle invalidation, pagination, streaming overlap, reconnect and running state.
 - React package and test app build/type check passed. Browser interaction was intentionally not run, per the user's CLI-only instruction. User preview acceptance remains required.
 - Final read-only production-data EXPLAIN: 20 messages, 17 payload-free tool summaries; message/text query 152.290 ms, summary query 360.158 ms, total 512.448 ms. A single detail query took 293.255 ms. These are database timings, not deployed HTTP latency.
 - Startup establishes and consumes the subscription before fetching history, avoiding a duplicate initial snapshot and closing the subscription/snapshot gap.

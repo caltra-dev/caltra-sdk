@@ -25,7 +25,7 @@
 
 - Superseded implementation/validation detail is recorded in [lazy transcript tools](2026-10-21-lazy-transcript-tools.md).
 - Pagination now lives in the framework-neutral `CaltraSessionRuntime` in `packages/client` after rebasing onto the current runtime separation and running-state fixes.
-- Initial history is requested only after opening/consuming the stream, closing the snapshot gap with one bounded initial read. Six pagination regressions pass in the 52-test SDK suite.
+- Initial history is requested only after opening/consuming the stream, closing the snapshot gap with one bounded initial read. Seven pagination regressions pass in the 53-test SDK suite.
 - The development runtime demo has 36 deterministic messages and saved successful/failed tool calls. It paginates to 20 initially and fetches simulated details on expansion; no production data is seeded.
 - Browser interaction was not run per the user's CLI-only instruction. User preview review is pending; do not merge or delete the task worktrees/Sprite before acceptance.
 - No package publication or production deployment.
