@@ -2,10 +2,12 @@
 
 import {
   ActionBarPrimitive, AssistantRuntimeProvider, AuiIf,
-  MessagePrimitive, ThreadPrimitive, useAuiState, type ToolCallMessagePartProps,
+  ComposerPrimitive, MessagePrimitive, ThreadPrimitive, useAuiState, type ToolCallMessagePartProps,
 } from "@assistant-ui/react";
-import { createContext, useContext, useMemo, useState, type ComponentType } from "react";
-import { useCaltraRuntime, type UseCaltraRuntimeOptions, type UseCaltraRuntimeResult } from "../use_caltra_runtime.js";
+import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ComponentType, type ComponentPropsWithoutRef } from "react";
+import { CaltraSessionRuntime } from "@caltra/client";
+import { useAssistantUiRuntime } from "@caltra/assistant-ui";
+import { type UseCaltraRuntimeOptions, type UseCaltraRuntimeResult } from "../use_caltra_runtime.js";
 import { caltraThemes, type CaltraColorMode, type CaltraTheme, type CaltraThemeName } from "../themes/index.js";
 import { themeStyle, type CaltraChatStyle } from "./theme_style.js";
 import { defaultCaltraChatLabels, type CaltraChatLabels } from "./labels.js";
@@ -17,7 +19,12 @@ import { Composer } from "./assistant-ui/composer.js";
 const ToolContext = createContext<{ labels: CaltraChatLabels; Tool?: ComponentType<ToolCallMessagePartProps> }>({ labels: defaultCaltraChatLabels });
 
 export interface CaltraChatSlotProps { labels: CaltraChatLabels; }
-export interface CaltraComposerProps extends CaltraChatSlotProps { submitMode: "enter" | "ctrlEnter" | "none"; }
+export type CaltraComposerInputProps = Omit<ComponentPropsWithoutRef<typeof ComposerPrimitive.Input>, "children" | "asChild" | "submitOnEnter">;
+export type CaltraViewportProps = Omit<ComponentPropsWithoutRef<typeof ThreadPrimitive.Viewport>, "children" | "asChild" | "hidden">;
+export interface CaltraComposerProps extends CaltraChatSlotProps {
+  submitMode: "enter" | "ctrlEnter" | "none";
+  inputProps?: CaltraComposerInputProps;
+}
 export interface CaltraConnectionProps extends CaltraChatSlotProps {
   connection: UseCaltraRuntimeResult["connection"];
   error: Error | null;
@@ -35,7 +42,13 @@ export interface CaltraChatComponents {
   Tool?: ComponentType<ToolCallMessagePartProps>;
 }
 
-export interface CaltraChatProps extends UseCaltraRuntimeOptions {
+export type CaltraChatSource =
+  | (UseCaltraRuntimeOptions & { runtime?: never })
+  | { runtime: CaltraSessionRuntime; client?: never; sessionId?: never };
+
+export interface CaltraChatPresentationProps {
+  /** Upstream assistant-ui options, applied over Caltra's presentation defaults. */
+  slotProps?: { viewport?: CaltraViewportProps; composerInput?: CaltraComposerInputProps };
   labels?: Partial<CaltraChatLabels>;
   components?: CaltraChatComponents;
   className?: string;
@@ -49,18 +62,31 @@ export interface CaltraChatProps extends UseCaltraRuntimeOptions {
   submitMode?: CaltraComposerProps["submitMode"];
 }
 
+export type CaltraChatProps = CaltraChatSource & CaltraChatPresentationProps;
+
 /** Styled chat with safe loading/empty states. The @caltra/react/ui entry loads its scoped CSS. */
-export function CaltraChat({ client, sessionId, ...presentation }: CaltraChatProps) {
-  // A new client is an authorization boundary. Remount atomically rather than briefly
-  // rendering the old assistant-ui repository while a hook effect switches stores.
-  const Session = useMemo(() => function Session(props: Omit<CaltraChatProps, "client" | "sessionId">) {
-    return <ChatSession {...props} client={client} sessionId={sessionId} />;
-  }, [client, sessionId]);
-  return <Session {...presentation} />;
+export function CaltraChat(props: CaltraChatProps) {
+  // An identity change must discard both the adapter repository and composer draft atomically.
+  const Session = useMemo(() => function Session(next: CaltraChatProps) {
+    return <ChatSession {...next} />;
+  }, [props.client, props.sessionId, props.runtime]);
+  return <Session {...props} />;
 }
 
-function ChatSession({ client, sessionId, labels: overrides, components = {}, className, style, hidden, theme = "assistant-ui", colorMode = "system", submitMode = "enter" }: CaltraChatProps) {
-  const caltra = useCaltraRuntime({ client, sessionId });
+function ChatSession(props: CaltraChatProps) {
+  const { labels: overrides, components = {}, className, style, hidden, theme = "assistant-ui",
+    colorMode = "system", submitMode = "enter", slotProps = {} } = props;
+  const session = useMemo(() => props.runtime ?? new CaltraSessionRuntime(props.client!, props.sessionId!),
+    [props.runtime, props.client, props.sessionId]);
+  useEffect(() => {
+    if (props.runtime) return; // Supplied runtimes belong to the caller, including their connection lifetime.
+    void session.start().catch(() => undefined);
+    return () => { void session.stop(); };
+  }, [session, props.runtime]);
+  const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
+  const runtime = useAssistantUiRuntime(session);
+  const caltra = { ...snapshot, runtime, reconnect: () => session.reconnect() };
+  const viewport = slotProps.viewport ?? {};
   const resolvedTheme = typeof theme === "string" ? caltraThemes[theme] : theme;
   const labels = useMemo(() => ({ ...defaultCaltraChatLabels, ...overrides }), [overrides]);
   const { Welcome = CaltraWelcome, Loading = CaltraHistoryLoading, Message = CaltraMessage,
@@ -71,7 +97,11 @@ function ChatSession({ client, sessionId, labels: overrides, components = {}, cl
     <ThreadPrimitive.Root className={`caltra-chat${className ? ` ${className}` : ""}`} style={{ ...themeStyle(resolvedTheme), ...style }} data-theme={resolvedTheme.name} data-color-mode={colorMode} hidden={hidden} aria-label={labels.chat}>
       <Connection labels={labels} connection={caltra.connection} error={caltra.error} historyLoaded={caltra.historyLoaded} retry={caltra.reconnect} />
       {!caltra.historyLoaded && caltra.connection !== "failed" && <Loading labels={labels} />}
-      <ThreadPrimitive.Viewport className="caltra-chat__viewport" autoScroll hidden={!caltra.historyLoaded && caltra.connection !== "failed"}>
+      <ThreadPrimitive.Viewport {...viewport}
+        className={`caltra-chat__viewport${viewport.className ? ` ${viewport.className}` : ""}`}
+        autoScroll={viewport.autoScroll ?? true}
+        scrollToBottomOnRunStart={viewport.scrollToBottomOnRunStart ?? false}
+        hidden={!caltra.historyLoaded && caltra.connection !== "failed"}>
         <div className="caltra-chat__content">
           {caltra.historyLoaded && <>
             <AuiIf condition={(state) => state.thread.messages.length === 0 && !state.thread.isLoading}>
@@ -83,7 +113,7 @@ function ChatSession({ client, sessionId, labels: overrides, components = {}, cl
             <ThreadPrimitive.ScrollToBottom className="caltra-chat__scroll" aria-label={labels.scrollToBottom}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14m-7-7 7 7 7-7" /></svg>
             </ThreadPrimitive.ScrollToBottom>
-            <Composer labels={labels} submitMode={submitMode} />
+            <Composer labels={labels} submitMode={submitMode} inputProps={slotProps.composerInput} />
           </ThreadPrimitive.ViewportFooter>
         </div>
       </ThreadPrimitive.Viewport>
@@ -161,8 +191,8 @@ export function CaltraTool(props: ToolCallMessagePartProps) {
   return <ToolFallback {...props} status={status} />;
 }
 
-export function CaltraComposer({ labels, submitMode }: CaltraComposerProps) {
-  return <Composer labels={labels} submitMode={submitMode} />;
+export function CaltraComposer({ labels, submitMode, inputProps }: CaltraComposerProps) {
+  return <Composer labels={labels} submitMode={submitMode} inputProps={inputProps} />;
 }
 
 export function CaltraConnection({ labels, connection, error, historyLoaded, retry }: CaltraConnectionProps) {

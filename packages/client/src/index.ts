@@ -24,3 +24,6 @@ export type {
 } from "./types.js";
 
 export { CaltraAgentsClient, CaltraAgentSessionsClient } from "./agents.js";
+
+export { CaltraSessionRuntime } from "./session_runtime.js";
+export type { CaltraConnectionState, CaltraSessionSnapshot, CaltraSessionRuntimeOptions, CaltraSessionTransport } from "./session_runtime.js";

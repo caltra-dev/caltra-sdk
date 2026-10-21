@@ -8,13 +8,14 @@ import { Button } from "./button.js";
 import { TooltipIconButton } from "./tooltip-icon-button.js";
 
 /** Upstream text composer; attachment and dictation adapters are not supported. */
-export function Composer({ labels, submitMode }: CaltraComposerProps) {
+export function Composer({ labels, submitMode, inputProps }: CaltraComposerProps) {
   return <ComposerPrimitive.Root className="aui-composer-root caltra-chat__composer relative flex w-full flex-col">
     <div data-slot="aui_composer-shell" className="flex w-full cursor-text flex-col gap-2 rounded-(--composer-radius) border bg-(--composer-bg) p-(--composer-padding) transition-[border-color]">
       <ComposerPrimitive.Input
-        className="aui-composer-input caret-primary placeholder:text-muted-foreground/60 max-h-48 min-h-10 w-full resize-none bg-transparent px-2.5 py-1 text-base leading-6 outline-none"
         placeholder={labels.placeholder} aria-label={labels.messageInput}
         rows={1} autoFocus enterKeyHint="send" submitMode={submitMode}
+        {...inputProps}
+        className={`aui-composer-input caret-primary placeholder:text-muted-foreground/60 max-h-48 min-h-10 w-full resize-none bg-transparent px-2.5 py-1 text-base leading-6 outline-none${inputProps?.className ? ` ${inputProps.className}` : ""}`}
       />
       <div className="aui-composer-action-wrapper relative flex items-center justify-between">
         <div className="aui-composer-actions flex items-center gap-1.5">

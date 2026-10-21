@@ -1,3 +1,4 @@
+import { CaltraSessionRuntime, type CaltraSessionRuntimeOptions } from "./session_runtime.js";
 import { CaltraAgentsClient } from "./agents.js";
 import { z } from "zod";
 import { CaltraApiError } from "./error.js";
@@ -78,6 +79,11 @@ export class CaltraClient {
     );
     this.agents = new CaltraAgentsClient(this);
     this.sessions = new CaltraSessionsClient(this);
+  }
+
+  /** Creates an inert, caller-owned session runtime. Call start(), then stop() on disposal. */
+  createSessionRuntime({ sessionId, ...options }: CaltraSessionRuntimeOptions & { sessionId: string }): CaltraSessionRuntime {
+    return new CaltraSessionRuntime(this, sessionId, options);
   }
 
   async getAgent(): Promise<{ id: string; name: string }> {

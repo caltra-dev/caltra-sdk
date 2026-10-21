@@ -175,3 +175,12 @@ const session = await agent.sessions.get({ externalId: "primary", createIfMissin
 ```
 
 The session external ID is scoped to its agent. This path creates no agent identity. Agent authorization is derived from the signed browser identity; an agent identity-downscoped token cannot create a session without a separate agent identity. Caltra API support and the `agents:provision` credential scope must be deployed before consumers switch to these methods.
+
+## UI integration layers
+
+- `@caltra/client`: framework-neutral API client and caller-owned `CaltraSessionRuntime`.
+- `@caltra/assistant-ui`: `useAssistantUiRuntime(sessionRuntime)` for custom assistant-ui composition.
+- `@caltra/react/ui`: ready-made `CaltraChat`, accepting either `client + sessionId` or a supplied `runtime`.
+- `@caltra/react`: compatibility `useCaltraRuntime` convenience hook and historical store exports.
+
+See [session runtime](packages/client/README.md), [assistant-ui adapter](packages/assistant-ui/README.md), and [chat customization](packages/react/README.md). Release order for this change is client 0.10.0, assistant-ui 0.1.0, then react 0.11.0. The new package requires its npm trusted-publisher configuration before publishing through the existing workflow; repository changes alone do not configure npm. No package is published by local builds or preview validation.

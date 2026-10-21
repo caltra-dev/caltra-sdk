@@ -10,6 +10,7 @@ on:
         options:
           - server
           - client
+          - assistant-ui
           - react
 
 permissions:
@@ -38,6 +39,9 @@ jobs:
       - name: Publish client
         if: inputs.package == 'client'
         run: npm publish --workspace=@caltra/client
-      - name: Publish React adapter
+      - name: Publish assistant-ui adapter
+        if: inputs.package == 'assistant-ui'
+        run: npm publish --workspace=@caltra/assistant-ui
+      - name: Publish React chat
         if: inputs.package == 'react'
         run: npm publish --workspace=@caltra/react

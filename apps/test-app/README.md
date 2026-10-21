@@ -79,3 +79,11 @@ capability with `/tool <capability-id>`, then copy its current versioned action 
 Echo waits 1.5 seconds to make progress visible; failure intentionally returns an error.
 The seed is idempotent, grants demo tools to the development workspace audience, and keeps
 `records.update` ungranted. Do not hard-code action IDs: manifest publication versions them.
+
+## Deterministic runtime and scroll preview
+
+Open `/?demo=runtime` in the test app to bypass backend authorization and use in-memory sample data. This is an explicitly labeled simulation, not hosted-agent execution. Each reload creates the same 36-message history; no production requests or data stores are used.
+
+Choose Managed CaltraChat, Caller-owned runtime, or Custom assistant-ui. Scroll up, then click Stream steps: eight alternating message/tool steps arrive over eight seconds. Reading position stays fixed by default. Click the down arrow to follow the remaining steps. Enable Force scroll on run start to exercise the explicit upstream override. This deliberately remounts the chat because assistant-ui 0.15.16 retains the initial viewport event callback; toggling this demo option resets the composer draft. In Caller-owned runtime mode, hiding the chat unmounts the UI but leaves the runtime connected; showing it again restores shared history (not the unmounted composer's draft).
+
+Run `npm run test:e2e -w @caltra/test-app -- e2e/runtime-scroll.spec.ts` on the Sprite. These browser checks cover default scroll preservation, resuming follow, explicit override, supplied runtime ownership, and custom adapter send/history.

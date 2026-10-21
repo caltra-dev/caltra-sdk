@@ -169,3 +169,37 @@ it("swaps native Send for Stop and preserves running UI on failure until a succe
   expect(cancelSession).toHaveBeenLastCalledWith("running");
   expect(screen.queryByRole("button", { name: "Stop generating" })).toBeNull();
 });
+
+it("observes a caller-owned runtime without opening or closing its transport", async () => {
+  const { CaltraSessionRuntime } = await import("@caltra/client");
+  const f = fixture();
+  const runtime = new CaltraSessionRuntime(f.client as never, "shared");
+  const view = render(<CaltraChat runtime={runtime} slotProps={{ composerInput: { autoFocus: false, placeholder: "Custom input" }, viewport: { className: "custom-viewport" } }} />);
+  expect(f.client.openSessionEvents).not.toHaveBeenCalled();
+  const started = runtime.start();
+  await f.resolve("Shared history");
+  await started;
+  expect(screen.getByPlaceholderText("Custom input")).toBeTruthy();
+  expect(view.container.querySelector(".caltra-chat__viewport.custom-viewport")).toBeTruthy();
+  const connection = await f.client.openSessionEvents.mock.results[0]!.value;
+  view.unmount();
+  expect(connection.close).not.toHaveBeenCalled();
+  await runtime.stop();
+  expect(connection.close).toHaveBeenCalledOnce();
+});
+
+it("isolates transcript and draft when switching supplied runtime identities", async () => {
+  const { CaltraSessionRuntime } = await import("@caltra/client");
+  const a = fixture(); const b = fixture();
+  const first = new CaltraSessionRuntime(a.client as never, "first");
+  const second = new CaltraSessionRuntime(b.client as never, "second");
+  const view = render(<CaltraChat runtime={first} />);
+  const startFirst = first.start(); await a.resolve("First identity"); await startFirst;
+  fireEvent.change(screen.getByRole("textbox"), { target: { value: "Private draft" } });
+  view.rerender(<CaltraChat runtime={second} />);
+  expect(screen.queryByText("First identity")).toBeNull();
+  const startSecond = second.start(); await b.resolve("Second identity"); await startSecond;
+  expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("");
+  expect((await a.client.openSessionEvents.mock.results[0]!.value).close).not.toHaveBeenCalled();
+  view.unmount(); await first.stop(); await second.stop();
+});

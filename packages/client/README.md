@@ -46,3 +46,26 @@ Provision the user’s hosted agent through the server SDK before opening the br
 ### Cancellation
 
 `await client.cancelSession(sessionId)` cancels the active turn in an owned active session and returns `{ turn_id: string | null }`; null means already idle. It uses the browser token's `messages:create` permission. Callers should refetch messages after success. API errors propagate normally. Requires the server's `POST /client/v1/sessions/:session_id/cancel` endpoint.
+
+## Framework-neutral session runtime (0.10.0)
+
+`CaltraClient` owns authentication and transport. `CaltraSessionRuntime` owns the in-memory state of one session and has no React or UI-framework dependencies. Creating it performs no I/O:
+
+```ts
+const runtime = client.createSessionRuntime({ sessionId });
+const unsubscribe = runtime.subscribe(() => {
+  const { messages, connection, historyLoaded, error, isRunning } = runtime.getSnapshot();
+  // Update your UI. Do not mutate the snapshot or its messages.
+});
+await runtime.start();
+await runtime.send("Hello");
+// await runtime.cancel();
+unsubscribe();
+await runtime.stop();
+```
+
+Create one runtime per active client/session scope. Start is idempotent; multiple consumers share the same event stream. Retain the instance across renders. The owner calls stop when done; UI adapters only subscribe/unsubscribe. `refresh()` reconciles history; `reconnect()` restores transport while retaining loaded messages. A runtime's session ID is immutable. Use a new runtime when switching authenticated identities or sessions, and reset the UI's presentation state at that boundary.
+
+The runtime reconciles optimistic user IDs with persisted history and exposes connection, error, loading and message-activity state. It preserves the current message API's semantics: `isRunning` is not an authoritative whole-turn/automation status. Backend run lifecycle events are needed to distinguish pauses between tools from actual turn completion.
+
+`@caltra/assistant-ui` translates the runtime to assistant-ui. Other UI adapters can consume the same subscription/action contract without duplicating transport or session reconciliation. CopilotKit/AG-UI integration is not implemented.

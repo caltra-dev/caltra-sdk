@@ -8,7 +8,7 @@ The styled entry point is available starting in **0.9.0**.
 Install the styled chat and its peer dependencies:
 
 ```bash
-npm install @caltra/client@0.8.3 @caltra/react@0.9.0 @assistant-ui/react@0.15.16 react react-dom
+npm install @caltra/client@0.10.0 @caltra/react@0.11.0 @assistant-ui/react@0.15.16 react react-dom
 ```
 
 ```tsx
@@ -26,7 +26,7 @@ source, or host CSS reset is required. The explicit `@caltra/react/styles.css` e
 available for compatibility. The headless `@caltra/react` entry does not import CSS. The defaults
 include a welcome, skeleton-only loading state (the loading label is screen-reader-only), Markdown transcript, copy icon with checkmark feedback and localized accessible labels/tooltips, scroll-to-bottom button,
 upstream text composer, connection recovery and retry. Enter sends; Shift+Enter inserts a newline.
-While a turn runs, the native Stop control calls `CaltraClient.cancelSession`, then reloads persisted history. A failed cancellation preserves the running state and exposes the existing error alert; Stop can be retried. HTTP cancellation also works while the event stream reconnects. The adapter does not infer turn completion from stale message history.
+While a turn runs, the native Stop control calls `CaltraClient.cancelSession`, then reloads persisted history. A failed cancellation preserves the running state and exposes the existing error alert; Stop can be retried. HTTP cancellation also works while the event stream reconnects. Running-state presentation follows the public message lifecycle; it is not proof of whole-turn completion.
 Initial loading fills the panel with 16px gutters and reserves the composer's bottom
 position. The real composer becomes available after history resolves, in the same
 position for both saved and empty conversations. Bootstrap integrations may render
@@ -195,3 +195,40 @@ Client 0.8.3 opts in to structured tool history and tool-start events. Deploy th
 Caltra API support before publishing this client version; older clients keep their existing
 text-only wire format. The API exposes public tool arguments/results, never raw model metadata
 or reasoning. A successful copy uses assistant-ui's standard three-second checkmark feedback.
+
+## Session runtime integration (0.11.0)
+
+There are two mutually exclusive sources for `CaltraChat`:
+
+```tsx
+// Chat creates, starts, and stops its own session runtime.
+<CaltraChat client={client} sessionId={sessionId} />
+
+// Caller creates and starts this runtime; chat only observes it.
+const runtime = client.createSessionRuntime({ sessionId });
+await runtime.start();
+<CaltraChat runtime={runtime} />
+// Owner calls await runtime.stop() when all consumers are done.
+```
+
+Do not create the supplied runtime during every render. Use a stable owner, useMemo, or a keyed component with useState. Unmounting a chat supplied with `runtime` never stops that runtime. Other chats/adapters can keep observing it. Each mounted chat owns its own composer draft; unmounting discards that draft. Use `hidden` to retain a chat's draft when collapsing it. Changing the runtime, client identity or session ID resets the chat's transcript and draft atomically.
+
+### Scrolling and upstream props
+
+The default chat follows incoming content only while the reader is at the bottom. Scrolling up pauses following across message/tool steps and new run-start notifications. The down-arrow button or manually returning to the bottom resumes following. Initial history loading and session changes still position the chat at the bottom.
+
+Use typed upstream options to customize these defaults:
+
+```tsx
+<CaltraChat client={client} sessionId={sessionId}
+  slotProps={{
+    viewport: { scrollToBottomOnRunStart: false, scrollToBottomOnInitialize: true },
+    composerInput: { autoFocus: false, submitMode: "ctrlEnter" },
+  }} />
+```
+
+`slotProps.viewport` derives from `ThreadPrimitive.Viewport`; `composerInput` derives from `ComposerPrimitive.Input`. Explicit values override Caltra's defaults. Configure viewport anchoring/event behavior at mount: assistant-ui 0.15.16 retains the initial event callback/options in the verified integration. Remount the chat (or your custom viewport) to change those options; remounting a chat clears its composer draft. Theme/labels/hidden remain live presentation updates. Classes are appended to the SDK classes and styles are forwarded. These inputs exclude structural children/asChild and the deprecated composer submitOnEnter option (use submitMode), and viewport visibility remains controlled by history loading. Existing `components` slots replace presentation inside the same assistant-ui provider; custom slots can use upstream `useAui`/`useAuiState` directly. A custom Composer receives `inputProps` and chooses how to apply them. Caltra's own history and session lifecycle cannot be replaced through presentation props.
+
+For a fully custom assistant-ui tree, use `useAssistantUiRuntime(sessionRuntime)` from `@caltra/assistant-ui` with upstream `AssistantRuntimeProvider`. See the [adapter guide](../assistant-ui/README.md). The original `useCaltraRuntime({ client, sessionId })` hook remains compatible and creates/manages its session runtime automatically. `CaltraSessionStore` remains a deprecated alias; new consumers import `CaltraSessionRuntime` from `@caltra/client`.
+
+The protocol currently reports message activity rather than whole-turn lifecycle. The default viewport deliberately does not force a scroll on each running-state transition.

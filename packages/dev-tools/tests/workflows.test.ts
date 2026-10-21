@@ -55,16 +55,16 @@ describe("SDK workflow event contract", () => {
   it("preserves explicit package selection, validation, and OIDC publication", () => {
     const workflow = workflows.get("publish.yml");
     expect(workflow?.on.workflow_dispatch).toEqual({ inputs: { package: {
-      description: "Package to publish", required: true, type: "choice", options: ["server", "client", "react"],
+      description: "Package to publish", required: true, type: "choice", options: ["server", "client", "assistant-ui", "react"],
     } } });
     expect(workflow?.permissions).toEqual({ contents: "read", "id-token": "write" });
     expect(workflow?.jobs.publish?.steps.flatMap((step) => step.run ?? [])).toEqual([
       "npm install --global npm@11.19.0", "npm ci", "npm run typecheck", "npm test", "npm run build",
-      "npm publish --workspace=@caltra/server", "npm publish --workspace=@caltra/client", "npm publish --workspace=@caltra/react",
+      "npm publish --workspace=@caltra/server", "npm publish --workspace=@caltra/client", "npm publish --workspace=@caltra/assistant-ui", "npm publish --workspace=@caltra/react",
     ]);
     expect(workflow?.jobs.publish?.steps.filter((step) => step.run?.startsWith("npm publish"))
       .map((step) => step.if)).toEqual([
-      "inputs.package == 'server'", "inputs.package == 'client'", "inputs.package == 'react'",
+      "inputs.package == 'server'", "inputs.package == 'client'", "inputs.package == 'assistant-ui'", "inputs.package == 'react'",
     ]);
   });
 });

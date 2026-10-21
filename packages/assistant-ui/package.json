@@ -1,0 +1,56 @@
+{
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "name": "@caltra/assistant-ui",
+  "version": "0.1.0",
+  "description": "assistant-ui adapter for framework-neutral Caltra session runtimes",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prebuild": "npm run build --workspace=@caltra/client",
+    "test": "vitest run tests",
+    "pretest": "npm run build --workspace=@caltra/client",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pretypecheck": "npm run build --workspace=@caltra/client"
+  },
+  "dependencies": {
+    "@caltra/client": "0.10.0"
+  },
+  "peerDependencies": {
+    "@assistant-ui/react": "^0.15.16",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@assistant-ui/react": "0.15.16",
+    "@testing-library/react": "16.3.2",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "jsdom": "30.0.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/caltra-dev/caltra-sdk.git",
+    "directory": "packages/assistant-ui"
+  }
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import type { CaltraSessionEvent } from "@caltra/client";
-import { CaltraSessionStore } from "../src/session_store.js";
+import type { CaltraSessionEvent } from "../src/types.js";
+import { CaltraSessionRuntime } from "../src/session_runtime.js";
 
 const sessionId = "40000000-0000-4000-8000-000000000001";
 const userMessageId = "50000000-0000-4000-8000-000000000001";
@@ -25,7 +25,7 @@ class StubEventConnection implements AsyncIterable<CaltraSessionEvent> {
   }
 }
 
-describe("CaltraSessionStore", () => {
+describe("CaltraSessionRuntime", () => {
   it("restarts after a development Strict Mode start-stop-start cycle", async () => {
     const connection = new StubEventConnection([]);
     let attempts = 0;
@@ -42,7 +42,7 @@ describe("CaltraSessionStore", () => {
       }),
       sendMessage: vi.fn(),
     };
-    const store = new CaltraSessionStore(client as never, sessionId);
+    const store = new CaltraSessionRuntime(client as never, sessionId);
 
     const firstStart = store.start();
     await vi.waitFor(() => expect(client.openSessionEvents).toHaveBeenCalledTimes(1));
@@ -68,7 +68,7 @@ describe("CaltraSessionStore", () => {
         .mockImplementationOnce(() => new Promise((resolve) => { finishReconnect = resolve; })),
       getSessionById: vi.fn(async () => ({ id: sessionId, title: null })),
     };
-    const store = new CaltraSessionStore(client as never, sessionId);
+    const store = new CaltraSessionRuntime(client as never, sessionId);
     await store.start();
     const oldRefresh = store.refresh();
     const reconnect = store.reconnect();
@@ -139,7 +139,7 @@ describe("CaltraSessionStore", () => {
         return { message_id: userMessageId, turn_id: turnId };
       }),
     };
-    const store = new CaltraSessionStore(client as never, sessionId, {
+    const store = new CaltraSessionRuntime(client as never, sessionId, {
       retryDelay: async () => undefined,
     });
 
@@ -175,7 +175,7 @@ it("keeps a live tool identity until durable completion replaces it with its res
     }, close: async () => {} })),
     listSessionMessages: vi.fn().mockResolvedValueOnce({ data: [] }).mockResolvedValue({ data: [{ ...message, tool_calls: [{ id: "call-1", name: "demo.echo", arguments: { text: "hello" }, status: "completed", result: { text: "hello" } }] }] }),
   };
-  const store = new CaltraSessionStore(client as never, sessionId); await store.start();
+  const store = new CaltraSessionRuntime(client as never, sessionId); await store.start();
   await vi.waitFor(() => expect(store.getSnapshot().messages[0]?.tool_calls?.[0]?.status).toBe("running"));
   finish();
   await vi.waitFor(() => expect(store.getSnapshot().messages[0]?.tool_calls?.[0]).toMatchObject({ status: "completed", result: { text: "hello" } }));
@@ -190,7 +190,7 @@ it("uses repaired completed history after reconnect without changing the running
     listSessionMessages: vi.fn().mockResolvedValueOnce({ data: [stale] })
       .mockResolvedValue({ data: [{ ...stale, status: "completed" }] }),
   };
-  const store = new CaltraSessionStore(client as never, sessionId);
+  const store = new CaltraSessionRuntime(client as never, sessionId);
   await store.start();
   expect(store.getSnapshot().isRunning).toBe(true);
   await store.reconnect();
@@ -207,7 +207,7 @@ it("cancels over HTTP while SSE recovers and trusts the refreshed persisted stat
       .mockResolvedValue({ data: [{ ...message, status: "cancelled" }] }),
     cancelSession: vi.fn(async () => ({ turn_id: turnId })),
   };
-  const store = new CaltraSessionStore(client as never, sessionId);
+  const store = new CaltraSessionRuntime(client as never, sessionId);
   await store.start();
   const reconnect = store.reconnect().catch(() => undefined);
   await vi.waitFor(() => expect(client.openSessionEvents).toHaveBeenCalledTimes(2));
@@ -226,7 +226,7 @@ it("keeps a running turn and partial text on cancellation failure, then supports
     listSessionMessages: vi.fn().mockResolvedValueOnce({ data: [message] }).mockResolvedValue({ data: [{ ...message, status: "cancelled" }] }),
     cancelSession: vi.fn().mockRejectedValueOnce(failure).mockResolvedValue({ turn_id: turnId }),
   };
-  const store = new CaltraSessionStore(client as never, sessionId);
+  const store = new CaltraSessionRuntime(client as never, sessionId);
   await store.start();
   await expect(store.cancel()).rejects.toBe(failure);
   expect(store.getSnapshot()).toMatchObject({ error: failure, isRunning: true, messages: [message] });
@@ -234,4 +234,32 @@ it("keeps a running turn and partial text on cancellation failure, then supports
   await store.cancel();
   expect(store.getSnapshot()).toMatchObject({ error: null, isRunning: false });
   await store.stop();
+});
+
+it("creates a framework-neutral runtime without opening a connection", async () => {
+  const { CaltraClient } = await import("../src/client.js");
+  const fetch = vi.fn();
+  const client = new CaltraClient({ fetch, authorizationCodeProvider: async () => "unused" });
+  const runtime = client.createSessionRuntime({ sessionId });
+  expect(runtime).toBeInstanceOf(CaltraSessionRuntime);
+  expect(runtime.sessionId).toBe(sessionId);
+  expect(runtime.getSnapshot()).toMatchObject({ historyLoaded: false, messages: [] });
+  expect(fetch).not.toHaveBeenCalled();
+});
+
+it("ignores a send result from a stopped connection after reconciling a new connection", async () => {
+  let finish!: (value: { message_id: string; turn_id: string }) => void;
+  const client = {
+    openSessionEvents: vi.fn(async () => new StubEventConnection([])),
+    getSessionById: vi.fn(async () => ({ id: sessionId })),
+    listSessionMessages: vi.fn(async () => ({ data: [] })),
+    sendMessage: vi.fn(() => new Promise(resolve => { finish = resolve; })),
+  };
+  const runtime = new CaltraSessionRuntime(client as never, sessionId);
+  const send = runtime.send("Old request");
+  await vi.waitFor(() => expect(client.sendMessage).toHaveBeenCalledOnce());
+  await runtime.stop(); await runtime.start();
+  finish({ message_id: userMessageId, turn_id: turnId }); await send;
+  expect(runtime.getSnapshot().messages).toEqual([]);
+  await runtime.stop();
 });
