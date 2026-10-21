@@ -27,7 +27,7 @@ it("keeps terminal status collapsed, fetches only on expansion, caches and retri
   await screen.findByText("Could not load tool details.");
   fireEvent.click(screen.getByRole("button", { name: "Try again" }));
   await waitFor(() => expect(client.getSessionToolDetails).toHaveBeenCalledTimes(2));
-  expect(screen.getByText("Loading tool details…")).toBeTruthy();
+  expect(screen.getByRole("status", { name: "Loading tool details…" })).toBeTruthy();
   await act(async () => finish({ ...tool, arguments: { text: "secret args" }, result: { text: "loaded result" } }));
   expect(await screen.findByText(/loaded result/)).toBeTruthy();
   fireEvent.click(trigger); fireEvent.click(trigger);
