@@ -44,4 +44,5 @@
 - Restoring the old forced-scroll default caused the regression to fail with a 1,000px reading-position jump.
 - Private preview checked through the Chrome extension: 36 to 44 messages retained scrollTop 3706 after completion.
 - Final deployed preview checked during active streaming: Saved message 30 remained at viewport offset 120.71875px while native anchoring adjusted scrollTop for hidden Copy action bars.
-- User accepted the preview and authorized merging, publishing, deployment, and consumer updates. Running-state flicker was then reproduced; release waits for its regression checks.
+- User accepted the preview and authorized merging, publishing, deployment, and consumer updates. Running-state flicker was then reproduced and fixed before publication. Final verification passed 113 unit tests and 11 browser tests. An isolated execution of the actual Caltra GraphDriver confirmed message completion precedes tool execution while the turn remains running.
+- Client 0.10.0, assistant-ui 0.1.0 and React 0.11.0 are published and installable; registry checksums match the tested artifacts. The new adapter’s npm trusted publisher is configured. Consumer production activation is tracked in the application repositories.

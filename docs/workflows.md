@@ -8,11 +8,13 @@ and builds with Node.js 24 and npm 11.19.0. It has read-only repository access
 and no publishing or runtime-secret credentials.
 
 `publish.yml` remains an explicit manual operation. Select `server`, `client`,
-or `react` in **Publish SDK packages**. It retains its explicit typechecks,
+`assistant-ui`, or `react` in **Publish SDK packages**. It retains its explicit typechecks,
 tests, and build before publishing only the selected package through npm
 trusted publishing. Prepare an increasing, unpublished package version for a
 release; npm does not permit replacing an already published name/version.
 Ordinary development does not require a version bump.
+
+A successful npm publication can precede registry availability. Verify both exact-version metadata and its downloadable tarball, with integrity matching the tested artifact, before upgrading consumers. The 2026-10-21 React release took approximately ten minutes to become installable; do not repeat an accepted publication while npm processes it.
 
 | Event or input | Result |
 | --- | --- |
@@ -43,3 +45,5 @@ default branch protection/ruleset to require `validate` before merge. That is a
 separate administrator operation; changing the workflow does not update live
 GitHub protections. Keep the existing per-package npm trusted-publisher
 relationship with `publish.yml`. No new publishing credential is needed.
+
+On 2026-10-21, `@caltra/assistant-ui` 0.1.0 was first published interactively, then its package-specific GitHub trusted publisher was created for `caltra-dev/caltra-sdk` and `publish.yml`. Client 0.10.0 and React 0.11.0 were published through that workflow. All three registry integrities matched the prepublication artifacts.
