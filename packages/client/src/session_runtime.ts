@@ -87,7 +87,7 @@ export class CaltraSessionRuntime {
     return new CaltraReasoningRuntime(this.client, this.sessionId, messageId, (resource, active) => {
       if (active) this.reasoningResources.add(resource);
       else this.reasoningResources.delete(resource);
-    });
+    }, this);
   }
 
   async start(): Promise<void> {
@@ -124,6 +124,7 @@ export class CaltraSessionRuntime {
   async refresh(): Promise<void> {
     const generation = this.generation;
     const request = ++this.historyRequest;
+    const reasoningAtRequest = new Map(this.snapshot.messages.map(message => [message.id, message.reasoning]));
     const page = await this.client.listSessionMessages(this.sessionId, { limit: this.pageSize });
     if (generation !== this.generation || request < this.appliedHistoryRequest) return;
     this.appliedHistoryRequest = request;
@@ -134,7 +135,7 @@ export class CaltraSessionRuntime {
       this.olderCursor = page.next_cursor ?? null;
       this.olderAnchorId = page.data[0]?.id ?? null;
     }
-    const messages = this.mergeHistory(page.data, false, !page.next_cursor);
+    const messages = this.mergeHistory(page.data, false, !page.next_cursor, null, reasoningAtRequest);
     this.update({ historyLoaded: true, messages, hasOlderMessages: this.olderCursor !== null,
       isRunning: messages.some(message => message.status === "streaming") });
   }
@@ -171,7 +172,8 @@ export class CaltraSessionRuntime {
     return await pending;
   }
 
-  private mergeHistory(history: readonly CaltraSessionMessage[], older: boolean, complete = false, anchor: string | null = null): CaltraSessionMessage[] {
+  private mergeHistory(history: readonly CaltraSessionMessage[], older: boolean, complete = false, anchor: string | null = null,
+    reasoningAtRequest?: ReadonlyMap<string, CaltraSessionMessage["reasoning"]>): CaltraSessionMessage[] {
     const existing = new Map(this.snapshot.messages.map(message => [message.id, message]));
     const merged = history.map(message => {
       const live = existing.get(message.id);
@@ -181,7 +183,12 @@ export class CaltraSessionRuntime {
         this.canonicalMessages.add(message.id);
         return older && live ? live : message;
       }
-      return live ? { ...message, ...live, created_at: message.created_at } : message;
+      if (!live) return message;
+      // Preserve answer deltas, but accept refreshed thinking status unless a newer
+      // metadata event arrived while this history request was in flight.
+      const reasoning = reasoningAtRequest && live.reasoning === reasoningAtRequest.get(message.id)
+        ? message.reasoning ?? live.reasoning : live.reasoning;
+      return { ...message, ...live, created_at: message.created_at, ...(reasoning ? { reasoning } : {}) };
     });
     const ids = new Set(history.map(message => message.id));
     const retained = this.snapshot.messages.filter(message => !ids.has(message.id)

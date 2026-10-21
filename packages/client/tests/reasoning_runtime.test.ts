@@ -54,6 +54,65 @@ describe("independent reasoning", () => {
     await reopened;
     expect(resource.getSnapshot()).toMatchObject({ streaming: false, error: null, parts: [{ text: "ABCDE" }] });
     await resource.stop();
+    await resource.start();
+    expect(f.calls).toEqual(["stream", "snapshot", "stream", "snapshot"]);
+    expect(resource.getSnapshot().loading).toBe(false);
+    await resource.stop();
+  });
+
+  it("uses transcript completion to fetch without SSE, follows resumed thinking, and caches the final snapshot", async () => {
+    const f = fixture();
+    let messageStatus: "streaming" | "completed" = "streaming";
+    let reasoningStatus: "streaming" | "completed" = "completed";
+    const runtime = new CaltraSessionRuntime({ ...f.client,
+      listSessionMessages: async () => ({ data: [{ id: message, role: "assistant", text: "Answer still streaming",
+        status: messageStatus, reasoning: { status: reasoningStatus }, created_at: "2026-10-21T00:00:00Z" }], next_cursor: null }),
+    } as never, session);
+    await runtime.refresh();
+    const resource = runtime.reasoning(message);
+    const starting = resource.start();
+    expect(f.calls).toEqual(["snapshot"]);
+    f.resolve({ ...f.snapshot("First thought", 2), parts: [{ position: 0, text: "First thought", status: "completed" }] });
+    await starting;
+    expect(resource.getSnapshot().streaming).toBe(false);
+
+    reasoningStatus = "streaming";
+    await runtime.refresh();
+    await vi.waitFor(() => expect(f.calls).toEqual(["snapshot", "stream", "snapshot"]));
+    f.resolve(f.snapshot("First thought plus more", 3));
+    await resource.start();
+    expect(resource.getSnapshot().streaming).toBe(true);
+
+    reasoningStatus = "completed";
+    messageStatus = "completed";
+    await runtime.refresh();
+    expect(f.calls).toEqual(["snapshot", "stream", "snapshot", "snapshot"]);
+    f.resolve({ ...f.snapshot("Final thought", 4), status: "completed", parts: [{ position: 0, text: "Final thought", status: "completed" }] });
+    await resource.start();
+    await resource.stop();
+    await resource.start();
+    expect(f.calls).toHaveLength(4);
+    expect(resource.getSnapshot()).toMatchObject({ loading: false, streaming: false, parts: [{ text: "Final thought" }] });
+    await runtime.stop();
+  });
+
+  it("fetches once without SSE when the transcript message was already completed", async () => {
+    const f = fixture();
+    const runtime = new CaltraSessionRuntime({ ...f.client,
+      listSessionMessages: async () => ({ data: [{ id: message, role: "assistant", text: "Answer", status: "completed",
+        reasoning: { status: "completed" }, created_at: "2026-10-21T00:00:00Z" }], next_cursor: null }),
+    } as never, session);
+    await runtime.refresh();
+    const resource = runtime.reasoning(message);
+    const starting = resource.start();
+    expect(f.calls).toEqual(["snapshot"]);
+    f.resolve({ ...f.snapshot("Saved thought", 4), status: "completed", parts: [{ position: 0, text: "Saved thought", status: "completed" }] });
+    await starting;
+    await resource.stop();
+    await resource.start();
+    expect(f.calls).toEqual(["snapshot"]);
+    expect(resource.getSnapshot().loading).toBe(false);
+    await runtime.stop();
   });
 
   it("does not apply a snapshot that arrives after collapsing", async () => {

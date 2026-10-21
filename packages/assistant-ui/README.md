@@ -32,6 +32,8 @@ The adapter forwards the session runtime's authoritative turn state. `isRunning`
 
 The adapter carries availability/status in `message.metadata.custom.caltraReasoning`.
 Use `useCaltraReasoning(sessionRuntime, messageId, open)` inside your disclosure to load its
-separate stream and snapshot only while open. The hook returns `parts`, `loading`, `streaming`,
+separate text resource only while open. Completed thinking fetches without a stream; a cached
+final snapshot is reused without a request. Live thinking connects before fetching its snapshot.
+The hook returns `parts`, `loading`, `streaming`,
 `error`, and `retry()`. Render each part's `text` and use `position` as its stable key.
 Closing or unmounting stops this subscription and leaves the main session connected.

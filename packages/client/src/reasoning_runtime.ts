@@ -1,4 +1,4 @@
-import type { CaltraSessionTransport } from "./session_runtime.js";
+import type { CaltraSessionRuntime, CaltraSessionTransport } from "./session_runtime.js";
 import type { CaltraReasoningSnapshot, CaltraSessionEvent } from "./types.js";
 
 export interface CaltraReasoningState {
@@ -18,9 +18,12 @@ export class CaltraReasoningRuntime {
   private watermark = -1;
   private terminal = false;
   private streamId: string | null = null;
+  private unsubscribeTranscript?: () => void;
+  private transcriptStatus?: string;
 
   constructor(private readonly client: CaltraSessionTransport, readonly sessionId: string, readonly messageId: string,
-    private readonly activity: (resource: CaltraReasoningRuntime, active: boolean) => void = () => {}) {}
+    private readonly activity: (resource: CaltraReasoningRuntime, active: boolean) => void = () => {},
+    private readonly transcript?: Pick<CaltraSessionRuntime, "subscribe" | "getSnapshot">) {}
 
   readonly getSnapshot = (): CaltraReasoningState => this.state;
   readonly subscribe = (listener: () => void): (() => void) => {
@@ -28,9 +31,26 @@ export class CaltraReasoningRuntime {
     return () => { this.listeners.delete(listener); };
   };
 
-  /** Connect first, buffer events, then fetch and reconcile the authoritative snapshot. */
+  /** Completed text loads once; live text subscribes before fetching to avoid gaps. */
   start(): Promise<void> {
+    if (this.terminal) return Promise.resolve();
     if (this.ready) return this.ready;
+    if (this.transcript && !this.unsubscribeTranscript) {
+      this.transcriptStatus = this.getTranscriptStatus();
+      this.unsubscribeTranscript = this.transcript.subscribe(() => {
+        const status = this.getTranscriptStatus();
+        if (status === this.transcriptStatus) return;
+        this.transcriptStatus = status;
+        // A phase can end before the answer, or resume in another part. Reconcile
+        // from the main transcript even when this resource has no live stream.
+        this.controller?.abort();
+        const connection = this.connection;
+        this.connection = undefined;
+        this.ready = undefined;
+        void connection?.close().catch(() => undefined);
+        void this.start().catch(() => undefined);
+      });
+    }
     const controller = new AbortController();
     this.controller = controller;
     this.activity(this, true);
@@ -40,6 +60,8 @@ export class CaltraReasoningRuntime {
 
   /** Aborts both HTTP operations, retaining displayable text for the next expansion. */
   async stop(): Promise<void> {
+    this.unsubscribeTranscript?.();
+    this.unsubscribeTranscript = undefined;
     this.controller?.abort();
     this.controller = undefined;
     this.ready = undefined;
@@ -50,12 +72,29 @@ export class CaltraReasoningRuntime {
     await connection?.close().catch(() => undefined);
   }
 
+  private getMessage() {
+    return this.transcript?.getSnapshot().messages.find(message => message.id === this.messageId);
+  }
+
+  private getTranscriptStatus(): string {
+    const message = this.getMessage();
+    return `${message?.status}:${message?.reasoning?.status}`;
+  }
+
   private async connect(controller: AbortController): Promise<void> {
     const { signal } = controller;
     let connection: typeof this.connection;
     try {
-      if (!this.client.openSessionReasoningEvents || !this.client.getSessionReasoning) throw new Error("This transport does not support reasoning.");
+      if (!this.client.getSessionReasoning) throw new Error("This transport does not support reasoning.");
       this.update({ loading: true, error: null });
+      const message = this.getMessage();
+      if (message?.reasoning?.status === "completed" || (message && message.status !== "streaming")) {
+        this.update({ streaming: false });
+        await this.refresh(signal);
+        if (!signal.aborted) this.update({ loading: false });
+        return;
+      }
+      if (!this.client.openSessionReasoningEvents) throw new Error("This transport does not support reasoning streaming.");
       connection = await this.client.openSessionReasoningEvents(this.sessionId, this.messageId, { signal });
       if (signal.aborted) { await connection.close(); return; }
       this.connection = connection;
@@ -81,7 +120,6 @@ export class CaltraReasoningRuntime {
       await connection?.close().catch(() => undefined);
       if (signal.aborted) return;
       if (this.controller === controller) this.ready = undefined;
-      this.activity(this, false);
       this.update({ loading: false, error: error instanceof Error ? error : new Error("Reasoning could not be loaded.") });
       throw error;
     }
@@ -95,7 +133,6 @@ export class CaltraReasoningRuntime {
     this.watermark = snapshot.sequence;
     this.update({ parts: snapshot.parts, streaming: snapshot.status === "streaming" && snapshot.parts.some(part => part.status === "streaming") });
     if (snapshot.status !== "streaming") {
-      this.activity(this, false);
       await this.connection?.close();
     }
   }
@@ -118,7 +155,6 @@ export class CaltraReasoningRuntime {
     if (controller.signal.aborted || this.controller !== controller) return;
     if (this.terminal) return;
     this.ready = undefined;
-    this.activity(this, false);
     this.update({ error: new Error("Reasoning stream disconnected. Retry to catch up.") });
   }
 

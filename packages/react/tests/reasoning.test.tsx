@@ -10,9 +10,9 @@ beforeAll(() => {
 });
 afterEach(cleanup);
 
-function fixture() {
+function fixture(initialStatus: "streaming" | "completed" = "streaming") {
   const close = vi.fn(async () => undefined);
-  let status: "streaming" | "completed" = "streaming";
+  let status = initialStatus;
   const client = {
     openSessionEvents: vi.fn(async () => ({ async *[Symbol.asyncIterator]() { await new Promise(() => undefined); }, close })),
     openSessionReasoningEvents: vi.fn(async () => ({ async *[Symbol.asyncIterator]() { await new Promise(() => undefined); }, close })),
@@ -68,8 +68,43 @@ describe("thinking display modes", () => {
     await act(f.complete);
     await waitFor(() => expect(screen.getByRole("button", { name: /Thinking/ }).getAttribute("aria-expanded")).toBe("false"));
     fireEvent.click(screen.getByRole("button", { name: /Thinking/ }));
+    await screen.findByText("Separate thinking text");
+    expect(f.client.openSessionReasoningEvents).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("status", { name: "Loading thinking…" })).toBeNull();
+    await f.runtime.stop();
+  });
+
+  it("reopens completed cached thinking without a spinner, fetch, or stream", async () => {
+    const f = fixture("completed"); await f.runtime.start();
+    render(<CaltraChat runtime={f.runtime} reasoningDisplay="collapsed" />);
+    const toggle = screen.getByRole("button", { name: /Thinking/ });
+    fireEvent.click(toggle);
+    await screen.findByText("Separate thinking text");
+    fireEvent.click(toggle);
+    fireEvent.click(toggle);
+    expect(screen.getByText("Separate thinking text")).toBeTruthy();
+    expect(screen.queryByRole("status", { name: "Loading thinking…" })).toBeNull();
+    expect(f.client.getSessionReasoning).toHaveBeenCalledTimes(1);
+    expect(f.client.openSessionReasoningEvents).not.toHaveBeenCalled();
+    await f.runtime.stop();
+  });
+
+  it("keeps cached streaming text visible without a spinner while reopening catches up", async () => {
+    const f = fixture(); await f.runtime.start();
+    render(<CaltraChat runtime={f.runtime} reasoningDisplay="collapsed" />);
+    const toggle = screen.getByRole("button", { name: /Thinking/ });
+    fireEvent.click(toggle);
+    await screen.findByText("Separate thinking text");
+    fireEvent.click(toggle);
+    let resolveThinking!: (value: Awaited<ReturnType<typeof f.client.getSessionReasoning>>) => void;
+    f.client.getSessionReasoning.mockImplementationOnce(() => new Promise(resolve => { resolveThinking = resolve; }));
+    fireEvent.click(toggle);
     await waitFor(() => expect(f.client.getSessionReasoning).toHaveBeenCalledTimes(2));
     expect(screen.getByText("Separate thinking text")).toBeTruthy();
+    expect(screen.queryByRole("status", { name: "Loading thinking…" })).toBeNull();
+    await act(async () => resolveThinking({ message_id: "message", stream_id: "stream", sequence: 2, status: "streaming",
+      parts: [{ position: 0, text: "Separate thinking text caught up", status: "streaming" }] }));
+    await screen.findByText("Separate thinking text caught up");
     await f.runtime.stop();
   });
 });

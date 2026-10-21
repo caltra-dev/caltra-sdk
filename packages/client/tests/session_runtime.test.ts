@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { CaltraSessionEvent } from "../src/types.js";
+import type { CaltraSessionEvent, CaltraSessionMessage } from "../src/types.js";
 import { CaltraSessionRuntime } from "../src/session_runtime.js";
 
 const sessionId = "40000000-0000-4000-8000-000000000001";
@@ -26,6 +26,36 @@ class StubEventConnection implements AsyncIterable<CaltraSessionEvent> {
 }
 
 describe("CaltraSessionRuntime", () => {
+  it("refreshes thinking status during answer streaming without overwriting newer metadata events", async () => {
+    const message: CaltraSessionMessage = { id: assistantMessageId, role: "assistant", status: "streaming", text: "Partial answer",
+      reasoning: { status: "streaming" }, created_at: "2026-10-21T00:00:00Z" };
+    let emit!: () => void;
+    const gate = new Promise<void>(resolve => { emit = resolve; });
+    let finish!: (value: { data: CaltraSessionMessage[] }) => void;
+    const client = {
+      openSessionEvents: vi.fn(async () => ({ async *[Symbol.asyncIterator]() {
+        await gate;
+        yield { event: "reasoning.updated", id: "resumed", data: { message_id: assistantMessageId, session_id: sessionId, turn_id: turnId, status: "streaming" } };
+        await new Promise(() => undefined);
+      }, close: async () => {} })),
+      getSessionById: vi.fn(async () => ({ id: sessionId })),
+      listSessionMessages: vi.fn().mockResolvedValueOnce({ data: [message] })
+        .mockResolvedValueOnce({ data: [{ ...message, text: "", reasoning: { status: "completed" } }] })
+        .mockImplementationOnce(() => new Promise(resolve => { finish = resolve; })),
+    };
+    const runtime = new CaltraSessionRuntime(client as never, sessionId);
+    await runtime.start();
+    await runtime.refresh();
+    expect(runtime.getSnapshot().messages[0]).toMatchObject({ text: "Partial answer", status: "streaming", reasoning: { status: "completed" } });
+    const pending = runtime.refresh();
+    emit();
+    await vi.waitFor(() => expect(runtime.getSnapshot().messages[0]?.reasoning?.status).toBe("streaming"));
+    finish({ data: [{ ...message, reasoning: { status: "completed" } }] });
+    await pending;
+    expect(runtime.getSnapshot().messages[0]?.reasoning?.status).toBe("streaming");
+    await runtime.stop();
+  });
+
   it("restarts after a development Strict Mode start-stop-start cycle", async () => {
     const connection = new StubEventConnection([]);
     let attempts = 0;

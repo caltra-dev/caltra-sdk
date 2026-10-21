@@ -281,9 +281,13 @@ of model reasoning settings and model context. Only provider-returned displayabl
 available; encrypted state and signatures remain internal.
 
 The main runtime has no reasoning options. Messages contain only availability/status metadata.
-Expanding opens a separate message-scoped reasoning stream, then fetches its snapshot; sequence
-watermarks avoid duplicating overlapping text. Collapsing disconnects that stream, retains cached
-text, and reopening catches up. Failure is local to the disclosure with a retry action.
+Expanding checks the transcript's thinking status. Completed thinking fetches a snapshot without
+opening a stream, and a cached final snapshot needs no request. Streaming thinking opens its
+separate message-scoped stream before fetching a snapshot; sequence watermarks avoid duplicating
+overlapping text. Collapsing disconnects and retains cached text. Reopening unfinished thinking
+catches up without showing a loading spinner over cached text. Failure is local to the disclosure
+with a retry action. While open, the resource follows transcript status changes, including thinking
+that resumes before the message finishes.
 
 Custom consumers can use `useCaltraReasoning(sessionRuntime, messageId, open)` from
 `@caltra/assistant-ui`. It returns `parts`, `loading`, `streaming`, `error`, and `retry()`.
