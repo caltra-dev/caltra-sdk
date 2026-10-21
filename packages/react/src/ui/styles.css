@@ -27,7 +27,8 @@
 .caltra-chat button { cursor: pointer; }
 .caltra-chat button:disabled { cursor: default; opacity: .45; }
 .caltra-chat :focus-visible { outline: 2px solid var(--caltra-resolved-accent); outline-offset: 3px; }
-.caltra-chat__viewport { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+/* Keep centered messages stationary when disclosures or streaming introduce a scrollbar. */
+.caltra-chat__viewport { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable both-edges; }
 .caltra-chat__viewport[hidden] { display: none; }
 .caltra-chat__content { display: flex; flex-direction: column; min-height: 100%; max-width: var(--caltra-content-width, var(--caltra-theme-content-width, 44rem)); margin: 0 auto; padding: 1rem 1rem 0; }
 .caltra-chat__welcome { margin: auto 0 1.5rem; padding-top: 2rem; text-align: start; }
