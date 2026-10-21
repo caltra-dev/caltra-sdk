@@ -1,3 +1,4 @@
+import "./runtime-demo.css";
 import { useEffect, useState } from "react";
 import { AssistantRuntimeProvider, ThreadPrimitive, MessagePrimitive, ComposerPrimitive } from "@assistant-ui/react";
 import { useAssistantUiRuntime } from "@caltra/assistant-ui";
@@ -20,7 +21,7 @@ export function RuntimeDemo() {
   return <main style={{ maxWidth: 960, margin: "0 auto", padding: 20 }}>
     <h1>Caltra runtime demo</h1>
     <p>Sample history and simulated message/tool events. No backend or production data.</p>
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 12, margin: "16px 0" }}>
+    <div className="runtime-demo-controls">
       <label>Integration <select aria-label="Integration" value={mode} onChange={event => { client.disposeTimers(); setMode(event.target.value); }}>
         <option value="managed">Managed CaltraChat</option>
         <option value="shared">Caller-owned runtime</option>
