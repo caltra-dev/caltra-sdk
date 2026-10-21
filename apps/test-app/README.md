@@ -89,3 +89,5 @@ Choose Managed CaltraChat, Caller-owned runtime, or Custom assistant-ui. Scroll 
 Run `npm run test:e2e -w @caltra/test-app -- e2e/runtime-scroll.spec.ts` on the Sprite. These browser checks cover default scroll preservation, resuming follow, explicit override, supplied runtime ownership, and custom adapter send/history.
 
 Private Fly sign-in can return to the demo app root without the query string. If that happens, reopen the full `/?demo=runtime` link after signing in to enter the in-memory preview.
+
+Scroll regression assertions track a visible message's viewport-relative position. The upstream Copy action bars hide while streaming and reappear between steps, so native scroll anchoring can correctly change scrollTop while keeping the same text stationary. A fixed scrollTop assertion alone is insufficient during those layout changes.

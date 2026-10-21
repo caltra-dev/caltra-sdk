@@ -37,3 +37,11 @@
 - Run builds, type checks, affected unit tests and browser regressions on the Sprite. Verify tracked source parity with the local worktree.
 - Commit validated changes; deploy committed HEAD via sprite-dev up. Validate the private preview using the browser extension.
 - Provide URL and review steps. Wait for user preview acceptance before merging into main; then delete Sprite before removing the merged worktree.
+
+## Verification evidence
+
+- Sprite: all workspace type checks and builds passed; 109 unit tests and 10 browser tests passed.
+- Restoring the old forced-scroll default caused the regression to fail with a 1,000px reading-position jump.
+- Private preview checked through the Chrome extension: 36 to 44 messages retained scrollTop 3706 after completion.
+- Final deployed preview checked during active streaming: Saved message 30 remained at viewport offset 120.71875px while native anchoring adjusted scrollTop for hidden Copy action bars.
+- Preview review is pending. No npm publication, main merge, or Piria deployment has occurred.

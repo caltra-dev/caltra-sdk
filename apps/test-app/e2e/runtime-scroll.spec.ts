@@ -11,10 +11,18 @@ for (const mode of ["managed", "shared"]) {
     await expect.poll(distance).toBeLessThan(2);
     await viewport.hover(); await page.mouse.wheel(0, -700);
     await expect.poll(distance).toBeGreaterThan(500);
-    const position = await viewport.evaluate(el => el.scrollTop);
+    // Copy controls hide during streaming, changing content height above the reader.
+    // Assert the visible message stays anchored rather than requiring a fixed scrollTop.
+    const anchor = await viewport.evaluate(el => {
+      const top = el.getBoundingClientRect().top;
+      const paragraph = [...el.querySelectorAll("p")].find(p => p.textContent?.startsWith("Saved message") && p.getBoundingClientRect().top >= top)!;
+      return { text: paragraph.textContent!, offset: paragraph.getBoundingClientRect().top - top };
+    });
     await page.getByRole("button", { name: "Stream steps", exact: true }).click();
     await expect.poll(count).toBeGreaterThan(39);
-    expect(Math.abs(await viewport.evaluate(el => el.scrollTop) - position)).toBeLessThan(3);
+    const offset = await page.getByText(anchor.text, { exact: true }).evaluate(el =>
+      el.getBoundingClientRect().top - document.querySelector(".caltra-chat__viewport")!.getBoundingClientRect().top);
+    expect(Math.abs(offset - anchor.offset)).toBeLessThan(3);
     await page.getByRole("button", { name: "Scroll to bottom", exact: true }).click();
     await expect.poll(distance).toBeLessThan(2);
     const before = await count();
