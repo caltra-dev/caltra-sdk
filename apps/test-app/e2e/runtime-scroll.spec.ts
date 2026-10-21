@@ -1,5 +1,29 @@
 import { expect, test } from "@playwright/test";
 
+test("one turn keeps Stop visible across every message boundary and clears it at completion", async ({ page }) => {
+  await page.goto("/?demo=runtime");
+  await expect(page.locator(".caltra-chat__message")).toHaveCount(36);
+  await page.getByRole("button", { name: "Stream steps", exact: true }).click();
+  const stop = page.getByRole("button", { name: "Stop generating", exact: true });
+  await expect(stop).toBeVisible();
+  await page.evaluate(() => {
+    const trace: boolean[] = [];
+    const observer = new MutationObserver(() => {
+      const running = !!document.querySelector('button[aria-label="Stop generating"]');
+      if (trace.at(-1) !== running) trace.push(running);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    (window as unknown as { runTrace: { trace: boolean[]; observer: MutationObserver } }).runTrace = { trace, observer };
+  });
+  await expect(page.locator(".caltra-chat__message")).toHaveCount(44, { timeout: 12_000 });
+  await expect(stop).toHaveCount(0);
+  const transitions = await page.evaluate(() => {
+    const { trace, observer } = (window as unknown as { runTrace: { trace: boolean[]; observer: MutationObserver } }).runTrace;
+    observer.disconnect(); return trace;
+  });
+  expect(transitions).toEqual([true, false]);
+});
+
 for (const mode of ["managed", "shared"]) {
   test(`${mode}: keeps reading position across new messages and tool steps, then resumes following`, async ({ page }) => {
     await page.goto("/?demo=runtime");

@@ -9,6 +9,7 @@ export class DemoClient extends CaltraClient {
   private streams = new Set<ReadableStreamDefaultController<Uint8Array>>();
   private timers = new Set<ReturnType<typeof setTimeout>>();
   private generation = 0;
+  private running = false;
   messages: CaltraSessionMessage[] = Array.from({ length: 36 }, (_, index) => ({
     id: `80000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
     created_at: createdAt, role: index % 2 ? "assistant" : "user", status: "completed",
@@ -19,7 +20,7 @@ export class DemoClient extends CaltraClient {
     super({ authorizationCodeProvider: async () => "unused-demo-code", fetch: async () => { throw new Error("The demo never uses the network."); } });
   }
   override async getSessionById(id: string): Promise<CaltraSession> {
-    return { id, auto_name: false, title: "Runtime demo", title_source: "manual", title_updated_at: null,
+    return { id, is_running: this.running, auto_name: false, title: "Runtime demo", title_source: "manual", title_updated_at: null,
       agentIdentity: null, agent: { id: demoSessionId, name: "Demo" }, created_at: createdAt,
       updated_at: createdAt, external_id: null, status: "active" };
   }
@@ -46,6 +47,8 @@ export class DemoClient extends CaltraClient {
   }
   streamSteps() {
     const generation = ++this.generation;
+    this.running = true;
+    this.emit({ event: "session.updated", id: crypto.randomUUID(), data: { session_id: demoSessionId } });
     for (let index = 0; index < 8; index++) this.later(() => {
       if (generation !== this.generation) return;
       const messageId = crypto.randomUUID();
@@ -69,6 +72,10 @@ export class DemoClient extends CaltraClient {
         message.status = "completed";
         for (const tool of message.tool_calls ?? []) { tool.status = "completed"; tool.result = { ok: true }; }
         this.emit({ event: "message.completed", id: `${messageId}:end`, data });
+        if (index === 7) {
+          this.running = false;
+          this.emit({ event: "session.updated", id: crypto.randomUUID(), data: { session_id: demoSessionId } });
+        }
       }, 550);
     }, 300 + index * 1000);
   }
@@ -80,9 +87,14 @@ export class DemoClient extends CaltraClient {
   }
   override async cancelSession() {
     this.disposeTimers();
-    for (const message of this.messages) if (message.status === "streaming") message.status = "cancelled";
-    this.emit({ event: "session.updated", id: crypto.randomUUID(), data: { session_id: demoSessionId } });
     return { turn_id: turnId };
   }
-  disposeTimers() { this.generation++; for (const timer of this.timers) clearTimeout(timer); this.timers.clear(); }
+  disposeTimers() {
+    this.generation++;
+    for (const timer of this.timers) clearTimeout(timer);
+    this.timers.clear();
+    this.running = false;
+    for (const message of this.messages) if (message.status === "streaming") message.status = "cancelled";
+    this.emit({ event: "session.updated", id: crypto.randomUUID(), data: { session_id: demoSessionId } });
+  }
 }

@@ -26,7 +26,7 @@ source, or host CSS reset is required. The explicit `@caltra/react/styles.css` e
 available for compatibility. The headless `@caltra/react` entry does not import CSS. The defaults
 include a welcome, skeleton-only loading state (the loading label is screen-reader-only), Markdown transcript, copy icon with checkmark feedback and localized accessible labels/tooltips, scroll-to-bottom button,
 upstream text composer, connection recovery and retry. Enter sends; Shift+Enter inserts a newline.
-While a turn runs, the native Stop control calls `CaltraClient.cancelSession`, then reloads persisted history. A failed cancellation preserves the running state and exposes the existing error alert; Stop can be retried. HTTP cancellation also works while the event stream reconnects. Running-state presentation follows the public message lifecycle; it is not proof of whole-turn completion.
+While a turn runs, the native Stop control calls `CaltraClient.cancelSession`, then reloads persisted history. A failed cancellation preserves the running state and exposes the existing error alert; Stop can be retried. HTTP cancellation also works while the event stream reconnects. Running-state presentation follows the persisted queued/running turn on current servers, including pauses between messages and tools. Older servers retain the legacy message-activity fallback.
 Initial loading fills the panel with 16px gutters and reserves the composer's bottom
 position. The real composer becomes available after history resolves, in the same
 position for both saved and empty conversations. Bootstrap integrations may render
@@ -231,4 +231,4 @@ Use typed upstream options to customize these defaults:
 
 For a fully custom assistant-ui tree, use `useAssistantUiRuntime(sessionRuntime)` from `@caltra/assistant-ui` with upstream `AssistantRuntimeProvider`. See the [adapter guide](../assistant-ui/README.md). The original `useCaltraRuntime({ client, sessionId })` hook remains compatible and creates/manages its session runtime automatically. `CaltraSessionStore` remains a deprecated alias; new consumers import `CaltraSessionRuntime` from `@caltra/client`.
 
-The protocol currently reports message activity rather than whole-turn lifecycle. The default viewport deliberately does not force a scroll on each running-state transition.
+The default viewport preserves the reading position when a new turn starts. Consumers can override upstream viewport options explicitly.

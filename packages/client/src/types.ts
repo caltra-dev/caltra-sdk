@@ -33,6 +33,8 @@ export interface CaltraAgentIdentity {
 }
 
 export interface CaltraSession {
+  /** Authoritative queued/running turn state; absent only on older servers. */
+  is_running?: boolean;
   auto_name: boolean;
   title: string | null;
   title_source: "generated" | "manual" | null;

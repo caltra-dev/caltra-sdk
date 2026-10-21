@@ -14,7 +14,7 @@ export interface CaltraSessionSnapshot {
   error: Error | null;
   /** True only after an authoritative history response, including an empty one. */
   historyLoaded: boolean;
-  /** Message/stream activity; the public protocol does not yet expose whole-turn completion. */
+  /** Queued/running turn or pending submission. Older servers fall back to message activity. */
   isRunning: boolean;
   messages: readonly CaltraSessionMessage[];
 }
@@ -36,6 +36,9 @@ export class CaltraSessionRuntime {
   private rejectReady?: (reason: unknown) => void;
   private resolveReady?: () => void;
   private generation = 0;
+  private metadataRequest = 0;
+  private legacyIsRunning = false;
+  private readonly pendingSends = new Set<string>();
   private snapshot: CaltraSessionSnapshot = {
     session: null,
     connection: "connecting",
@@ -72,6 +75,7 @@ export class CaltraSessionRuntime {
 
   async stop(): Promise<void> {
     this.generation += 1;
+    this.pendingSends.clear();
     const connection = this.connection;
     this.abortController?.abort();
     this.abortController = undefined;
@@ -92,8 +96,9 @@ export class CaltraSessionRuntime {
 
   async refreshMetadata(): Promise<void> {
     const generation = this.generation;
+    const request = ++this.metadataRequest;
     const session = await this.client.getSessionById(this.sessionId);
-    if (generation === this.generation) this.update({ session });
+    if (generation === this.generation && request === this.metadataRequest) this.update({ session });
   }
 
   /** Restarts transport without throwing away a transcript already loaded for this session. */
@@ -113,11 +118,15 @@ export class CaltraSessionRuntime {
       status: "completed",
       text,
     };
+    this.pendingSends.add(temporaryId);
     this.update({ messages: [...this.snapshot.messages, optimistic] });
     try {
       const submitted = await this.client.sendMessage(this.sessionId, { text });
       if (generation !== this.generation) return;
       this.update({
+        ...(this.snapshot.session?.is_running === undefined ? {} : {
+          session: { ...this.snapshot.session, is_running: true },
+        }),
         messages: this.snapshot.messages.map((message) => message.id === temporaryId
           ? { ...message, id: submitted.message_id }
           : message),
@@ -129,6 +138,16 @@ export class CaltraSessionRuntime {
         messages: this.snapshot.messages.filter((message) => message.id !== temporaryId),
       });
       throw error;
+    } finally {
+      if (generation === this.generation) {
+        // Accepted input can be queued before the first assistant message. Reconcile
+        // separately so a metadata failure never turns an accepted send into a retry.
+        if (this.snapshot.session?.is_running !== undefined) {
+          await this.refreshMetadata().catch(error => this.update({ error: this.toError(error) }));
+        }
+        this.pendingSends.delete(temporaryId);
+        this.update({});
+      }
     }
   }
 
@@ -136,7 +155,7 @@ export class CaltraSessionRuntime {
   async cancel(): Promise<void> {
     try {
       await this.client.cancelSession(this.sessionId);
-      await this.refresh();
+      await Promise.all([this.refresh(), this.refreshMetadata()]);
       this.update({ error: null });
     } catch (error) {
       this.update({ error: this.toError(error) });
@@ -190,9 +209,13 @@ export class CaltraSessionRuntime {
 
   private async apply(event: CaltraSessionEvent): Promise<void> {
     if (event.event === "session.updated") {
-      await this.refreshMetadata();
+      await Promise.all([this.refreshMetadata(), this.refresh()]);
       return;
     }
+    // Message activity is only a hint to refresh persisted turn state. A completed
+    // message may be followed by tools or another model request in the same turn.
+    if (this.snapshot.session?.is_running !== undefined
+      && (event.event === "message.started" || event.event === "message.completed")) await this.refreshMetadata();
     if (event.event === "tool.started") {
       const tool = { id: event.data.tool_call_id, name: event.data.tool_name, arguments: {}, status: "running" as const };
       this.update({ isRunning: true, messages: this.snapshot.messages.map(message => message.id === event.data.message_id
@@ -242,7 +265,11 @@ export class CaltraSessionRuntime {
   }
 
   private update(update: Partial<CaltraSessionSnapshot>): void {
-    this.snapshot = { ...this.snapshot, ...update };
+    if (update.isRunning !== undefined) this.legacyIsRunning = update.isRunning;
+    const session = update.session === undefined ? this.snapshot.session : update.session;
+    this.snapshot = { ...this.snapshot, ...update,
+      isRunning: this.pendingSends.size > 0 || (session?.is_running ?? this.legacyIsRunning),
+    };
     for (const listener of this.listeners) listener();
   }
 

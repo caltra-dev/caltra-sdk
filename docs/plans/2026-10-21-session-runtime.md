@@ -27,7 +27,7 @@
 - Subscribe to supplied runtimes without starting/stopping them. Start/stop only internally created runtimes.
 - Expose typed viewport options and composer input options; keep structural children under component slots. Keep public runtime access via slots and upstream hooks.
 - Disable scrollToBottomOnRunStart by default, retaining initial history positioning, bottom-follow, and explicit jump-to-bottom.
-- Public events currently expose message lifecycle, not authoritative run completion. Do not invent whole-run state from message boundaries; document that limitation separately.
+- Follow-up reproduction proved message lifecycle cannot represent whole-turn state. Current servers expose authoritative is_running and notify through session.updated; runtime uses this instead, retaining a legacy fallback for older servers.
 
 ## 5. Deterministic preview and documentation
 - Add an explicit runtime demo to the test app with saved history and repeatable streamed message/tool steps. Exercise managed, caller-owned, and custom assistant-ui modes without production data.
@@ -44,4 +44,4 @@
 - Restoring the old forced-scroll default caused the regression to fail with a 1,000px reading-position jump.
 - Private preview checked through the Chrome extension: 36 to 44 messages retained scrollTop 3706 after completion.
 - Final deployed preview checked during active streaming: Saved message 30 remained at viewport offset 120.71875px while native anchoring adjusted scrollTop for hidden Copy action bars.
-- Preview review is pending. No npm publication, main merge, or Piria deployment has occurred.
+- User accepted the preview and authorized merging, publishing, deployment, and consumer updates. Running-state flicker was then reproduced; release waits for its regression checks.

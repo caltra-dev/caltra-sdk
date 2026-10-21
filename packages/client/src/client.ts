@@ -31,6 +31,7 @@ const AgentIdentitySchema = z.object({
 }).strict();
 
 const SessionSchema = z.object({
+  is_running: z.boolean().optional(),
   auto_name: z.boolean(),
   title: z.string().nullable(),
   title_source: z.enum(["generated", "manual"]).nullable(),
@@ -240,6 +241,7 @@ export class CaltraClient {
     const headers = new Headers(input);
     headers.set("authorization", `Bearer ${await this.tokenProvider.getToken()}`);
     headers.set("x-caltra-session-metadata", "true");
+    headers.set("x-caltra-session-run-state", "true");
     return headers;
   }
 
