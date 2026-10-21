@@ -69,3 +69,5 @@ Create one runtime per active client/session scope. Start is idempotent; multipl
 The runtime reconciles optimistic user IDs with persisted history and exposes connection, error, loading and turn state. On current Caltra servers, `isRunning` stays true while input is being submitted or a persisted turn is queued/running, including tool execution and gaps between messages. Session updates and reconnects reconcile this state; message completion alone never clears it. Older servers that omit `is_running` retain the legacy message-activity fallback. Turn completion is distinct from completion of any larger application workflow.
 
 `@caltra/assistant-ui` translates the runtime to assistant-ui. Other UI adapters can consume the same subscription/action contract without duplicating transport or session reconciliation. CopilotKit/AG-UI integration is not implemented.
+
+Browser deployment prerequisite: activate the Caltra API/worker capability release before upgrading consumers. Client 0.10.0 sends `x-caltra-session-run-state`, which must be allowed by the API’s CORS policy. The runtime’s missing-field fallback applies only after transport succeeds.

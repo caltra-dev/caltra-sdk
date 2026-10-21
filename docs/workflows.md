@@ -47,3 +47,7 @@ GitHub protections. Keep the existing per-package npm trusted-publisher
 relationship with `publish.yml`. No new publishing credential is needed.
 
 On 2026-10-21, `@caltra/assistant-ui` 0.1.0 was first published interactively, then its package-specific GitHub trusted publisher was created for `caltra-dev/caltra-sdk` and `publish.yml`. Client 0.10.0 and React 0.11.0 were published through that workflow. All three registry integrities matched the prepublication artifacts.
+
+## Runtime capability rollout order
+
+Deploy and verify the Caltra API/worker before activating browser consumers of client 0.10.0. The client sends `x-caltra-session-run-state`; the API must allow it in CORS as well as implement the metadata capability. On 2026-10-21, activating Piria before Caltra completed its ECS rollout temporarily prevented the chat from connecting because the old API omitted this header from `Access-Control-Allow-Headers`. A missing-field runtime fallback does not bypass browser CORS. Verify an OPTIONS request from the consumer origin before activation.

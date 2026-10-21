@@ -232,3 +232,5 @@ Use typed upstream options to customize these defaults:
 For a fully custom assistant-ui tree, use `useAssistantUiRuntime(sessionRuntime)` from `@caltra/assistant-ui` with upstream `AssistantRuntimeProvider`. See the [adapter guide](../assistant-ui/README.md). The original `useCaltraRuntime({ client, sessionId })` hook remains compatible and creates/manages its session runtime automatically. `CaltraSessionStore` remains a deprecated alias; new consumers import `CaltraSessionRuntime` from `@caltra/client`.
 
 The default viewport preserves the reading position when a new turn starts. Consumers can override upstream viewport options explicitly.
+
+Browser deployment prerequisite: activate the Caltra API/worker capability release before upgrading consumers. Client 0.10.0 sends `x-caltra-session-run-state`, which must be allowed by the API’s CORS policy. The runtime’s missing-field fallback applies only after transport succeeds.
