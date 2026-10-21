@@ -106,7 +106,9 @@ This is explicitly simulated data; API authorization and SQL plans are validated
 ## Thinking display preview
 
 The live SDK demo has a Thinking display selector (Hidden, Auto, Collapsed, Expanded).
-Use the local deterministic model and send `/think Thinking demo complete` to stream a clearly
+Click **Stream thinking**, or use the local deterministic model and send `/think Thinking demo complete`, to stream a clearly
 labeled simulated reasoning summary through the real worker/API. Auto expands during thinking
 and collapses when it ends; expand again or reload to inspect the saved summary. Collapsed
 opens no reasoning-text connection until clicked. Hidden opens none. Mode changes retain drafts.
+The command button shares the chat's runtime, preserves the composer draft, and disables while
+a turn is running. Thinking and tool expansion use the same accessible loading spinner.

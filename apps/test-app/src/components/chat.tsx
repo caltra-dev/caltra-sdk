@@ -1,7 +1,7 @@
 import type { CaltraClient, CaltraSession } from "@caltra/client";
 import { CaltraChat, type CaltraReasoningDisplay, type CaltraChatLabels } from "@caltra/react/ui";
 import { createCaltraTheme, type CaltraColorMode, type CaltraThemeName } from "@caltra/react/themes";
-import { useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 const italian: CaltraChatLabels = {
   thinking: "Ragionamento…", thought: "Ragionamento", reasoningLoading: "Caricamento ragionamento…", reasoningFailed: "Impossibile caricare il ragionamento.",
@@ -23,10 +23,25 @@ const brandTheme = createCaltraTheme({
 
 /** The demo consumes the packaged chat unchanged; customization is a live prop update. */
 export function Chat({ client, session }: { client: CaltraClient; session: CaltraSession }) {
+  const runtime = useMemo(() => client.createSessionRuntime({ sessionId: session.id }), [client, session.id]);
+  useEffect(() => {
+    void runtime.start().catch(() => undefined);
+    return () => { void runtime.stop(); };
+  }, [runtime]);
+  const snapshot = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot, runtime.getSnapshot);
+  const [sendingThinking, setSendingThinking] = useState(false);
+  const [thinkingError, setThinkingError] = useState(false);
   const [reasoningDisplay, setReasoningDisplay] = useState<CaltraReasoningDisplay>("auto");
   const [theme, setTheme] = useState<CaltraThemeName | "brand">("assistant-ui");
   const [colorMode, setColorMode] = useState<CaltraColorMode>("system");
   const [language, setLanguage] = useState("en");
+  const streamThinking = async () => {
+    setSendingThinking(true);
+    setThinkingError(false);
+    try { await runtime.send("/think Thinking demo complete"); }
+    catch { setThinkingError(true); }
+    finally { setSendingThinking(false); }
+  };
   return <main className="chat-shell">
     <header className="chat-header" data-success-toast-anchor>
       <div data-success-toast-avoid><span className="eyebrow">CALTRA REACT SDK</span><h1>{session.agent.name}</h1></div>
@@ -51,9 +66,14 @@ export function Chat({ client, session }: { client: CaltraClient; session: Caltr
             <option value="en">English</option><option value="it">Italiano</option>
           </select>
         </label>
+        <button className="demo-thinking-button" type="button"
+          disabled={sendingThinking || snapshot.isRunning || snapshot.connection !== "connected"}
+          onClick={() => { void streamThinking(); }}>Stream thinking</button>
+        <p className="demo-thinking-hint">Sends <code>/think</code> to the local deterministic model. Choose Auto or Expanded to watch the text stream.</p>
+        {thinkingError && <p className="demo-thinking-hint" role="alert">Could not start thinking. Try again.</p>}
       </div>
     </header>
-    <CaltraChat reasoningDisplay={reasoningDisplay} client={client} sessionId={session.id} labels={language === "it" ? italian : undefined}
+    <CaltraChat reasoningDisplay={reasoningDisplay} runtime={runtime} labels={language === "it" ? italian : undefined}
       theme={theme === "brand" ? brandTheme : theme} colorMode={colorMode} />
   </main>;
 }

@@ -29,6 +29,10 @@ function fixture() {
 describe("thinking display modes", () => {
   it("does not fetch in hidden or closed mode, and switches modes without clearing the composer", async () => {
     const f = fixture(); await f.runtime.start();
+    let resolveThinking!: (value: Awaited<ReturnType<typeof f.client.getSessionReasoning>>) => void;
+    const savedThinking = await f.client.getSessionReasoning();
+    f.client.getSessionReasoning.mockClear();
+    f.client.getSessionReasoning.mockImplementationOnce(() => new Promise(resolve => { resolveThinking = resolve; }));
     const view = render(<CaltraChat runtime={f.runtime} />);
     expect(screen.queryByRole("button", { name: /Thinking/ })).toBeNull();
     expect(f.client.openSessionReasoningEvents).not.toHaveBeenCalled();
@@ -37,7 +41,13 @@ describe("thinking display modes", () => {
     expect(screen.getByRole("button", { name: /Thinking/ }).getAttribute("aria-expanded")).toBe("false");
     expect(f.client.getSessionReasoning).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: /Thinking/ }));
+    const loading = await screen.findByRole("status", { name: "Loading thinking…" });
+    expect(loading.querySelector("svg")).toBeTruthy();
+    expect(loading.textContent).toBe("");
+    await waitFor(() => expect(f.client.getSessionReasoning).toHaveBeenCalledTimes(1));
+    await act(async () => resolveThinking(savedThinking));
     await screen.findByText("Separate thinking text");
+    expect(screen.queryByRole("status", { name: "Loading thinking…" })).toBeNull();
     await act(f.complete);
     expect(screen.getByRole("button", { name: /Thinking/ }).getAttribute("aria-expanded")).toBe("true");
     view.rerender(<CaltraChat runtime={f.runtime} reasoningDisplay="expanded" />);

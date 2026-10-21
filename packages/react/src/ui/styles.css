@@ -104,8 +104,8 @@
 .caltra-chat .aui-tool-fallback-trigger:active { scale: .98; }
 .caltra-chat .aui-tool-fallback-trigger-icon, .caltra-chat .aui-tool-fallback-trigger-chevron { width: 1rem; height: 1rem; flex-shrink: 0; }
 .caltra-chat .aui-tool-fallback-trigger-icon.animate-spin { animation: caltra-tool-spin .6s linear infinite; }
-.caltra-chat .caltra-tool-details-spinner { display: block; width: .75rem; height: .75rem; color: var(--caltra-resolved-muted-foreground); animation: caltra-tool-spin .6s linear infinite; }
-@media (prefers-reduced-motion: reduce) { .caltra-chat .caltra-tool-details-spinner { animation: none; } }
+.caltra-chat .caltra-details-spinner { display: block; width: .75rem; height: .75rem; color: var(--caltra-resolved-muted-foreground); animation: caltra-tool-spin .6s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .caltra-chat .caltra-details-spinner { animation: none; } }
 .caltra-chat .aui-tool-fallback-trigger-label-wrapper { position: relative; display: inline-block; min-width: 0; line-height: 1; overflow-wrap: anywhere; }
 .caltra-chat .aui-tool-fallback-trigger-label-wrapper.line-through { text-decoration: line-through; }
 .caltra-chat .aui-tool-fallback-trigger-shimmer { position: absolute; inset: 0; pointer-events: none; color: transparent; background: linear-gradient(90deg, transparent 0%, var(--caltra-resolved-foreground) 50%, transparent 100%); background-size: 200% 100%; background-clip: text; animation: caltra-tool-shimmer 2s linear infinite; }

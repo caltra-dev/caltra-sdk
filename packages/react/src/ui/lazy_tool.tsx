@@ -2,10 +2,10 @@
 
 import type { ToolCallMessagePartProps } from "@assistant-ui/react";
 import type { CaltraSessionRuntime, CaltraToolCall } from "@caltra/client";
-import { LoaderCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ToolFallback } from "./assistant-ui/tool-fallback.js";
 import type { CaltraChatLabels } from "./labels.js";
+import { DetailsLoading } from "./details_loading.js";
 
 /** Adds read-on-expand behavior using upstream parts without changing assistant-ui's implementation. */
 export function LazyTool(props: ToolCallMessagePartProps & {
@@ -28,9 +28,7 @@ export function LazyTool(props: ToolCallMessagePartProps & {
     <ToolFallback.Trigger toolName={props.toolName} status={props.status} />
     <ToolFallback.Content>
       <ToolFallback.Error status={props.status} />
-      {!state.details && !state.error && <span role="status" aria-label={props.labels.toolDetailsLoading}>
-        <LoaderCircle className="caltra-tool-details-spinner" aria-hidden="true" />
-      </span>}
+      {!state.details && !state.error && <DetailsLoading label={props.labels.toolDetailsLoading} />}
       {state.error && <div role="alert">{props.labels.toolDetailsFailed} <button type="button" onClick={() => setAttempt(value => value + 1)}>{props.labels.retry}</button></div>}
       {state.details && <>
         <ToolFallback.Args argsText={JSON.stringify(state.details.arguments)} />

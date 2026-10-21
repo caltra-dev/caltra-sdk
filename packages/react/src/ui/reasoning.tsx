@@ -6,6 +6,7 @@ import { ChevronDown, LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./assistant-ui/collapsible.js";
 import type { CaltraChatLabels } from "./labels.js";
+import { DetailsLoading } from "./details_loading.js";
 
 export type CaltraReasoningDisplay = "hidden" | "auto" | "collapsed" | "expanded";
 export interface CaltraReasoningProps {
@@ -31,7 +32,7 @@ export function CaltraReasoning({ session, messageId, status, display, labels }:
       {display !== "expanded" && <ChevronDown className="caltra-chat__reasoning-chevron" aria-hidden="true" />}
     </CollapsibleTrigger>
     <CollapsibleContent className="caltra-chat__reasoning-content">
-      {reasoning.loading && <span role="status">{labels.reasoningLoading}</span>}
+      {reasoning.loading && <DetailsLoading label={labels.reasoningLoading} />}
       {reasoning.error && <div role="alert">{labels.reasoningFailed} <button type="button" onClick={() => { void reasoning.retry(); }}>{labels.retry}</button></div>}
       {reasoning.parts.map(part => <p className="caltra-chat__reasoning-text" key={part.position}>{part.text}</p>)}
     </CollapsibleContent>
