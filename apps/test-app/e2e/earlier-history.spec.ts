@@ -16,6 +16,10 @@ for (const width of [390, 1280]) test(`scrolling up loads earlier pages without 
   const offset = () => anchor.evaluate(el => el.getBoundingClientRect().top - document.querySelector(".caltra-chat__viewport")!.getBoundingClientRect().top);
   const before = await offset();
   await expect(page.getByRole("status", { name: "Loading older messages…" })).toBeVisible();
+  const loading = page.getByRole("status", { name: "Loading older messages…" });
+  expect(await loading.evaluate(el => el.getBoundingClientRect().bottom)).toBeLessThanOrEqual(
+    await messages.first().evaluate(el => el.getBoundingClientRect().top),
+  );
   // New messages arrive while the earlier page is in flight.
   await page.getByRole("button", { name: "Stream steps", exact: true }).click();
   await expect.poll(() => messages.count()).toBeGreaterThanOrEqual(40);

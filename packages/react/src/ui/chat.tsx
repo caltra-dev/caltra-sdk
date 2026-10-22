@@ -15,7 +15,6 @@ import { themeStyle, type CaltraChatStyle } from "./theme_style.js";
 import { defaultCaltraChatLabels, type CaltraChatLabels } from "./labels.js";
 
 import { LazyTool } from "./lazy_tool.js";
-import { DetailsLoading } from "./details_loading.js";
 import { ToolFallback } from "./assistant-ui/tool-fallback.js";
 import { MarkdownText } from "./assistant-ui/markdown-text.js";
 import { Composer } from "./assistant-ui/composer.js";
@@ -120,13 +119,19 @@ function ChatSession(props: CaltraChatProps) {
         hidden={!caltra.historyLoaded && caltra.connection !== "failed"}>
         <div className="caltra-chat__content">
           {caltra.historyLoaded && <>
-            <AuiIf condition={state => state.thread.isLoadingEarlier}>
-              <div className="caltra-chat__history-loading"><DetailsLoading label={labels.olderLoading} /></div>
+            <AuiIf condition={state => state.thread.hasEarlier || state.thread.isLoadingEarlier}>
+              <div className="caltra-chat__history-pagination">
+                <AuiIf condition={state => state.thread.isLoadingEarlier}>
+                  <div className="caltra-chat__skeleton caltra-chat__history-skeleton" role="status" aria-label={labels.olderLoading}>
+                    {[0, 1].map(group => <div className="caltra-chat__skeleton-message" key={group} aria-hidden="true"><i /><i /></div>)}
+                  </div>
+                </AuiIf>
+                {caltra.olderError && <>
+                  <p role="alert">{labels.olderFailed}</p>
+                  <ThreadPrimitive.LoadEarlier>{labels.retry}</ThreadPrimitive.LoadEarlier>
+                </>}
+              </div>
             </AuiIf>
-            {caltra.olderError && <div className="caltra-chat__history-pagination">
-              <p role="alert">{labels.olderFailed}</p>
-              <ThreadPrimitive.LoadEarlier>{labels.retry}</ThreadPrimitive.LoadEarlier>
-            </div>}
             <AuiIf condition={(state) => state.thread.messages.length === 0 && !state.thread.isLoading}>
               <Welcome labels={labels} />
             </AuiIf>

@@ -48,7 +48,7 @@ HTTP reconciliation never blocks consumption of subsequent events.
 
 The shared chat loads one older cursor page when scrolling within 120 pixels of the top.
 assistant-ui 0.15.30 owns the earlier-history loading state and keeps visible messages anchored
-when a page is prepended. A shared loading spinner appears during the fetch. Failures pause
+when a page is prepended. Skeleton messages appear in reserved space above the transcript during the fetch. Failures pause
 automatic loading and show a local error with a native **Try again** control. Hidden chats
 do not trigger history loads. There is no automatic traversal of older cursors on mount.
 The headless result exposes `hasOlderMessages`, `loadingOlder`, `olderError`, and `loadOlder()`.

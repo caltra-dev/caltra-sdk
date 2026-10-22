@@ -14,3 +14,5 @@
 6. Commit and deploy the exact branch revision to a private Sprite. Present the preview for user validation before merging or publishing.
 
 Browser validation also exposed a cursor race during the first earlier-page request: an overlapping streamed-history refresh could reset its boundary and repeat a page. Preserve the in-flight boundary on overlap; retain cursor replacement for a real reconnect gap, with regression tests for both cases. Keep loading feedback out of transcript layout so a fast scroll cannot trigger bottom-follow through a resize.
+
+Preview correction: replace the overlay spinner with two skeleton messages in reserved space above the transcript. Keep the region's size stable while earlier history is available, reuse the initial-history skeleton styling, and verify its bounds stay above real messages on mobile and desktop while preserving prepend anchoring.
