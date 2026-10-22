@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("one turn keeps Stop visible across every message boundary and clears it at completion", async ({ page }) => {
   await page.goto("/?demo=runtime");
-  await expect(page.locator(".caltra-chat__message")).toHaveCount(36);
+  await expect(page.locator(".caltra-chat__message")).toHaveCount(20);
   await page.getByRole("button", { name: "Stream steps", exact: true }).click();
   const stop = page.getByRole("button", { name: "Stop generating", exact: true });
   await expect(stop).toBeVisible();
@@ -15,7 +15,7 @@ test("one turn keeps Stop visible across every message boundary and clears it at
     observer.observe(document.body, { childList: true, subtree: true });
     (window as unknown as { runTrace: { trace: boolean[]; observer: MutationObserver } }).runTrace = { trace, observer };
   });
-  await expect(page.locator(".caltra-chat__message")).toHaveCount(44, { timeout: 12_000 });
+  await expect(page.locator(".caltra-chat__message")).toHaveCount(28, { timeout: 12_000 });
   await expect(stop).toHaveCount(0);
   const transitions = await page.evaluate(() => {
     const { trace, observer } = (window as unknown as { runTrace: { trace: boolean[]; observer: MutationObserver } }).runTrace;
@@ -30,12 +30,12 @@ for (const mode of ["managed", "shared"]) {
     await page.getByLabel("Integration", { exact: true }).selectOption(mode);
     const viewport = page.locator(".caltra-chat__viewport");
     const count = () => page.locator(".caltra-chat__message").count();
-    await expect.poll(count).toBe(36);
+    await expect.poll(count).toBe(20);
     const distance = () => viewport.evaluate(el => el.scrollHeight - el.clientHeight - el.scrollTop);
     await expect.poll(distance).toBeLessThan(2);
     await viewport.hover(); await page.mouse.wheel(0, -700);
     await expect.poll(distance).toBeGreaterThan(500);
-    // Copy controls hide during streaming, changing content height above the reader.
+    // Streaming changes layout below the reader; preserve the visible message anchor.
     // Assert the visible message stays anchored rather than requiring a fixed scrollTop.
     const anchor = await viewport.evaluate(el => {
       const top = el.getBoundingClientRect().top;
@@ -43,7 +43,7 @@ for (const mode of ["managed", "shared"]) {
       return { text: paragraph.textContent!, offset: paragraph.getBoundingClientRect().top - top };
     });
     await page.getByRole("button", { name: "Stream steps", exact: true }).click();
-    await expect.poll(count).toBeGreaterThan(39);
+    await expect.poll(count).toBeGreaterThan(23);
     const offset = await page.getByText(anchor.text, { exact: true }).evaluate(el =>
       el.getBoundingClientRect().top - document.querySelector(".caltra-chat__viewport")!.getBoundingClientRect().top);
     expect(Math.abs(offset - anchor.offset)).toBeLessThan(3);
@@ -58,32 +58,32 @@ for (const mode of ["managed", "shared"]) {
 test("explicit upstream option restores forced run-start scrolling", async ({ page }) => {
   await page.goto("/?demo=runtime");
   const viewport = page.locator(".caltra-chat__viewport");
-  await expect(page.locator(".caltra-chat__message")).toHaveCount(36);
+  await expect(page.locator(".caltra-chat__message")).toHaveCount(20);
   await page.getByLabel("Force scroll on run start (resets chat)").check();
-  await expect(page.locator(".caltra-chat__message")).toHaveCount(36);
+  await expect(page.locator(".caltra-chat__message")).toHaveCount(20);
   await expect.poll(() => viewport.evaluate(el => el.scrollHeight - el.clientHeight - el.scrollTop)).toBeLessThan(2);
   await viewport.hover(); await page.mouse.wheel(0, -700);
   await expect.poll(() => viewport.evaluate(el => el.scrollHeight - el.clientHeight - el.scrollTop)).toBeGreaterThan(500);
   await page.getByRole("button", { name: "Stream steps", exact: true }).click();
-  await expect(page.locator(".caltra-chat__message")).toHaveCount(37);
+  await expect(page.locator(".caltra-chat__message")).toHaveCount(21);
   await expect.poll(() => viewport.evaluate(el => el.scrollHeight - el.clientHeight - el.scrollTop)).toBeLessThan(2);
 });
 
 test("caller-owned runtime continues receiving events while the chat is unmounted", async ({ page }) => {
   await page.goto("/?demo=runtime");
   await page.getByLabel("Integration", { exact: true }).selectOption("shared");
-  await expect(page.locator(".caltra-chat__message")).toHaveCount(36);
+  await expect(page.locator(".caltra-chat__message")).toHaveCount(20);
   await page.getByRole("button", { name: "Hide chat", exact: true }).click();
   await page.getByRole("button", { name: "Stream steps", exact: true }).click();
   await expect(page.locator(".caltra-chat")).toHaveCount(0);
   await page.getByRole("button", { name: "Show chat", exact: true }).click();
-  await expect.poll(() => page.locator(".caltra-chat__message").count()).toBeGreaterThan(36);
+  await expect.poll(() => page.locator(".caltra-chat__message").count()).toBeGreaterThan(20);
 });
 
 test("custom assistant-ui uses the same runtime to send and render history", async ({ page }) => {
   await page.goto("/?demo=runtime");
   await page.getByLabel("Integration", { exact: true }).selectOption("custom");
-  await expect(page.getByText("Saved message 36", { exact: false })).toBeVisible();
+  await expect(page.getByText("Saved message 60", { exact: false })).toBeVisible();
   await page.getByRole("textbox", { name: "Custom message" }).fill("Custom adapter message");
   await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect(page.getByText("Custom adapter message", { exact: true })).toBeVisible();

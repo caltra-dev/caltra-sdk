@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 const italian: CaltraChatLabels = {
   thinking: "Ragionamento…", thought: "Ragionamento", reasoningLoading: "Caricamento ragionamento…", reasoningFailed: "Impossibile caricare il ragionamento.",
+  olderLoading: "Caricamento messaggi precedenti…", olderFailed: "Impossibile caricare i messaggi precedenti. Riprova.",
   chat: "Conversazione", welcomeTitle: "Come posso aiutarti oggi?", welcomeDescription: "",
   placeholder: "Scrivi un messaggio…", messageInput: "Messaggio", send: "Invia messaggio",
   copy: "Copia", copied: "Copiato", scrollToBottom: "Vai in fondo", loading: "Caricamento conversazione…",

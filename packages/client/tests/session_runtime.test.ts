@@ -26,6 +26,31 @@ class StubEventConnection implements AsyncIterable<CaltraSessionEvent> {
 }
 
 describe("CaltraSessionRuntime", () => {
+  for (const overlap of [true, false]) it(`preserves an in-flight earlier cursor only when refreshed history overlaps (${overlap})`, async () => {
+    const message = (id: string): CaltraSessionMessage => ({ id, role: "assistant", status: "completed", text: id, created_at: "2026-10-21T00:00:00Z" });
+    let finish!: (page: { data: CaltraSessionMessage[]; next_cursor: string }) => void;
+    const client = {
+      openSessionEvents: async () => new StubEventConnection([]),
+      getSessionById: async () => ({ id: sessionId }),
+      listSessionMessages: vi.fn().mockResolvedValueOnce({ data: [message("latest")], next_cursor: "before-latest" })
+        .mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }))
+        .mockResolvedValueOnce({ data: [...(overlap ? [message("latest")] : []), message("new")], next_cursor: "refreshed-boundary" })
+        .mockResolvedValueOnce({ data: [message("oldest")], next_cursor: null }),
+    };
+    const runtime = new CaltraSessionRuntime(client as never, sessionId);
+    await runtime.start();
+    const pending = runtime.loadOlder();
+    await runtime.refresh();
+    finish({ data: [message("earlier")], next_cursor: "before-earlier" });
+    await pending;
+    await runtime.loadOlder();
+    expect(client.listSessionMessages).toHaveBeenLastCalledWith(sessionId, {
+      limit: 20, cursor: overlap ? "before-earlier" : "refreshed-boundary",
+    });
+    expect(runtime.getSnapshot().messages.map(item => item.id)).toContain("new");
+    await runtime.stop();
+  });
+
   it("refreshes thinking status during answer streaming without overwriting newer metadata events", async () => {
     const message: CaltraSessionMessage = { id: assistantMessageId, role: "assistant", status: "streaming", text: "Partial answer",
       reasoning: { status: "streaming" }, created_at: "2026-10-21T00:00:00Z" };

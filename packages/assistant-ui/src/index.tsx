@@ -53,6 +53,9 @@ export function useAssistantUiRuntime(store: CaltraSessionRuntime): AssistantRun
   const runtime = useExternalStoreRuntime<ThreadMessage>({
     isLoading: !snapshot.historyLoaded,
     isRunning: snapshot.isRunning,
+    hasEarlier: snapshot.hasOlderMessages,
+    // Caltra owns cursors/errors; assistant-ui owns loading state and prepend anchoring.
+    onLoadEarlier: () => store.loadOlder().catch(() => undefined),
     isSendDisabled: snapshot.connection !== "connected",
     messageRepository,
     onNew,

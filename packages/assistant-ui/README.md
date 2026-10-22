@@ -28,6 +28,16 @@ Use upstream `useAui`, `useAuiState` and primitives directly inside `AssistantRu
 
 The adapter forwards the session runtime's authoritative turn state. `isRunning` remains true between messages and tools until the persisted turn completes, fails, or is cancelled. Servers without `is_running` retain legacy message-activity behavior. Turn completion does not prove a larger application workflow finished. For custom threads, use `scrollToBottomOnRunStart={false}` to preserve reading position when a new turn begins; CaltraChat applies this default automatically.
 
+## Earlier history
+
+Requires `@assistant-ui/react` 0.15.30 or later in the supported 0.15 range. The adapter maps
+Caltra's cursor availability and `loadOlder()` into `hasEarlier` and `onLoadEarlier`.
+Custom interfaces can use `thread.hasEarlier`, `thread.isLoadingEarlier`,
+`runtime.thread.loadEarlier()` or `ThreadPrimitive.LoadEarlier`. The upstream viewport
+preserves visible message positions when older pages arrive. Caltra still owns cursor
+merging, request deduplication, and `session.getSnapshot().olderError`; render that error
+with a retry control. CaltraChat additionally triggers loading when the reader scrolls near the top.
+
 ## Optional thinking text
 
 The adapter carries availability/status in `message.metadata.custom.caltraReasoning`.

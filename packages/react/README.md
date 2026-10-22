@@ -46,11 +46,14 @@ history is pending. History merges by message ID, stream events deduplicate by e
 and completed canonical text replaces provisional text without appending it twice.
 HTTP reconciliation never blocks consumption of subsequent events.
 
-The shared chat offers **Load older messages** above the transcript. Each activation fetches
-one cursor page, preserves already loaded messages and the scroll position, and shows a
-retryable local error on failure. There is no automatic traversal of older cursors on mount.
+The shared chat loads one older cursor page when scrolling within 120 pixels of the top.
+assistant-ui 0.15.30 owns the earlier-history loading state and keeps visible messages anchored
+when a page is prepended. A shared loading spinner appears during the fetch. Failures pause
+automatic loading and show a local error with a native **Try again** control. Hidden chats
+do not trigger history loads. There is no automatic traversal of older cursors on mount.
 The headless result exposes `hasOlderMessages`, `loadingOlder`, `olderError`, and `loadOlder()`.
-Use the `loadOlder` and `olderFailed` labels to localize the pagination control and error.
+Use `olderLoading`, `olderFailed`, and `retry` to localize history feedback. The legacy
+`loadOlder` label remains available for custom interfaces.
 
 Keep the same client instance for the same authenticated identity. Keep the component mounted
 and use `hidden` when collapsing a panel to retain its draft and connection.

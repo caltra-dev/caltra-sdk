@@ -84,20 +84,23 @@ The seed is idempotent, grants demo tools to the development workspace audience,
 
 ## Deterministic runtime and scroll preview
 
-Open `/?demo=runtime` in the test app to bypass backend authorization and use in-memory sample data. This is an explicitly labeled simulation, not hosted-agent execution. Each reload creates the same 36-message history; no production requests or data stores are used.
+Open `/?demo=runtime` in the test app to bypass backend authorization and use in-memory sample data. This is an explicitly labeled simulation, not hosted-agent execution. Each reload creates the same 60-message history, initially loading the newest 20 messages; no production requests or data stores are used.
 
-Choose Managed CaltraChat, Caller-owned runtime, or Custom assistant-ui. Scroll up, then click Stream steps: eight alternating message/tool steps arrive over eight seconds. Reading position stays fixed by default. Click the down arrow to follow the remaining steps. Enable Force scroll on run start to exercise the explicit upstream override. This deliberately remounts the chat because assistant-ui 0.15.16 retains the initial viewport event callback; toggling this demo option resets the composer draft. In Caller-owned runtime mode, hiding the chat unmounts the UI but leaves the runtime connected; showing it again restores shared history (not the unmounted composer's draft).
+Choose Managed CaltraChat, Caller-owned runtime, or Custom assistant-ui. Scroll up, then click Stream steps: eight alternating message/tool steps arrive over eight seconds. Reading position stays fixed by default. Click the down arrow to follow the remaining steps. Enable Force scroll on run start to exercise the explicit upstream override. This deliberately remounts the chat to provide a fresh viewport for each comparison; toggling this demo option resets the composer draft. In Caller-owned runtime mode, hiding the chat unmounts the UI but leaves the runtime connected; showing it again restores shared history (not the unmounted composer's draft).
 
 Run `npm run test:e2e -w @caltra/test-app -- e2e/runtime-scroll.spec.ts` on the Sprite. These browser checks cover default scroll preservation, resuming follow, explicit override, supplied runtime ownership, and custom adapter send/history.
 
 Private Fly sign-in can return to the demo app root without the query string. If that happens, reopen the full `/?demo=runtime` link after signing in to enter the in-memory preview.
 
-Scroll regression assertions track a visible message's viewport-relative position. The upstream Copy action bars hide while streaming and reappear between steps, so native scroll anchoring can correctly change scrollTop while keeping the same text stationary. A fixed scrollTop assertion alone is insufficient during those layout changes.
+Scroll regression assertions track a visible message's viewport-relative position. Earlier Copy controls stay visible while streaming; native anchoring can still change scrollTop while keeping the same text stationary. A fixed scrollTop assertion alone is insufficient during those layout changes.
 
 ## Lazy transcript inspection preview
 
-The pending release makes `/?demo=runtime` a deterministic paginated fixture: 36 messages,
-with a 20-message initial page and Load older messages for the preceding page. The latest
+The demo makes `/?demo=runtime` a deterministic paginated fixture: 60 messages,
+with a 20-message initial page. Scrolling near the top loads the preceding page through
+assistant-ui 0.15.30 and preserves the visible message position. Click Fail next history load
+before scrolling up to test the inline error and Retry control. Custom assistant-ui mode
+demonstrates the upstream LoadEarlier primitive directly. The latest
 messages include collapsed `demo.echo` and `demo.fail` cards; expanding a card simulates a
 350 ms detail fetch, then displays the saved arguments/result. Reopening it uses the runtime
 cache. Stream steps also exercises a running tool becoming completed while its panel is open.

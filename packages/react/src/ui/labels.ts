@@ -15,6 +15,7 @@ export interface CaltraChatLabels {
   toolDetailsLoading?: string;
   toolDetailsFailed?: string;
   loadOlder?: string;
+  olderLoading?: string;
   olderFailed?: string;
   connecting: string;
   recovering: string;
@@ -44,6 +45,7 @@ export const defaultCaltraChatLabels: CaltraChatLabels = {
   toolDetailsLoading: "Loading tool details…",
   toolDetailsFailed: "Could not load tool details.",
   loadOlder: "Load older messages",
+  olderLoading: "Loading older messages…",
   olderFailed: "Older messages could not be loaded. Try again.",
   connecting: "Connecting…",
   recovering: "Reconnecting… Your conversation is still here.",

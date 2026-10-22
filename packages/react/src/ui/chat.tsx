@@ -6,7 +6,7 @@ import {
   ActionBarPrimitive, AssistantRuntimeProvider, AuiIf,
   ComposerPrimitive, MessagePrimitive, ThreadPrimitive, useAuiState, type ToolCallMessagePartProps,
 } from "@assistant-ui/react";
-import { createContext, useContext, useEffect, useLayoutEffect, useRef, useMemo, useState, useSyncExternalStore, type ComponentType, type ComponentPropsWithoutRef } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ComponentType, type ComponentPropsWithoutRef } from "react";
 import { CaltraSessionRuntime } from "@caltra/client";
 import { useAssistantUiRuntime } from "@caltra/assistant-ui";
 import { type UseCaltraRuntimeOptions, type UseCaltraRuntimeResult } from "../use_caltra_runtime.js";
@@ -15,6 +15,7 @@ import { themeStyle, type CaltraChatStyle } from "./theme_style.js";
 import { defaultCaltraChatLabels, type CaltraChatLabels } from "./labels.js";
 
 import { LazyTool } from "./lazy_tool.js";
+import { DetailsLoading } from "./details_loading.js";
 import { ToolFallback } from "./assistant-ui/tool-fallback.js";
 import { MarkdownText } from "./assistant-ui/markdown-text.js";
 import { Composer } from "./assistant-ui/composer.js";
@@ -93,19 +94,6 @@ function ChatSession(props: CaltraChatProps) {
   const runtime = useAssistantUiRuntime(session);
   const caltra = { ...snapshot, runtime, reconnect: () => session.reconnect() };
   const viewport = slotProps.viewport ?? {};
-  const viewportRef = useRef<HTMLDivElement>(null);
-  const scrollAnchor = useRef<{ height: number; top: number } | null>(null);
-  useLayoutEffect(() => {
-    if (!caltra.loadingOlder && scrollAnchor.current && viewportRef.current) {
-      viewportRef.current.scrollTop = scrollAnchor.current.top + viewportRef.current.scrollHeight - scrollAnchor.current.height;
-      scrollAnchor.current = null;
-    }
-  }, [caltra.loadingOlder]);
-  const loadOlder = async () => {
-    if (caltra.loadingOlder) return;
-    if (viewportRef.current) scrollAnchor.current = { height: viewportRef.current.scrollHeight, top: viewportRef.current.scrollTop };
-    await session.loadOlder().catch(() => undefined);
-  };
   const resolvedTheme = typeof theme === "string" ? caltraThemes[theme] : theme;
   const labels = useMemo(() => ({ ...defaultCaltraChatLabels, ...overrides }), [overrides]);
   const { Welcome = CaltraWelcome, Loading = CaltraHistoryLoading, Message = CaltraMessage,
@@ -116,18 +104,28 @@ function ChatSession(props: CaltraChatProps) {
     <ThreadPrimitive.Root className={`caltra-chat${className ? ` ${className}` : ""}`} style={{ ...themeStyle(resolvedTheme), ...style }} data-theme={resolvedTheme.name} data-color-mode={colorMode} hidden={hidden} aria-label={labels.chat}>
       <Connection labels={labels} connection={caltra.connection} error={caltra.error} historyLoaded={caltra.historyLoaded} retry={caltra.reconnect} />
       {!caltra.historyLoaded && caltra.connection !== "failed" && <Loading labels={labels} />}
-      <ThreadPrimitive.Viewport {...viewport} ref={viewportRef}
+      <ThreadPrimitive.Viewport {...viewport}
+        onScroll={event => {
+          viewport.onScroll?.(event);
+          // Load only as the reader reaches the beginning; errors wait for explicit retry.
+          // The native runtime coalesces requests and the viewport preserves the visible rows.
+          if (!hidden && caltra.historyLoaded && !caltra.olderError && event.currentTarget.scrollTop <= 120 &&
+            runtime.thread.getState().hasEarlier && !runtime.thread.getState().isLoadingEarlier) {
+            void runtime.thread.loadEarlier();
+          }
+        }}
         className={`caltra-chat__viewport${viewport.className ? ` ${viewport.className}` : ""}`}
         autoScroll={viewport.autoScroll ?? true}
         scrollToBottomOnRunStart={viewport.scrollToBottomOnRunStart ?? false}
         hidden={!caltra.historyLoaded && caltra.connection !== "failed"}>
         <div className="caltra-chat__content">
           {caltra.historyLoaded && <>
-            {caltra.hasOlderMessages && <div className="caltra-chat__history-pagination">
-              <button type="button" disabled={caltra.loadingOlder} aria-busy={caltra.loadingOlder} onClick={() => { void loadOlder(); }}>
-                {labels.loadOlder}
-              </button>
-              {caltra.olderError && <p role="alert">{labels.olderFailed}</p>}
+            <AuiIf condition={state => state.thread.isLoadingEarlier}>
+              <div className="caltra-chat__history-loading"><DetailsLoading label={labels.olderLoading} /></div>
+            </AuiIf>
+            {caltra.olderError && <div className="caltra-chat__history-pagination">
+              <p role="alert">{labels.olderFailed}</p>
+              <ThreadPrimitive.LoadEarlier>{labels.retry}</ThreadPrimitive.LoadEarlier>
             </div>}
             <AuiIf condition={(state) => state.thread.messages.length === 0 && !state.thread.isLoading}>
               <Welcome labels={labels} />

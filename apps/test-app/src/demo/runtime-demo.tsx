@@ -1,6 +1,6 @@
 import "./runtime-demo.css";
 import { useEffect, useState } from "react";
-import { AssistantRuntimeProvider, ThreadPrimitive, MessagePrimitive, ComposerPrimitive } from "@assistant-ui/react";
+import { AssistantRuntimeProvider, AuiIf, ThreadPrimitive, MessagePrimitive, ComposerPrimitive } from "@assistant-ui/react";
 import { useAssistantUiRuntime } from "@caltra/assistant-ui";
 import type { CaltraSessionRuntime } from "@caltra/client";
 import { CaltraChat } from "@caltra/react/ui";
@@ -28,10 +28,11 @@ export function RuntimeDemo() {
         <option value="custom">Custom assistant-ui</option>
       </select></label>
       <button onClick={() => client.streamSteps()}>Stream steps</button>
+      <button onClick={() => client.failNextHistoryLoad()}>Fail next history load</button>
       <button onClick={() => setMounted(value => !value)}>{mounted ? "Hide chat" : "Show chat"}</button>
       <label><input type="checkbox" checked={forceScroll} onChange={event => setForceScroll(event.target.checked)} /> Force scroll on run start (resets chat)</label>
     </div>
-    <p>Scroll up, then stream steps. Use the down arrow to resume following. In caller-owned mode, hide/show preserves the runtime.</p>
+    <p>60 saved messages, loaded 20 at a time. Scroll near the top to load earlier history automatically. Use Fail next history load to test Retry. Stream steps while reading to test stable scrolling.</p>
     <div style={{ height: "65dvh", minHeight: 300, border: "1px solid #d4d4d8", borderRadius: 12, overflow: "hidden" }}>
       {mounted && (mode === "custom" ? <CustomChat runtime={runtime} /> : mode === "shared"
         ? <CaltraChat key={String(forceScroll)} runtime={runtime} slotProps={{ viewport: { scrollToBottomOnRunStart: forceScroll ? true : undefined }, composerInput: { autoFocus: false } }} />
@@ -45,6 +46,9 @@ function CustomChat({ runtime }: { runtime: CaltraSessionRuntime }) {
   return <AssistantRuntimeProvider runtime={assistantRuntime}>
     <ThreadPrimitive.Root style={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <ThreadPrimitive.Viewport style={{ overflowY: "auto", flex: 1, minHeight: 0, padding: 16 }} scrollToBottomOnRunStart={false}>
+        <AuiIf condition={state => state.thread.hasEarlier}>
+          <ThreadPrimitive.LoadEarlier>Load earlier messages</ThreadPrimitive.LoadEarlier>
+        </AuiIf>
         <ThreadPrimitive.Messages>{({ message }) => <MessagePrimitive.Root style={{ padding: 12 }}>
           <strong>{message.role === "user" ? "You" : "Assistant"}</strong><MessagePrimitive.Parts />
         </MessagePrimitive.Root>}</ThreadPrimitive.Messages>

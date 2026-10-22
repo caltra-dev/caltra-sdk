@@ -129,9 +129,11 @@ export class CaltraSessionRuntime {
     if (generation !== this.generation || request < this.appliedHistoryRequest) return;
     this.appliedHistoryRequest = request;
     const existingIds = new Set(this.snapshot.messages.map(message => message.id));
-    if (!this.hasLoadedOlder || !page.data.some(message => existingIds.has(message.id))) {
+    if ((!this.hasLoadedOlder && !this.olderPromise) || !page.data.some(message => existingIds.has(message.id))) {
       // A reconnect can introduce more than one page of unseen messages. Start
       // pagination at that new gap instead of skipping it with the old cursor.
+      // An overlapping refresh must preserve an in-flight earlier-page boundary
+      // so that request can advance its cursor instead of repeating the same page.
       this.olderCursor = page.next_cursor ?? null;
       this.olderAnchorId = page.data[0]?.id ?? null;
     }
