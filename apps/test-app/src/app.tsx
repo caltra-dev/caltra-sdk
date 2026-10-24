@@ -11,18 +11,42 @@ import { TestAppAuthorizationCodeProvider } from "./authorization_code_provider.
 
 import { TestAppPreviewFetch } from "./preview_fetch.js";
 
-declare const __CALTRA_LOCAL_STUB__: boolean;
+declare const __CALTRA_REAL_API_AVAILABLE__: boolean;
+declare const __CALTRA_DEFAULT_CONNECTION__: "stub" | "real";
+type Connection = "stub" | "real";
 
 export function App() {
+  const [connection, setConnection] = useState<Connection>(__CALTRA_DEFAULT_CONNECTION__);
+  return <div className="demo-app">
+    <div className="demo-connection-bar">
+      <label className="demo-appearance">Connection
+        <select aria-label="Connection" value={connection} onChange={event => {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("session");
+          window.history.replaceState(null, "", url);
+          setConnection(event.target.value as Connection);
+        }}>
+          <option value="stub">Local stub</option>
+          {__CALTRA_REAL_API_AVAILABLE__ && <option value="real">Real Caltra API</option>}
+        </select>
+      </label>
+      <p>{__CALTRA_REAL_API_AVAILABLE__ ? "Switching connection clears the current draft and opens that connection’s sessions."
+        : "Launch with CALTRA_API_KEY or --caltra-api-key to enable Real Caltra API."}</p>
+    </div>
+    <ConnectedApp key={connection} connection={connection} />
+  </div>;
+}
+
+function ConnectedApp({ connection }: { connection: Connection }) {
   const { success } = useSuccessToast();
   const sdkClient = useMemo(() => {
-    const authorizationCodeProvider = new TestAppAuthorizationCodeProvider();
+    const authorizationCodeProvider = new TestAppAuthorizationCodeProvider(undefined, connection === "stub" ? "/demo/stub" : "");
     return new CaltraClient({
-      apiUrl: window.location.origin,
+      apiUrl: window.location.origin + (connection === "stub" ? "/demo/stub" : ""),
       fetch: TestAppPreviewFetch.fetch,
       authorizationCodeProvider: async () => await authorizationCodeProvider.create(),
     });
-  }, []);
+  }, [connection]);
   const [client, setClient] = useState<CaltraClient>();
   const [agent, setAgent] = useState<{ id: string; name: string }>();
   const [sessions, setSessions] = useState<CaltraSession[]>([]);
@@ -31,12 +55,14 @@ export function App() {
   const [error, setError] = useState<Error>();
 
   useEffect(() => {
+    let active = true;
     void Promise.resolve()
       .then(async () => {
         const [hostedAgent, sessionPage] = await Promise.all([
           sdkClient.agents.get(),
           sdkClient.listSessions({ limit: 100 }),
         ]);
+        if (!active) return;
         setClient(sdkClient);
         setAgent(hostedAgent);
         setSessions(sessionPage.data);
@@ -44,9 +70,10 @@ export function App() {
         // Resolve deep links only within the sessions authorized for this client.
         setSelected(sessionPage.data.find((session) => session.id === requested) ?? sessionPage.data[0]);
       })
-      .catch((reason: unknown) => setError(
+      .catch((reason: unknown) => { if (active) setError(
         reason instanceof Error ? reason : new Error("SDK initialization failed."),
-      ));
+      ); });
+    return () => { active = false; };
   }, [sdkClient]);
 
   const selectSession = (session: CaltraSession) => {
@@ -98,6 +125,7 @@ export function App() {
   return (
     <div className="app-frame">
       <SessionList
+        localStub={connection === "stub"}
         agent={agent}
         creating={creating}
         onCreate={createSession}
@@ -106,7 +134,7 @@ export function App() {
         sessions={sessions}
       />
       {selected
-        ? <Chat client={client} key={selected.id} session={selected} />
+        ? <Chat client={client} key={selected.id} session={selected} localStub={connection === "stub"} />
         : (
             <main className="no-session">
               <span>NO ACTIVE CHANNEL</span>

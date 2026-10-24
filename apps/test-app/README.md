@@ -14,7 +14,7 @@ npm run demo -- --local-stub         # explicitly ignore any inherited API key
 npm run demo -- --caltra-api-key=<key>
 ```
 
-`CALTRA_API_KEY` in the launch environment also selects real mode. Prefer environment injection for a saved credential; the Caltra repository's `npm run demo` launcher supplies its GitVaulty-managed demo key without copying it here. CLI keys are optional and may remain in shell history. The repository-pinned npm version rejects unknown flags before the script runs; the `--` separator is required.
+`CALTRA_API_KEY` in the launch environment also enables and initially selects **Real Caltra API**. Signal Room’s **Connection** setting always offers **Local stub**, and automatically adds **Real Caltra API** when a key is supplied. Without a key (or with the explicit `--local-stub` isolation override), only Local stub is available. Switching connection remounts the client and session, clears drafts and the session deep link, and closes the previous event subscription. It does not cancel a server-side run. The selector stays usable during loading or authentication errors. Prefer environment injection for a saved credential; the Caltra repository's `npm run demo` launcher supplies its GitVaulty-managed demo key without copying it here. CLI keys are optional and may remain in shell history. The repository-pinned npm version rejects unknown flags before the script runs; the `--` separator is required.
 
 The launcher builds the local workspace packages and opens Signal Room at `/`. Its Chat view selector offers CaltraChat and Standard Thread over the same selected session and runtime. Both modes use the normal CaltraClient authorization exchange, REST schemas, and SSE parser.
 
@@ -22,7 +22,7 @@ The stub implements the demo's authorization, agent lookup, session creation/lis
 
 Real mode defaults to `https://api.caltra.dev`. Its environment key stays in the Vite server. With only a key, the server resolves/creates workspace `sdk-demo` and the hosted assistant for `sdk-test-user`; the key needs `agents:provision` and `client_tokens:create`. `CALTRA_TENANT_USER_EXTERNAL_ID` overrides that user. If `CALTRA_WORKSPACE_ID` is provided, the workspace and user's hosted agent must already exist. `CALTRA_API_URL` or `--caltra-api-url` selects another backend.
 
-Browser requests use a same-origin server proxy. It validates Origin/Referer against the request host, strips browser cookies before forwarding, and maps loopback HTTP origins to HTTPS for Caltra's production origin policy. The launcher binds to loopback. On private Sprites the actual HTTPS preview origin is preserved and `X-Preview-Authorization` is restored upstream. One-time codes and scoped client tokens reach the browser; the environment API key never does. Keep hosted demos behind authentication.
+Stub browser requests are isolated under `/demo/stub`; real browser requests use the existing origin-root routes and a same-origin server proxy. It validates Origin/Referer against the request host, strips browser cookies before forwarding, and maps loopback HTTP origins to HTTPS for Caltra's production origin policy. The launcher binds to loopback. On private Sprites the actual HTTPS preview origin is preserved and `X-Preview-Authorization` is restored upstream. One-time codes and scoped client tokens reach the browser; the environment API key never does. Keep hosted demos behind authentication.
 
 `npm run dev -w @caltra/test-app` remains available for direct Vite development, with the same environment selection.
 
@@ -122,11 +122,11 @@ by this text-only runtime. Neither production Piria nor the SDK default changes.
 
 ## Model and reasoning choices (unreleased)
 
-Signal Room shares **Model** and **Reasoning effort** controls across CaltraChat
-and Standard Thread. Choices come from `GET /client/v1/sessions/:id/model-choices`;
+Signal Room shares a **Model and reasoning** picker across CaltraChat
+and Standard Thread. In Standard Thread it sits directly inside the managed composer; in CaltraChat it remains in the header. Choices come from `GET /client/v1/sessions/:id/model-choices`;
 the UI never hard-codes production models or supported efforts. A selection
 applies to the next message in the current conversation and remains selected
-while that runtime is mounted. Both selectors are disabled during a turn.
+while that runtime is mounted. The picker is disabled during a turn.
 
 The HTTP stub offers Demo Fast and Demo Reasoning (provider default, low, high).
 Choose Demo Reasoning and send ordinary text to stream a deterministic reasoning

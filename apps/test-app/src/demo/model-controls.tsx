@@ -1,9 +1,17 @@
 import { ModelSelector, type ModelOption } from "../upstream/components/assistant-ui/elements/model-selector.aui.js";
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { CaltraApiError, type CaltraClient, type CaltraModelChoice, type CaltraSessionRuntime, type CaltraSessionSnapshot } from "@caltra/client";
 
 /** Uses the session's allowed catalog; no hard-coded production model names or effort levels. */
-export function ModelControls({ client, runtime, snapshot }: { client: CaltraClient; runtime: CaltraSessionRuntime; snapshot: CaltraSessionSnapshot }) {
+type ModelControlsProps = { client: CaltraClient; runtime: CaltraSessionRuntime; snapshot: CaltraSessionSnapshot };
+const ModelControlsContext = createContext<ReturnType<typeof useModelControls> | null>(null);
+
+export function ModelControlsProvider({ children, ...props }: ModelControlsProps & { children: ReactNode }) {
+  const controls = useModelControls(props);
+  return <ModelControlsContext.Provider value={controls}>{children}</ModelControlsContext.Provider>;
+}
+
+function useModelControls({ client, runtime, snapshot }: ModelControlsProps) {
   const [choices, setChoices] = useState<CaltraModelChoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
@@ -27,7 +35,12 @@ export function ModelControls({ client, runtime, snapshot }: { client: CaltraCli
     efforts: choices.filter(choice => choice.platform_model_id === id).map(choice => ({ id: choice.reasoning_level ?? "provider-default", name: choice.reasoning_level ?? "Provider default" })),
   }));
   const disabled = snapshot.isRunning || loading || Boolean(error) || choices.length === 0;
-  return <>
+  return { models, selected, disabled, open, setOpen, choices, setSelection, loading, error, setReload };
+}
+
+export function ModelControls() {
+  const { models, selected, disabled, open, setOpen, choices, setSelection, loading, error, setReload } = useContext(ModelControlsContext)!;
+  return <div className="demo-model-controls">
     <div className="demo-model-control demo-appearance">
       <span>Model and reasoning</span>
       {selected ? <ModelSelector models={models} value={selected.platform_model_id} effort={selected.reasoning_level ?? "provider-default"}
@@ -43,5 +56,5 @@ export function ModelControls({ client, runtime, snapshot }: { client: CaltraCli
     <p className="demo-thinking-hint">{error ?? (choices.length === 0 && !loading ? "No selectable combinations are available for this session." : "Model and effort apply to your next message. Thinking display only changes visibility.")}
       {error && <button type="button" onClick={() => setReload(value => value + 1)}> Retry</button>}
     </p>
-  </>;
+  </div>;
 }

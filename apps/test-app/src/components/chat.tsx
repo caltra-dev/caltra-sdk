@@ -1,5 +1,5 @@
 import { AssistantRuntimeProvider, RuntimeAdapterProvider } from "@assistant-ui/react";
-import { ModelControls } from "../demo/model-controls.js";
+import { ModelControls, ModelControlsProvider } from "../demo/model-controls.js";
 import { useAssistantUiRuntime } from "@caltra/assistant-ui";
 import { italian } from "../demo/italian-labels.js";
 import type { ThreadLocale } from "../upstream/lib/thread-i18n.js";
@@ -12,7 +12,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties 
 
 
 
-declare const __CALTRA_LOCAL_STUB__: boolean;
+
 
 const brandTheme = createCaltraTheme({
   name: "brand", radius: "0.75rem",
@@ -21,7 +21,7 @@ const brandTheme = createCaltraTheme({
 });
 
 /** The demo consumes the packaged chat unchanged; customization is a live prop update. */
-export function Chat({ client, session }: { client: CaltraClient; session: CaltraSession }) {
+export function Chat({ client, session, localStub }: { client: CaltraClient; session: CaltraSession; localStub: boolean }) {
   const runtime = useMemo(() => client.createSessionRuntime({ sessionId: session.id }), [client, session.id]);
   useEffect(() => {
     void runtime.start().catch(() => undefined);
@@ -58,13 +58,13 @@ export function Chat({ client, session }: { client: CaltraClient; session: Caltr
     fontFamily: selectedTheme.fontFamily, colorScheme: dark ? "dark" : "light",
   } as CSSProperties;
   const streamThinking = () => {
-    if (__CALTRA_LOCAL_STUB__) assistantRuntime.thread.append("/think Thinking demo complete");
+    if (localStub) assistantRuntime.thread.append("/think Thinking demo complete");
   };
-  return <AssistantRuntimeProvider runtime={assistantRuntime}><main className="chat-shell">
+  return <AssistantRuntimeProvider runtime={assistantRuntime}><ModelControlsProvider client={client} runtime={runtime} snapshot={snapshot}><main className="chat-shell">
     <header className="chat-header" data-success-toast-anchor>
       <div data-success-toast-avoid><span className="eyebrow">CALTRA REACT SDK</span><h1>{session.agent.name}</h1></div>
       <div className="demo-controls" data-success-toast-avoid>
-        <ModelControls client={client} runtime={runtime} snapshot={snapshot} />
+        {view === "caltra" && <ModelControls />}
         <label className="demo-appearance">Chat view
           <select aria-label="Chat view" value={view} onChange={event => setView(event.target.value)}>
             <option value="caltra">CaltraChat</option><option value="standard">Standard Thread</option>
@@ -91,12 +91,12 @@ export function Chat({ client, session }: { client: CaltraClient; session: Caltr
           </select>
         </label>
         <button className="demo-thinking-button" type="button"
-          disabled={!__CALTRA_LOCAL_STUB__ || snapshot.isRunning || snapshot.connection !== "connected"}
+          disabled={!localStub || snapshot.isRunning || snapshot.connection !== "connected"}
           aria-describedby="thinking-demo-help"
           onClick={() => { void streamThinking(); }}>Stream thinking</button>
-        <p id="thinking-demo-help" className="demo-thinking-hint">{__CALTRA_LOCAL_STUB__
+        <p id="thinking-demo-help" className="demo-thinking-hint">{localStub
           ? <>Streams a simulated reasoning summary. Auto opens while thinking and collapses when finished.</>
-          : <>The thinking test requires <code>npm run demo --local-stub</code>. On the real API, a Reasoning row appears only when the model returns reasoning; display settings cannot enable it.</>}</p>
+          : <>Choose Local stub in Connection to use the thinking test. On the real API, a Reasoning row appears only when the model returns reasoning; display settings cannot enable it.</>}</p>
         {view === "standard" && snapshot.error && <p className="demo-thinking-hint" role="alert">{snapshot.connection === "recovering" || snapshot.connection === "connecting"
           ? "Connection interrupted. Reconnecting…"
           : snapshot.connection === "failed" ? <>Connection unavailable. <button type="button" onClick={() => { void runtime.reconnect().catch(() => undefined); }}>Retry</button></>
@@ -107,5 +107,5 @@ export function Chat({ client, session }: { client: CaltraClient; session: Caltr
       <SignalThread runtime={assistantRuntime} session={runtime} display={reasoningDisplay} locale={language} />
     </div> : <RuntimeAdapterProvider adapters={sharedAdapters}><CaltraChat reasoningDisplay={reasoningDisplay} runtime={runtime} labels={language === "it" ? italian : undefined}
       theme={theme === "brand" ? brandTheme : theme} colorMode={colorMode} /></RuntimeAdapterProvider>}
-  </main></AssistantRuntimeProvider>;
+  </main></ModelControlsProvider></AssistantRuntimeProvider>;
 }

@@ -9,12 +9,12 @@ const AuthorizationSchema = z.object({
 export class TestAppAuthorizationCodeProvider {
   private readonly fetchImplementation: typeof fetch;
 
-  constructor(fetchImplementation?: typeof fetch) {
+  constructor(fetchImplementation?: typeof fetch, private readonly basePath = "") {
     this.fetchImplementation = fetchImplementation ?? globalThis.fetch.bind(globalThis);
   }
 
   async create(): Promise<string> {
-    const response = await this.fetchImplementation("/api/client-authorization", { method: "POST" });
+    const response = await this.fetchImplementation(`${this.basePath}/api/client-authorization`, { method: "POST" });
     if (!response.ok) {
       throw new Error(`Local client authorization failed with HTTP ${response.status}.`);
     }

@@ -91,6 +91,8 @@ const reasoningDuration = (timing: ThreadGroupPart["timing"]) =>
  * tool group; without it they render like any other tool call.
  */
 export type ThreadComponents = {
+  /** Demo-owned slot; retains the upstream composer and send/stop controls. */
+  ComposerControls?: ComponentType | undefined;
   AssistantMessage?: ComponentType | undefined;
   Welcome?: ComponentType | undefined;
   ToolFallback?: ToolCallMessagePartComponent | undefined;
@@ -528,6 +530,7 @@ const Composer: FC<{ autoFocus: boolean }> = ({ autoFocus }) => {
 };
 
 const ComposerAction: FC = () => {
+  const { ComposerControls } = useContext(ThreadComponentsContext);
   const t = useThreadText();
   // The stop control only cancels the send while no run it could stop is going.
   const isSending = useAuiState(
@@ -538,7 +541,10 @@ const ComposerAction: FC = () => {
 
   return (
     <div className="aui-composer-action-wrapper relative flex items-center justify-between">
-      <ComposerAddAttachment />
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <ComposerAddAttachment />
+        {ComposerControls && <ComposerControls />}
+      </div>
       <div className="flex items-center gap-1.5">
         <AuiIf condition={(s) => s.thread.capabilities.dictation}>
           <AuiIf condition={(s) => s.composer.dictation == null}>

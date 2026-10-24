@@ -1,9 +1,9 @@
 import type { CaltraSession } from "@caltra/client";
 import { Plus, Radio } from "lucide-react";
 
-declare const __CALTRA_LOCAL_STUB__: boolean;
 
 interface SessionListProps {
+  localStub: boolean;
   agent?: { id: string; name: string };
   creating: boolean;
   onCreate: () => Promise<void>;
@@ -21,7 +21,7 @@ export function SessionList(props: SessionListProps) {
         <div>
           <strong>CALTRA</strong>
           <span>SDK SIGNAL ROOM</span>
-          <span>{__CALTRA_LOCAL_STUB__ ? "LOCAL API STUB" : "REAL CALTRA API"}</span>
+          <span>{props.localStub ? "LOCAL API STUB" : "REAL CALTRA API"}</span>
         </div>
       </div>
 

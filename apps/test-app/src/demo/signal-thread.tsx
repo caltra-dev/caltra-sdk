@@ -1,3 +1,4 @@
+import { ModelControls } from "./model-controls.js";
 import { ThreadLocaleProvider, useThreadText, type ThreadLocale } from "../upstream/lib/thread-i18n.js";
 import { AssistantRuntimeProvider, useAuiState, type AssistantRuntime } from "@assistant-ui/react";
 import { useCaltraReasoning } from "@caltra/assistant-ui";
@@ -44,7 +45,7 @@ function ThreadReasoning({ session, display, messageId, status }: Settings & { m
   </div>;
 }
 
-const components = { AssistantMessage: CaltraThreadMessage };
+const components = { AssistantMessage: CaltraThreadMessage, ComposerControls: ModelControls };
 export function SignalThread({ session, display, runtime, locale }: Settings & { runtime: AssistantRuntime; locale: ThreadLocale }) {
   return <ThreadLocaleProvider value={locale}><ReasoningSettings.Provider value={{ session, display }}>
     <AssistantRuntimeProvider runtime={runtime}><Thread autoFocus={false} components={components} /></AssistantRuntimeProvider>

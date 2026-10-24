@@ -7,10 +7,10 @@ import { DemoClient, demoSessionId } from "../src/demo/client.js";
 /** In-process HTTP API simulator. The browser still uses the unmodified Caltra SDK transport. */
 export class LocalStub {
   private readonly sessions = new Map([[demoSessionId, new DemoClient()]]);
-  toVitePlugin(): Plugin {
+  toVitePlugin(mountPath = "/"): Plugin {
     return { name: "caltra-local-stub", configureServer: server => {
       server.httpServer?.once("close", () => { for (const client of this.sessions.values()) client.disposeTimers(); });
-      server.middlewares.use((request, response, next) => {
+      server.middlewares.use(mountPath, (request, response, next) => {
         const path = new URL(request.url ?? "/", "http://stub.local").pathname;
         if (!["/client/v1/", "/caltra/v1/", "/api/client-authorization"].some(prefix => path.startsWith(prefix))) return next();
         void this.respond(request, response).catch(() => {
