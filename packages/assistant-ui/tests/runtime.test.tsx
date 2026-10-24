@@ -17,6 +17,17 @@ function fixture() {
 }
 
 describe("useAssistantUiRuntime", () => {
+  it("reads the newest context callback at send time without replacing the session", async () => {
+    const f = fixture();
+    const hook = renderHook(({ id }) => useAssistantUiRuntime(f.session, { getContext: () => ({ page: { id } }) }), { initialProps: { id: "first" } });
+    await act(() => f.session.start());
+    hook.rerender({ id: "second" });
+    act(() => { hook.result.current.thread.append("Explain this"); });
+    await waitFor(() => expect(f.client.sendMessage).toHaveBeenCalledWith("session", { text: "Explain this", context: { page: { id: "second" } } }));
+    expect(f.client.openSessionEvents).toHaveBeenCalledOnce();
+    expect(JSON.stringify(hook.result.current.thread.getState().messages)).not.toContain('"second"');
+    hook.unmount(); await f.session.stop();
+  });
   it("exposes native earlier history and joins concurrent page requests", async () => {
     const f = fixture();
     let release!: (value: unknown) => void;

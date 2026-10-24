@@ -1,3 +1,4 @@
+import type { CaltraMessageContext } from "./types.js";
 import { CaltraReasoningRuntime } from "./reasoning_runtime.js";
 import {
   type CaltraSessionEvent,
@@ -241,7 +242,9 @@ export class CaltraSessionRuntime {
     await this.start();
   }
 
-  async send(text: string): Promise<void> {
+  async send(text: string, options: { context?: CaltraMessageContext } = {}): Promise<void> {
+    // Capture before connection/authentication awaits: navigation must not alter accepted input.
+    const context = options.context === undefined ? undefined : structuredClone(options.context);
     await this.start();
     const generation = this.generation;
     const temporaryId = `pending-${crypto.randomUUID()}`;
@@ -255,7 +258,7 @@ export class CaltraSessionRuntime {
     this.pendingSends.add(temporaryId);
     this.update({ messages: [...this.snapshot.messages, optimistic] });
     try {
-      const submitted = await this.client.sendMessage(this.sessionId, { text });
+      const submitted = await this.client.sendMessage(this.sessionId, { text, ...(context === undefined ? {} : { context }) });
       if (generation !== this.generation) return;
       this.update({
         ...(this.snapshot.session?.is_running === undefined ? {} : {

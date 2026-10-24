@@ -1,3 +1,12 @@
+/** JSON-only application data captured with a user message; never projected into UI history. */
+export type CaltraJsonValue = string | number | boolean | null | readonly CaltraJsonValue[] | { readonly [key: string]: CaltraJsonValue };
+export type CaltraMessageContext = { readonly [key: string]: CaltraJsonValue };
+export interface CaltraMessageInput {
+  text: string;
+  requestId?: string;
+  context?: CaltraMessageContext;
+}
+
 export type CaltraAuthorizationCodeProvider = () => Promise<string>;
 
 export interface CaltraTokenConfiguration {

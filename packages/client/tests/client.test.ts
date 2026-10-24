@@ -197,6 +197,9 @@ it("preserves a message request ID across retries", async () => {
   await client.sendMessage(sessionId, { text: "New flooring", requestId });
   await client.sendMessage(sessionId, { text: "New flooring", requestId });
   expect(bodies).toEqual([{ text: "New flooring", request_id: requestId }, { text: "New flooring", request_id: requestId }]);
+  const context = { page: { resource: { type: "job", id: "job-1" } } };
+  await client.sendMessage(sessionId, { text: "Explain this", context });
+  expect(bodies.at(-1)).toEqual({ text: "Explain this", context });
 });
 
 it("cancels with the browser token and decodes active and already-idle responses", async () => {

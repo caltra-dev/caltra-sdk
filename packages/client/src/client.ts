@@ -7,6 +7,7 @@ import { CaltraClientTokenProvider } from "./token_provider.js";
 import { CaltraAuthorizationCodeEndpointProvider } from "./authorization_code_provider.js";
 import { CaltraSessionsClient } from "./sessions.js";
 import type {
+  CaltraMessageInput,
   CaltraAgentIdentity,
   CaltraClientOptions,
   CaltraMessageSubmission,
@@ -226,12 +227,12 @@ export class CaltraClient {
     return new CaltraSessionEventConnection(response);
   }
 
-  async sendMessage(sessionId: string, input: { text: string; requestId?: string }): Promise<CaltraMessageSubmission> {
+  async sendMessage(sessionId: string, input: CaltraMessageInput): Promise<CaltraMessageSubmission> {
     return await this.request(
       `/sessions/${encodeURIComponent(sessionId)}/messages`,
       SubmissionSchema,
       {
-        body: JSON.stringify({ text: input.text, request_id: input.requestId }),
+        body: JSON.stringify({ text: input.text, request_id: input.requestId, context: input.context }),
         headers: { "content-type": "application/json" },
         method: "POST",
       },

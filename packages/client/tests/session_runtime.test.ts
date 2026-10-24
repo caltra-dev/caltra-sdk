@@ -26,6 +26,27 @@ class StubEventConnection implements AsyncIterable<CaltraSessionEvent> {
 }
 
 describe("CaltraSessionRuntime", () => {
+  it("snapshots context before connection awaits and never adds it to visible history", async () => {
+    let connect!: (connection: StubEventConnection) => void;
+    const client = {
+      openSessionEvents: vi.fn(() => new Promise<StubEventConnection>(resolve => { connect = resolve; })),
+      listSessionMessages: vi.fn(async () => ({ data: [], next_cursor: null })),
+      getSessionById: vi.fn(async () => ({ id: sessionId })),
+      sendMessage: vi.fn(async () => ({ message_id: userMessageId, turn_id: turnId })),
+    };
+    const runtime = new CaltraSessionRuntime(client as never, sessionId);
+    const context = { page: { resource: { id: "before-navigation" } } };
+    const sending = runtime.send("Explain this", { context });
+    context.page.resource.id = "after-navigation";
+    await vi.waitFor(() => expect(connect).toBeDefined());
+    connect(new StubEventConnection([]));
+    await sending;
+    expect(client.sendMessage).toHaveBeenCalledWith(sessionId, { text: "Explain this", context: { page: { resource: { id: "before-navigation" } } } });
+    expect(runtime.getSnapshot().messages).toEqual([expect.objectContaining({ text: "Explain this" })]);
+    expect(JSON.stringify(runtime.getSnapshot().messages)).not.toContain("before-navigation");
+    await runtime.stop();
+  });
+
   for (const overlap of [true, false]) it(`preserves an in-flight earlier cursor only when refreshed history overlaps (${overlap})`, async () => {
     const message = (id: string): CaltraSessionMessage => ({ id, role: "assistant", status: "completed", text: id, created_at: "2026-10-21T00:00:00Z" });
     let finish!: (page: { data: CaltraSessionMessage[]; next_cursor: string }) => void;

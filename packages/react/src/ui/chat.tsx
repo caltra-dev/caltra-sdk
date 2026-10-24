@@ -7,7 +7,7 @@ import {
   ComposerPrimitive, MessagePrimitive, ThreadPrimitive, useAuiState, type ToolCallMessagePartProps,
 } from "@assistant-ui/react";
 import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ComponentType, type ComponentPropsWithoutRef } from "react";
-import { CaltraSessionRuntime } from "@caltra/client";
+import { CaltraSessionRuntime, type CaltraMessageContext } from "@caltra/client";
 import { useAssistantUiRuntime } from "@caltra/assistant-ui";
 import { type UseCaltraRuntimeOptions, type UseCaltraRuntimeResult } from "../use_caltra_runtime.js";
 import { caltraThemes, type CaltraColorMode, type CaltraTheme, type CaltraThemeName } from "../themes/index.js";
@@ -51,6 +51,8 @@ export type CaltraChatSource =
   | { runtime: CaltraSessionRuntime; client?: never; sessionId?: never };
 
 export interface CaltraChatPresentationProps {
+  /** Snapshot application data with each send; not returned in the visible transcript. */
+  getContext?: () => CaltraMessageContext | undefined;
   /** Fetching is disclosure-owned. Hidden opens no reasoning stream. */
   reasoningDisplay?: CaltraReasoningDisplay;
   /** Upstream assistant-ui options, applied over Caltra's presentation defaults. */
@@ -90,7 +92,7 @@ function ChatSession(props: CaltraChatProps) {
     return () => { void session.stop(); };
   }, [session, props.runtime]);
   const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
-  const runtime = useAssistantUiRuntime(session);
+  const runtime = useAssistantUiRuntime(session, { getContext: props.getContext });
   const caltra = { ...snapshot, runtime, reconnect: () => session.reconnect() };
   const viewport = slotProps.viewport ?? {};
   const resolvedTheme = typeof theme === "string" ? caltraThemes[theme] : theme;

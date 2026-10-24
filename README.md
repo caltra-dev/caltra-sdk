@@ -184,3 +184,14 @@ The session external ID is scoped to its agent. This path creates no agent ident
 - `@caltra/react`: compatibility `useCaltraRuntime` convenience hook and historical store exports.
 
 See [session runtime](packages/client/README.md), [assistant-ui adapter](packages/assistant-ui/README.md), and [chat customization](packages/react/README.md). The earlier-history release uses client 0.12.1, assistant-ui 0.4.0, and react 0.14.0 with `@assistant-ui/react` 0.15.30 or later. The shared chat loads earlier pages when scrolling up and shows skeleton messages above the transcript. Activate Caltra API 0.2.95 or later before upgrading consumers: it provides lightweight summary pages, scoped tool-detail reads, and reasoning snapshots/streams. No package is published by local builds or preview validation.
+
+## Application context
+
+Pass a JSON object as `context` when sending a message, or supply `getContext` to `useCaltraRuntime`, `useAssistantUiRuntime`, or `CaltraChat`. The getter runs at Send time and the runtime snapshots its result before asynchronous work.
+
+```tsx
+<CaltraChat client={client} sessionId={sessionId}
+  getContext={() => ({ page: { screen: "customer", resource: { type: "customer", id: currentCustomerId } } })} />
+```
+
+The hosted API accepts up to 16 KiB and 12 levels of JSON context. It stores the snapshot with the message and provides it to the model as untrusted user data. Context is omitted from transcript responses and optimistic UI messages. Send `{ page: null }` to explicitly clear a previous page; omit context for ordinary text-only clients. Workspace identity and authorization still come from the authenticated session.
