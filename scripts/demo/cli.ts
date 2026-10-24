@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { DemoConfig } from "./config.ts";
 
-/** Builds the workspace packages, then starts the same Thread demo in either connection mode. */
+/** Builds the workspace packages, then starts the Signal Room demo in either connection mode. */
 class DemoCli {
   async run() {
     const config = new DemoConfig(process.argv.slice(2), process.env);
@@ -10,7 +10,7 @@ class DemoCli {
     console.log(`Caltra demo: ${config.environment.CALTRA_DEMO_MODE === "stub" ? "local API stub" : "real API"}`);
     const build = await this.runChild(["run", "build", "--workspace=@caltra/server", "--workspace=@caltra/react"], cwd, config.environment);
     if (build !== 0) { process.exitCode = build; return; }
-    process.exitCode = await this.runChild(["exec", "--workspace=@caltra/test-app", "--", "vite", "--host", "127.0.0.1", "--open", "/thread.html"], cwd, config.environment);
+    process.exitCode = await this.runChild(["exec", "--workspace=@caltra/test-app", "--", "vite", "--host", "127.0.0.1", "--open", "/"], cwd, config.environment);
   }
   private runChild(args: string[], cwd: string, env: NodeJS.ProcessEnv): Promise<number> {
     return new Promise((resolve, reject) => {

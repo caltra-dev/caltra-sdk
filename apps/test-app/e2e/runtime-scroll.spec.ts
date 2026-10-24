@@ -1,91 +1,38 @@
 import { expect, test } from "@playwright/test";
 
-test("one turn keeps Stop visible across every message boundary and clears it at completion", async ({ page }) => {
-  await page.goto("/?demo=runtime");
-  await expect(page.locator(".caltra-chat__message")).toHaveCount(20);
-  await page.getByRole("button", { name: "Stream steps", exact: true }).click();
-  const stop = page.getByRole("button", { name: "Stop generating", exact: true });
-  await expect(stop).toBeVisible();
-  await page.evaluate(() => {
-    const trace: boolean[] = [];
-    const observer = new MutationObserver(() => {
-      const running = !!document.querySelector('button[aria-label="Stop generating"]');
-      if (trace.at(-1) !== running) trace.push(running);
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    (window as unknown as { runTrace: { trace: boolean[]; observer: MutationObserver } }).runTrace = { trace, observer };
-  });
-  await expect(page.locator(".caltra-chat__message")).toHaveCount(28, { timeout: 12_000 });
-  await expect(stop).toHaveCount(0);
-  const transitions = await page.evaluate(() => {
-    const { trace, observer } = (window as unknown as { runTrace: { trace: boolean[]; observer: MutationObserver } }).runTrace;
-    observer.disconnect(); return trace;
-  });
-  expect(transitions).toEqual([true, false]);
+const sample = "/?session=70000000-0000-4000-8000-000000000001";
+
+test("both views share the runtime while a turn is streaming", async ({ page }) => {
+  await page.goto(sample);
+  await page.getByRole("button", { name: "Create session", exact: true }).click();
+  await expect(page.locator(".caltra-chat__message")).toHaveCount(0);
+  await page.getByRole("textbox", { name: "Message", exact: true }).fill("Shared runtime check");
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Stop generating", exact: true })).toBeVisible();
+  await page.getByLabel("Chat view", { exact: true }).selectOption("standard");
+  await expect(page.getByText("Shared runtime check", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Stop generating", exact: true })).toBeVisible();
+  await page.getByLabel("Chat view", { exact: true }).selectOption("caltra");
+  await expect(page.getByRole("button", { name: "Stop generating", exact: true })).toBeVisible();
+  await expect(page.locator(".caltra-chat__message")).toHaveCount(9, { timeout: 15_000 });
+  await expect(page.getByRole("button", { name: "Stop generating", exact: true })).toHaveCount(0);
 });
 
-for (const mode of ["managed", "shared"]) {
-  test(`${mode}: keeps reading position across new messages and tool steps, then resumes following`, async ({ page }) => {
-    await page.goto("/?demo=runtime");
-    await page.getByLabel("Integration", { exact: true }).selectOption(mode);
-    const viewport = page.locator(".caltra-chat__viewport");
-    const count = () => page.locator(".caltra-chat__message").count();
-    await expect.poll(count).toBe(20);
-    const distance = () => viewport.evaluate(el => el.scrollHeight - el.clientHeight - el.scrollTop);
-    await expect.poll(distance).toBeLessThan(2);
-    await viewport.hover(); await page.mouse.wheel(0, -700);
-    await expect.poll(distance).toBeGreaterThan(500);
-    // Streaming changes layout below the reader; preserve the visible message anchor.
-    // Assert the visible message stays anchored rather than requiring a fixed scrollTop.
-    const anchor = await viewport.evaluate(el => {
-      const top = el.getBoundingClientRect().top;
-      const paragraph = [...el.querySelectorAll("p")].find(p => p.textContent?.startsWith("Saved message") && p.getBoundingClientRect().top >= top)!;
-      return { text: paragraph.textContent!, offset: paragraph.getBoundingClientRect().top - top };
-    });
-    await page.getByRole("button", { name: "Stream steps", exact: true }).click();
-    await expect.poll(count).toBeGreaterThan(23);
-    const offset = await page.getByText(anchor.text, { exact: true }).evaluate(el =>
-      el.getBoundingClientRect().top - document.querySelector(".caltra-chat__viewport")!.getBoundingClientRect().top);
-    expect(Math.abs(offset - anchor.offset)).toBeLessThan(3);
-    await page.getByRole("button", { name: "Scroll to bottom", exact: true }).click();
-    await expect.poll(distance).toBeLessThan(2);
-    const before = await count();
-    await expect.poll(count).toBeGreaterThan(before);
-    await expect.poll(distance).toBeLessThan(2);
-  });
-}
-
-test("explicit upstream option restores forced run-start scrolling", async ({ page }) => {
-  await page.goto("/?demo=runtime");
-  const viewport = page.locator(".caltra-chat__viewport");
-  await expect(page.locator(".caltra-chat__message")).toHaveCount(20);
-  await page.getByLabel("Force scroll on run start (resets chat)").check();
-  await expect(page.locator(".caltra-chat__message")).toHaveCount(20);
-  await expect.poll(() => viewport.evaluate(el => el.scrollHeight - el.clientHeight - el.scrollTop)).toBeLessThan(2);
-  await viewport.hover(); await page.mouse.wheel(0, -700);
-  await expect.poll(() => viewport.evaluate(el => el.scrollHeight - el.clientHeight - el.scrollTop)).toBeGreaterThan(500);
-  await page.getByRole("button", { name: "Stream steps", exact: true }).click();
-  await expect(page.locator(".caltra-chat__message")).toHaveCount(21);
-  await expect.poll(() => viewport.evaluate(el => el.scrollHeight - el.clientHeight - el.scrollTop)).toBeLessThan(2);
-});
-
-test("caller-owned runtime continues receiving events while the chat is unmounted", async ({ page }) => {
-  await page.goto("/?demo=runtime");
-  await page.getByLabel("Integration", { exact: true }).selectOption("shared");
-  await expect(page.locator(".caltra-chat__message")).toHaveCount(20);
-  await page.getByRole("button", { name: "Hide chat", exact: true }).click();
-  await page.getByRole("button", { name: "Stream steps", exact: true }).click();
-  await expect(page.locator(".caltra-chat")).toHaveCount(0);
-  await page.getByRole("button", { name: "Show chat", exact: true }).click();
-  await expect.poll(() => page.locator(".caltra-chat__message").count()).toBeGreaterThan(20);
-});
-
-test("custom assistant-ui uses the same runtime to send and render history", async ({ page }) => {
-  await page.goto("/?demo=runtime");
-  await page.getByLabel("Integration", { exact: true }).selectOption("custom");
+test("Thread keeps shared controls and explains unsupported settings", async ({ page }) => {
+  await page.goto(sample);
+  await page.getByLabel("Language", { exact: true }).selectOption("it");
+  await page.getByLabel("Theme", { exact: true }).selectOption("ocean");
+  await page.getByLabel("Color mode", { exact: true }).selectOption("dark");
+  await page.getByLabel("Chat view", { exact: true }).selectOption("standard");
+  await expect(page.getByLabel("Language", { exact: true })).toBeDisabled();
+  await expect(page.getByLabel("Language", { exact: true })).toHaveValue("en");
+  await expect(page.getByLabel("Thinking display", { exact: true })).toBeDisabled();
+  await expect(page.locator("#thread-settings-limit")).toContainText("English only");
+  await expect(page.locator(".signal-thread")).toHaveCSS("background-color", "rgb(15, 23, 42)");
+  await expect(page.getByRole("button", { name: "Stream thinking", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Reload|Export as Markdown/ })).toHaveCount(0);
+  await page.getByLabel("Chat view", { exact: true }).selectOption("caltra");
+  await expect(page.getByLabel("Language", { exact: true })).toBeEnabled();
+  await expect(page.getByLabel("Language", { exact: true })).toHaveValue("it");
   await expect(page.getByText("Saved message 60", { exact: false })).toBeVisible();
-  await page.getByRole("textbox", { name: "Custom message" }).fill("Custom adapter message");
-  await page.getByRole("button", { name: "Send", exact: true }).click();
-  await expect(page.getByText("Custom adapter message", { exact: true })).toBeVisible();
-  await expect(page.getByText("Incoming step 1: reading position preserved.", { exact: true })).toBeAttached();
 });

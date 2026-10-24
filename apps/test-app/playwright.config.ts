@@ -13,7 +13,8 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: configured ? "npm run dev" : "npm run dev -- --mode test",
+    command: "npm run dev",
+    env: { CALTRA_DEMO_MODE: configured ? "real" : "stub" },
     reuseExistingServer: true,
     timeout: 30_000,
     url: "http://127.0.0.1:5173",

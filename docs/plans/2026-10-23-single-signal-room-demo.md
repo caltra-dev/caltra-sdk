@@ -1,0 +1,7 @@
+# One Signal Room demo
+
+Remove the legacy runtime simulation page and the separate Thread comparison page. Signal Room at `/` owns sessions and connections; its Chat view selector mounts either CaltraChat or Standard Thread on the same caller-owned runtime. Both views keep the same control panel. Thread maps preset colors and light/dark/system mode to its CSS tokens. Language and Thinking display remain visible but disabled with an explanation: the vendored Thread has hard-coded English strings and Caltra exposes reasoning through a separate lazy resource, not inline reasoning parts. Stream thinking remains available, with an accurate provider requirement. Both local HTTP stub and real API launch modes remain supported. The original client-method simulation survives only as the server stub's fixture engine, not a browser page.
+
+Scope the upstream reset and theme to the Standard Thread panel. Its tooltips and dialogs portal into that panel so their styles inherit correctly. Keep the previous removal of Reload and Markdown export. Switching chat views preserves session history and streaming; the unmounted composer's draft is layout-local.
+
+Validate typecheck/build and API stub tests in the Sprite, then verify real-mode Signal Room, view switching, viewport geometry, Copy, and the retired simulation URL in the browser extension. Update browser test scenarios to the retained UI instead of leaving references to removed controls. Hold merge for preview acceptance.

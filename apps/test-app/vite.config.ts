@@ -22,7 +22,6 @@ export default defineConfig(({ command, mode }) => {
   }
   return {
     resolve: { alias: { "@": fileURLToPath(new URL("./src/upstream", import.meta.url)) } },
-    build: { rollupOptions: { input: { main: fileURLToPath(new URL("./index.html", import.meta.url)), thread: fileURLToPath(new URL("./thread.html", import.meta.url)) } } },
     define: { __CALTRA_API_URL__: JSON.stringify(apiUrl), __CALTRA_LOCAL_STUB__: JSON.stringify(stub) },
     plugins,
     server: { allowedHosts: [".sprites.app"] },

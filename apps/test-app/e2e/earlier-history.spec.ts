@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 for (const width of [390, 1280]) test(`scrolling up loads earlier pages without moving the reader at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 844 });
-  await page.goto("/?demo=runtime");
+  await page.goto("/?session=70000000-0000-4000-8000-000000000001");
   const viewport = page.locator(".caltra-chat__viewport");
   const messages = page.locator(".caltra-chat__message");
   await expect(messages).toHaveCount(20);
@@ -20,12 +20,9 @@ for (const width of [390, 1280]) test(`scrolling up loads earlier pages without 
   expect(await loading.evaluate(el => el.getBoundingClientRect().bottom)).toBeLessThanOrEqual(
     await messages.first().evaluate(el => el.getBoundingClientRect().top),
   );
-  // New messages arrive while the earlier page is in flight.
-  await page.getByRole("button", { name: "Stream steps", exact: true }).click();
   await expect.poll(() => messages.count()).toBeGreaterThanOrEqual(40);
   await expect.poll(async () => Math.abs(await offset() - before)).toBeLessThan(3);
   await expect(page.getByRole("textbox", { name: "Message", exact: true })).toHaveValue("Preserve this draft");
-  await page.getByRole("button", { name: "Stop generating", exact: true }).click();
   await viewport.hover();
   await page.mouse.wheel(0, -10_000);
   await expect(page.getByText("Saved message 1", { exact: true })).toBeAttached();
@@ -34,10 +31,16 @@ for (const width of [390, 1280]) test(`scrolling up loads earlier pages without 
 });
 
 test("failed history waits for Retry while preserving loaded messages", async ({ page }) => {
-  await page.goto("/?demo=runtime");
+  await page.goto("/?session=70000000-0000-4000-8000-000000000001");
   const viewport = page.locator(".caltra-chat__viewport");
   await expect(page.locator(".caltra-chat__message")).toHaveCount(20);
-  await page.getByRole("button", { name: "Fail next history load" }).click();
+  let failNext = true;
+  await page.route("**/client/v1/sessions/*/messages?*", async route => {
+    if (new URL(route.request().url()).searchParams.has("cursor") && failNext) {
+      failNext = false;
+      await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "History unavailable" }) });
+    } else await route.continue();
+  });
   await viewport.evaluate(el => { el.scrollTop = 0; });
   await expect(page.getByRole("alert")).toContainText("Older messages could not be loaded");
   await viewport.evaluate(el => { el.scrollTop = 50; });
@@ -47,9 +50,9 @@ test("failed history waits for Retry while preserving loaded messages", async ({
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
 
-test("custom assistant-ui uses the adapter's native LoadEarlier primitive", async ({ page }) => {
-  await page.goto("/?demo=runtime");
-  await page.getByLabel("Integration", { exact: true }).selectOption("custom");
+test("Standard Thread uses the adapter's native LoadEarlier primitive", async ({ page }) => {
+  await page.goto("/?session=70000000-0000-4000-8000-000000000001");
+  await page.getByLabel("Chat view", { exact: true }).selectOption("standard");
   await expect(page.getByText("Saved message 21", { exact: false })).toHaveCount(0);
   await page.getByRole("button", { name: "Load earlier messages", exact: true }).click();
   await expect(page.getByText("Saved message 21", { exact: false })).toBeAttached();

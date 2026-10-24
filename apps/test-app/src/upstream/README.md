@@ -12,9 +12,11 @@ with the existing clsx/tailwind-merge helper; MarkdownText imports the equivalen
 The demo omits Reload and the Export as Markdown menu from the assistant action bar; Copy and capability-gated feedback remain.
 Imports resolve through the demo's `@` alias. See LICENSE.
 
-The separate `/thread.html` entry uses the upstream template's Tailwind theme
-with local source scanning and system fonts. It does not import the Signal Room's
-global CSS. No SDK consumer needs these demo-only dependencies.
+Signal Room embeds Thread as a selectable view. Tailwind preflight is scoped to
+`.signal-thread`; theme tokens are mapped from the shared controls. Tooltip and
+dialog portals target this panel to inherit its scoped styles. Language and Caltra
+lazy reasoning are explicitly unavailable in this stock view. No SDK consumer
+needs these demo-only dependencies.
 
 Caltra's runtime adapter supplies the same session to both comparison views.
 The demo can use its local HTTP API stub or a real Caltra connection, selected at

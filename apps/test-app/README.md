@@ -4,7 +4,7 @@ This app exercises the local `@caltra/client` and `@caltra/react` packages again
 
 For UI changes, start at the [UI convention entry point](../../docs/ui/README.md).
 
-## Run the Thread demo
+## Run Signal Room
 
 From the SDK repository root, after `npm install`:
 
@@ -16,7 +16,7 @@ npm run demo -- --caltra-api-key=<key>
 
 `CALTRA_API_KEY` in the launch environment also selects real mode. Prefer environment injection for a saved credential; the Caltra repository's `npm run demo` launcher supplies its GitVaulty-managed demo key without copying it here. CLI keys are optional and may remain in shell history. The repository-pinned npm version rejects unknown flags before the script runs; the `--` separator is required.
 
-The launcher builds the local workspace packages and opens `/thread.html`. The same interface offers Standard Thread, CaltraChat, a session selector, and New conversation. Both modes use the normal CaltraClient authorization exchange, REST schemas, and SSE parser.
+The launcher builds the local workspace packages and opens Signal Room at `/`. Its Chat view selector offers CaltraChat and Standard Thread over the same selected session and runtime. Both modes use the normal CaltraClient authorization exchange, REST schemas, and SSE parser.
 
 The stub implements the demo's authorization, agent lookup, session creation/listing, paginated messages, tool details, sending, cancellation and SSE routes. It is an in-memory simulator of this API subset, not a complete Caltra backend. It starts with 60 deterministic messages and tool success/failure examples. Sending produces eight streamed steps. New conversations are empty; state resets when the server restarts.
 
@@ -24,14 +24,14 @@ Real mode defaults to `https://api.caltra.dev`. Its environment key stays in the
 
 Browser requests use a same-origin server proxy. It validates Origin/Referer against the request host, strips browser cookies before forwarding, and maps loopback HTTP origins to HTTPS for Caltra's production origin policy. The launcher binds to loopback. On private Sprites the actual HTTPS preview origin is preserved and `X-Preview-Authorization` is restored upstream. One-time codes and scoped client tokens reach the browser; the environment API key never does. Keep hosted demos behind authentication.
 
-To run the older Signal Room UI, open `/` on the same server. `npm run dev -w @caltra/test-app` remains available for direct Vite development, with the same environment selection.
+`npm run dev -w @caltra/test-app` remains available for direct Vite development, with the same environment selection.
 
 ## Packaged chat preview
 
 The demo imports `CaltraChat` from `@caltra/react/ui`, which loads its CSS automatically. Default styling uses the
 SDK's assistant-ui preset. Independent Theme, Color mode (System/Light/Dark), and Language
 selectors demonstrate both presets, a custom brand, and Italian labels while preserving
-the session, transcript, scroll position, and draft. Selecting a session writes `?session=<id>`
+the session, transcript, scroll position, and draft within CaltraChat. Switching chat views remounts the composer, so an unsent draft is view-local. Selecting a session writes `?session=<id>`
 so reloading that URL exercises loading the saved transcript directly; IDs are resolved only
 within the authorized session list.
 
@@ -62,68 +62,55 @@ Echo waits 1.5 seconds to make progress visible; failure intentionally returns a
 The seed is idempotent, grants demo tools to the development workspace audience, and keeps
 `records.update` ungranted. Do not hard-code action IDs: manifest publication versions them.
 
-## Deterministic runtime and scroll preview
+## Local API stub scenarios
 
-Open `/?demo=runtime` in the test app to bypass backend authorization and use in-memory sample data. This is an explicitly labeled simulation, not hosted-agent execution. Each reload creates the same 60-message history, initially loading the newest 20 messages; no production requests or data stores are used.
+Launch with `npm run demo -- --local-stub`. Signal Room loads 60 saved messages,
+initially displaying the newest 20. Scroll up in CaltraChat, or use **Load earlier
+messages** in Standard Thread, to load older pages. Send any text for eight streamed
+message/tool steps; use Stop to cancel. Create a session to start empty.
 
-Choose Managed CaltraChat, Caller-owned runtime, or Custom assistant-ui. Scroll up, then click Stream steps: eight alternating message/tool steps arrive over eight seconds. Reading position stays fixed by default. Click the down arrow to follow the remaining steps. Enable Force scroll on run start to exercise the explicit upstream override. This deliberately remounts the chat to provide a fresh viewport for each comparison; toggling this demo option resets the composer draft. In Caller-owned runtime mode, hiding the chat unmounts the UI but leaves the runtime connected; showing it again restores shared history (not the unmounted composer's draft).
+Saved messages 58 and 60 include successful/failed tool calls. In CaltraChat, expand
+a tool to fetch details. Copy stays directly below the text, before trailing tools.
+Standard Thread retains its upstream action-bar placement below the message.
 
-Run `npm run test:e2e -w @caltra/test-app -- e2e/runtime-scroll.spec.ts` on the Sprite. These browser checks cover default scroll preservation, resuming follow, explicit override, supplied runtime ownership, and custom adapter send/history.
+The old `?demo=runtime` simulation and separate `/thread.html` entry are removed.
+The server stub still uses deterministic fixtures, but the browser always uses the
+real CaltraClient HTTP/SSE path. The browser regression sources now target Signal
+Room. Scroll assertions should compare a visible message's viewport-relative
+position, not only scrollTop, because layout changes can trigger native anchoring.
 
-Private Fly sign-in can return to the demo app root without the query string. If that happens, reopen the full `/?demo=runtime` link after signing in to enter the in-memory preview.
+## Controls in both chat views
 
-Scroll regression assertions track a visible message's viewport-relative position. Earlier Copy controls stay visible while streaming; native anchoring can still change scrollTop while keeping the same text stationary. A fixed scrollTop assertion alone is insufficient during those layout changes.
+Both views show Chat view, Thinking display, Theme, Color mode, Language, and
+Stream thinking. Settings stay selected when switching views. Theme presets map
+to the standard Thread's CSS tokens; System mode follows the OS preference live.
+The Thread reset and tokens are scoped to its panel, including tooltip/dialog portals.
 
-## Lazy transcript inspection preview
+Standard Thread limitations are shown beside the controls:
 
-The demo makes `/?demo=runtime` a deterministic paginated fixture: 60 messages,
-with a 20-message initial page. Scrolling near the top loads the preceding page through
-assistant-ui 0.15.30 and preserves the visible message position. Click Fail next history load
-before scrolling up to test the inline error and Retry control. Custom assistant-ui mode
-demonstrates the upstream LoadEarlier primitive directly. The latest
-messages include collapsed `demo.echo` and `demo.fail` cards; expanding a card simulates a
-350 ms detail fetch, then displays the saved arguments/result. Reopening it uses the runtime
-cache. Stream steps also exercises a running tool becoming completed while its panel is open.
-This is explicitly simulated data; API authorization and SQL plans are validated separately.
+- **Language** is disabled and shows English. This pinned upstream component has
+  hard-coded English labels, with no language/labels prop. Italian remains available
+  in CaltraChat. Adding Thread localization requires adapting its source strings.
+- **Thinking display** is disabled. Upstream supports inline reasoning parts, but
+  the Caltra adapter exposes text-free metadata and loads reasoning through a
+  separate resource. A custom disclosure adapter is needed for this view.
+- **Stream thinking** sends `/think Thinking demo complete` through the shared runtime.
+  It requires Caltra's local deterministic model; the HTTP stub does not implement
+  reasoning and a production model is not guaranteed to honor this command. Standard
+  Thread can display the final answer but not the separate reasoning stream.
 
-## Thinking display preview
+In CaltraChat, Auto expands during reasoning and collapses afterward; Collapsed
+fetches only when opened, Hidden never fetches, and Expanded stays open. Changing
+these controls does not remount the composer.
 
-The live SDK demo has a Thinking display selector (Hidden, Auto, Collapsed, Expanded).
-Click **Stream thinking**, or use the local deterministic model and send `/think Thinking demo complete`, to stream a clearly
-labeled simulated reasoning summary through the real worker/API. Auto expands during thinking
-and collapses when it ends; expand again or reload to inspect the saved summary. Collapsed
-opens no reasoning-text connection until clicked. Hidden opens none. Mode changes retain drafts.
-The command button shares the chat's runtime, preserves the composer draft, and disables while
-a turn is running. Thinking and tool expansion use the same accessible loading spinner.
+## Standard Thread integration boundary
 
-## Transcript Copy placement review
+The upstream Thread uses Base UI and is pinned to assistant-ui React 0.15.30 source;
+see [provenance](src/upstream/README.md). Its Reload and Markdown export controls
+are omitted. Copy and capability-gated feedback remain. No SDK consumer needs the
+demo's Tailwind dependencies.
 
-The existing `/?demo=runtime` saved messages 58 and 60 contain text followed by
-successful/failed tool calls. Copy belongs directly under each message's text,
-before the collapsed tool row; expanding the row must not move Copy below it.
-Copy and paste into the composer to verify only the message text is copied.
-Stream steps to check that earlier controls remain available and tool-only steps
-have no Copy button. These deterministic fixtures verify shared SDK presentation,
-not a production Piria session or hosted-agent execution.
-
-## Standard Thread comparison
-
-Open `/thread.html` for the upstream assistant-ui Thread (Base UI, pinned to the
-React 0.15.30 release source). **Standard Thread** and **CaltraChat** switch layouts
-over one deterministic in-memory conversation. The separate HTML entry keeps its
-Tailwind theme isolated from the Signal Room's global styling. Neither production
-Piria nor the SDK default changes.
-
-Expand **1 tool call**, then the tool row to inspect saved arguments/results. Copy
-remains in upstream's message footer after content/tool groups. Use **Stream steps**
-or send any sample text to exercise send/stop; **Load earlier messages** loads the
-previous page. Reload resets all sample data. Switching layouts preserves messages
-but remounts the composer, so its unsent draft is layout-local.
-
-This is deliberately the standard presentation with the Caltra runtime adapter.
-Full tool parts are supplied for this demo; Caltra's lazy-details and reasoning
-wrappers are not installed. The stock tool UI can show a completed marker for a
-failed tool result, which CaltraChat corrects using durable tool metadata. Attachments,
-editing, regeneration and feedback are not implemented by this text-only demo
-runtime; visible stock controls are not evidence of backend support. Production
-adoption needs that capability and lifecycle integration review.
+The standard tool UI does not load Caltra's lazy tool details automatically. It can
+show a completed marker for a failed result. CaltraChat handles durable tool status
+and lazy loading. Attachments, editing, regeneration and feedback are not supported
+by this text-only runtime. Neither production Piria nor the SDK default changes.

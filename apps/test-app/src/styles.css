@@ -114,6 +114,7 @@ button { color: inherit; }
 .demo-controls { display: grid; grid-template-columns: minmax(0, 1.3fr) repeat(2, minmax(0, 1fr)); gap: .75rem; width: min(100%, 370px); }
 .demo-appearance { min-width: 0; display: grid; gap: .5rem; font-size: .75rem; }
 .demo-appearance select { width: 100%; max-width: 100%; min-height: 44px; padding: .5rem; color: #ecebdc; background: var(--panel); border: 1px solid var(--line); border-radius: .5rem; }
+.demo-appearance select:disabled { opacity: .55; cursor: not-allowed; }
 .demo-thinking-button { grid-column: span 2; align-self: end; min-height: 44px; padding: .5rem .75rem; color: var(--ink); background: var(--acid); border: 1px solid var(--acid); border-radius: .5rem; font: inherit; cursor: pointer; }
 .demo-thinking-button:disabled { opacity: .5; cursor: default; }
 .demo-thinking-button:focus-visible { outline: 2px solid var(--acid); outline-offset: 3px; }
@@ -225,7 +226,7 @@ button { color: inherit; }
   .session-rail { height: auto; min-height: auto; max-height: 42dvh; border-right: 0; border-bottom: 1px solid var(--line); }
   .brand-lockup { margin-bottom: 18px; }
   .new-session { margin-bottom: 18px; }
-  .chat-shell { height: 58dvh; }
+  .chat-shell { height: auto; min-height: 100dvh; grid-template-rows: auto minmax(420px, 65dvh); }
   .chat-header {
     flex-wrap: wrap;
     gap: 1rem;

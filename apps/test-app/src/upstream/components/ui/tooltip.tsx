@@ -39,7 +39,7 @@ function TooltipContent({
     "align" | "alignOffset" | "side" | "sideOffset"
   >) {
   return (
-    <TooltipPrimitive.Portal>
+    <TooltipPrimitive.Portal container={document.querySelector<HTMLElement>(".signal-thread")}>
       <TooltipPrimitive.Positioner
         align={align}
         alignOffset={alignOffset}

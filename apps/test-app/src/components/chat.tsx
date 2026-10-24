@@ -1,7 +1,11 @@
+import { AssistantRuntimeProvider } from "@assistant-ui/react";
+import { useAssistantUiRuntime } from "@caltra/assistant-ui";
+import { Thread } from "../upstream/components/assistant-ui/elements/thread.aui.js";
+import "../demo/standard-thread.css";
 import type { CaltraClient, CaltraSession } from "@caltra/client";
 import { CaltraChat, type CaltraReasoningDisplay, type CaltraChatLabels } from "@caltra/react/ui";
-import { createCaltraTheme, type CaltraColorMode, type CaltraThemeName } from "@caltra/react/themes";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { caltraThemes, createCaltraTheme, type CaltraColorMode, type CaltraThemeName } from "@caltra/react/themes";
+import { useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties } from "react";
 
 const italian: CaltraChatLabels = {
   thinking: "Ragionamento…", thought: "Ragionamento", reasoningLoading: "Caricamento ragionamento…", reasoningFailed: "Impossibile caricare il ragionamento.",
@@ -30,12 +34,36 @@ export function Chat({ client, session }: { client: CaltraClient; session: Caltr
     return () => { void runtime.stop(); };
   }, [runtime]);
   const snapshot = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot, runtime.getSnapshot);
+  const assistantRuntime = useAssistantUiRuntime(runtime);
+  const [view, setView] = useState("caltra");
   const [sendingThinking, setSendingThinking] = useState(false);
   const [thinkingError, setThinkingError] = useState(false);
   const [reasoningDisplay, setReasoningDisplay] = useState<CaltraReasoningDisplay>("auto");
   const [theme, setTheme] = useState<CaltraThemeName | "brand">("assistant-ui");
   const [colorMode, setColorMode] = useState<CaltraColorMode>("system");
   const [language, setLanguage] = useState("en");
+  const [systemDark, setSystemDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const update = () => setSystemDark(media.matches);
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  const dark = colorMode === "dark" || (colorMode === "system" && systemDark);
+  const selectedTheme = theme === "brand" ? brandTheme : caltraThemes[theme];
+  const palette = selectedTheme[dark ? "dark" : "light"];
+  const threadStyle = {
+    "--background": palette.background, "--foreground": palette.foreground,
+    "--muted": palette.muted, "--muted-foreground": palette.mutedForeground,
+    "--primary": palette.accent, "--primary-foreground": palette.accentForeground,
+    "--accent": palette.muted, "--accent-foreground": palette.foreground,
+    "--secondary": palette.muted, "--secondary-foreground": palette.foreground,
+    "--border": palette.border, "--input": palette.border, "--ring": palette.accent,
+    "--popover": palette.background, "--popover-foreground": palette.foreground,
+    "--card": palette.background, "--card-foreground": palette.foreground,
+    "--destructive": palette.error, "--radius": selectedTheme.radius,
+    fontFamily: selectedTheme.fontFamily, colorScheme: dark ? "dark" : "light",
+  } as CSSProperties;
   const streamThinking = async () => {
     setSendingThinking(true);
     setThinkingError(false);
@@ -47,8 +75,13 @@ export function Chat({ client, session }: { client: CaltraClient; session: Caltr
     <header className="chat-header" data-success-toast-anchor>
       <div data-success-toast-avoid><span className="eyebrow">CALTRA REACT SDK</span><h1>{session.agent.name}</h1></div>
       <div className="demo-controls" data-success-toast-avoid>
+        <label className="demo-appearance">Chat view
+          <select aria-label="Chat view" value={view} onChange={event => setView(event.target.value)}>
+            <option value="caltra">CaltraChat</option><option value="standard">Standard Thread</option>
+          </select>
+        </label>
         <label className="demo-appearance">Thinking display
-          <select aria-label="Thinking display" value={reasoningDisplay} onChange={event => setReasoningDisplay(event.target.value as CaltraReasoningDisplay)}>
+          <select disabled={view === "standard"} aria-describedby={view === "standard" ? "thread-settings-limit" : undefined} aria-label="Thinking display" value={reasoningDisplay} onChange={event => setReasoningDisplay(event.target.value as CaltraReasoningDisplay)}>
             <option value="hidden">Hidden</option><option value="auto">Auto</option><option value="collapsed">Collapsed</option><option value="expanded">Expanded</option>
           </select>
         </label>
@@ -63,18 +96,21 @@ export function Chat({ client, session }: { client: CaltraClient; session: Caltr
           </select>
         </label>
         <label className="demo-appearance">Language
-          <select aria-label="Language" value={language} onChange={(event) => setLanguage(event.target.value)}>
+          <select disabled={view === "standard"} aria-describedby={view === "standard" ? "thread-settings-limit" : undefined} aria-label="Language" value={view === "standard" ? "en" : language} onChange={(event) => setLanguage(event.target.value)}>
             <option value="en">English</option><option value="it">Italiano</option>
           </select>
         </label>
         <button className="demo-thinking-button" type="button"
           disabled={sendingThinking || snapshot.isRunning || snapshot.connection !== "connected"}
           onClick={() => { void streamThinking(); }}>Stream thinking</button>
-        <p className="demo-thinking-hint">Sends <code>/think</code> to the local deterministic model. Choose Auto or Expanded to watch the text stream.</p>
+        <p className="demo-thinking-hint">Requires the local deterministic Caltra model; the API stub does not simulate reasoning. Sends <code>/think</code>.</p>
+        {view === "standard" && <p className="demo-thinking-hint" id="thread-settings-limit">Standard Thread: English only. Thinking display is unavailable for Caltra’s separately loaded reasoning.</p>}
         {thinkingError && <p className="demo-thinking-hint" role="alert">Could not start thinking. Try again.</p>}
       </div>
     </header>
-    <CaltraChat reasoningDisplay={reasoningDisplay} runtime={runtime} labels={language === "it" ? italian : undefined}
-      theme={theme === "brand" ? brandTheme : theme} colorMode={colorMode} />
+    {view === "standard" ? <div className={`signal-thread${dark ? " dark" : ""}`} style={threadStyle}>
+      <AssistantRuntimeProvider runtime={assistantRuntime}><Thread autoFocus={false} /></AssistantRuntimeProvider>
+    </div> : <CaltraChat reasoningDisplay={reasoningDisplay} runtime={runtime} labels={language === "it" ? italian : undefined}
+      theme={theme === "brand" ? brandTheme : theme} colorMode={colorMode} />}
   </main>;
 }

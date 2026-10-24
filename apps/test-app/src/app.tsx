@@ -11,7 +11,6 @@ import { TestAppAuthorizationCodeProvider } from "./authorization_code_provider.
 
 import { TestAppPreviewFetch } from "./preview_fetch.js";
 
-declare const __CALTRA_API_URL__: string;
 declare const __CALTRA_LOCAL_STUB__: boolean;
 
 export function App() {
@@ -82,7 +81,7 @@ export function App() {
         <span>CONNECTION REFUSED</span>
         <h1>Signal room unavailable.</h1>
         <p>{error.message}</p>
-        <p>Check the four server-side variables in <code>apps/test-app/.env.local</code>.</p>
+        <p>Check the demo server’s API key and workspace configuration.</p>
       </div>
     );
   }
