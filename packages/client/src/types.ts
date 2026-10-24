@@ -5,6 +5,7 @@ export interface CaltraMessageInput {
   text: string;
   requestId?: string;
   context?: CaltraMessageContext;
+  modelSelection?: CaltraModelSelection;
 }
 
 export type CaltraAuthorizationCodeProvider = () => Promise<string>;
@@ -158,3 +159,7 @@ export interface CaltraApiProblem {
   title: string;
   type: string;
 }
+
+/** Explicit selection for one new turn; omission preserves the session default. */
+export interface CaltraModelSelection { platformModelId: string; reasoningLevel: string | null }
+export interface CaltraModelChoice { platform_model_id: string; model_name: string; reasoning_level: string | null; is_default: boolean }

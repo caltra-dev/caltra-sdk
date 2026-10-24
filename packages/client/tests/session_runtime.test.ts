@@ -26,7 +26,7 @@ class StubEventConnection implements AsyncIterable<CaltraSessionEvent> {
 }
 
 describe("CaltraSessionRuntime", () => {
-  it("snapshots context before connection awaits and never adds it to visible history", async () => {
+  it("snapshots context and model selection before connection awaits and never adds it to visible history", async () => {
     let connect!: (connection: StubEventConnection) => void;
     const client = {
       openSessionEvents: vi.fn(() => new Promise<StubEventConnection>(resolve => { connect = resolve; })),
@@ -36,15 +36,37 @@ describe("CaltraSessionRuntime", () => {
     };
     const runtime = new CaltraSessionRuntime(client as never, sessionId);
     const context = { page: { resource: { id: "before-navigation" } } };
+    runtime.setModelSelection({ platformModelId: sessionId, reasoningLevel: "high" });
     const sending = runtime.send("Explain this", { context });
+    runtime.setModelSelection({ platformModelId: sessionId, reasoningLevel: "low" });
     context.page.resource.id = "after-navigation";
     await vi.waitFor(() => expect(connect).toBeDefined());
     connect(new StubEventConnection([]));
     await sending;
-    expect(client.sendMessage).toHaveBeenCalledWith(sessionId, { text: "Explain this", context: { page: { resource: { id: "before-navigation" } } } });
+    expect(client.sendMessage).toHaveBeenCalledWith(sessionId, { text: "Explain this", modelSelection: { platformModelId: sessionId, reasoningLevel: "high" }, context: { page: { resource: { id: "before-navigation" } } } });
     expect(runtime.getSnapshot().messages).toEqual([expect.objectContaining({ text: "Explain this" })]);
     expect(JSON.stringify(runtime.getSnapshot().messages)).not.toContain("before-navigation");
     await runtime.stop();
+  });
+
+  it("keeps model selection out of previous messages and omits it for default sends", async () => {
+    const sent = vi.fn(async () => ({ message_id: userMessageId, turn_id: turnId }));
+    const runtime = new CaltraSessionRuntime({
+      openSessionEvents: async () => new StubEventConnection([]),
+      getSessionById: async () => ({ id: sessionId, is_running: false }),
+      listSessionMessages: async () => ({ data: [], next_cursor: null }), sendMessage: sent,
+    } as never, sessionId);
+    await runtime.start();
+    try {
+      const selection = { platformModelId: sessionId, reasoningLevel: "high" };
+      runtime.setModelSelection(selection);
+      selection.reasoningLevel = "low";
+      await runtime.send("first");
+      expect(sent).toHaveBeenLastCalledWith(sessionId, { text: "first", modelSelection: { platformModelId: sessionId, reasoningLevel: "high" } });
+      runtime.setModelSelection(undefined);
+      await runtime.send("second");
+      expect(sent).toHaveBeenLastCalledWith(sessionId, { text: "second" });
+    } finally { await runtime.stop(); }
   });
 
   for (const overlap of [true, false]) it(`preserves an in-flight earlier cursor only when refreshed history overlaps (${overlap})`, async () => {

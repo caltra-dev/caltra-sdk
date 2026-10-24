@@ -71,3 +71,38 @@ The runtime reconciles optimistic user IDs with persisted history and exposes co
 `@caltra/assistant-ui` translates the runtime to assistant-ui. Other UI adapters can consume the same subscription/action contract without duplicating transport or session reconciliation. CopilotKit/AG-UI integration is not implemented.
 
 Browser deployment prerequisite: activate the Caltra API/worker capability release before upgrading consumers. Client 0.10.0 sends `x-caltra-session-run-state`, which must be allowed by the API’s CORS policy. The runtime’s missing-field fallback applies only after transport succeeds.
+
+## Model selection for the next message (unreleased)
+
+Requires a Caltra server with the session model choices API. The catalog contains
+only public model names/IDs and allowed reasoning levels for the hosted agent;
+provider credentials and routing details stay on the server.
+
+```ts
+const { choices } = await client.getSessionModelChoices(sessionId);
+const choice = choices.find(item => !item.is_default);
+if (choice) {
+  runtime.setModelSelection({
+    platformModelId: choice.platform_model_id,
+    reasoningLevel: choice.reasoning_level,
+  });
+}
+await runtime.send("Use these settings for this message");
+runtime.setModelSelection(undefined); // Restore the session default.
+```
+
+The runtime retains this selection while mounted and exposes it in its snapshot.
+It applies to subsequent sends in the same conversation without replacing the
+runtime, history, or composer. Changes are rejected while a turn is running.
+Direct callers may pass the same `modelSelection` to `client.sendMessage`.
+The HTTP body uses `model_selection: { platform_model_id, reasoning_level }`;
+`reasoning_level: null` explicitly requests the provider default. Omitting
+`model_selection` keeps the existing session default behavior.
+
+Caltra revalidates each selected pair on submission and pins it on the new turn.
+Invalid choices return `invalid_model_selection`; an explicit selection while a
+turn is queued/running returns `turn_in_progress`. Retry the same request ID with
+the same selection. Agent policy edits apply to later submissions, and do not
+rewrite accepted turns. External executor agents do not expose hosted choices.
+Reasoning effort controls generation; thinking-display controls only visibility
+of reasoning actually returned by the provider.

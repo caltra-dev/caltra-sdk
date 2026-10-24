@@ -1,11 +1,19 @@
-import { CaltraClient, CaltraSessionEventConnection, type CaltraSession, type CaltraSessionMessage, type CaltraSessionEvent, type CaltraPageInput, type CaltraReasoningSnapshot } from "@caltra/client";
+import { CaltraClient, CaltraSessionEventConnection, type CaltraSession, type CaltraSessionMessage, type CaltraSessionEvent, type CaltraPageInput, type CaltraReasoningSnapshot, type CaltraModelSelection, type CaltraModelChoice } from "@caltra/client";
 
 export const demoSessionId = "70000000-0000-4000-8000-000000000001";
+export const demoReasoningModelId = "90000000-0000-4000-8000-000000000002";
+export const demoFastModelId = "90000000-0000-4000-8000-000000000001";
+const modelChoices: CaltraModelChoice[] = [
+  { platform_model_id: demoFastModelId, model_name: "Demo Fast", reasoning_level: null, is_default: true },
+  ...[null, "low", "high"].map(reasoning_level => ({ platform_model_id: demoReasoningModelId, model_name: "Demo Reasoning", reasoning_level, is_default: false })),
+];
 const turnId = "70000000-0000-4000-8000-000000000002";
 const createdAt = "2026-10-21T12:00:00.000Z";
 
 /** In-memory demonstration only. No credentials, API calls, or shared mutable data. */
 export class DemoClient extends CaltraClient {
+  readonly submittedSelections: (CaltraModelSelection | undefined)[] = [];
+  override async getSessionModelChoices(_sessionId: string) { return { choices: structuredClone(modelChoices) }; }
   private streams = new Set<ReadableStreamDefaultController<Uint8Array>>();
   private reasoningStreams = new Set<ReadableStreamDefaultController<Uint8Array>>();
   private timers = new Set<ReturnType<typeof setTimeout>>();
@@ -118,7 +126,7 @@ export class DemoClient extends CaltraClient {
       }, 550);
     }, 300 + index * 1000);
   }
-  private streamThinking() {
+  private streamThinking(effort: string | null = null) {
     const generation = ++this.generation;
     const messageId = crypto.randomUUID();
     const data = { session_id: this.sessionId, turn_id: turnId, message_id: messageId };
@@ -130,7 +138,7 @@ export class DemoClient extends CaltraClient {
     this.emit({ event: "session.updated", id: crypto.randomUUID(), data: { session_id: this.sessionId } });
     this.emit({ event: "message.started", id: crypto.randomUUID(), data });
     this.emit({ event: "reasoning.updated", id: crypto.randomUUID(), data: { ...data, status: "streaming" } });
-    const chunks = ["Simulated reasoning summary: ", "inspect the sample input, ", "check the available details, ", "and prepare a concise answer."];
+    const chunks = [`Simulated reasoning summary${effort ? ` (${effort} effort)` : ""}: `, "inspect the sample input, ", "check the available details, ", "and prepare a concise answer."];
     chunks.forEach((delta, sequence) => this.later(() => {
       if (generation !== this.generation) return;
       snapshot.sequence = sequence;
@@ -153,10 +161,14 @@ export class DemoClient extends CaltraClient {
       this.emit({ event: "session.updated", id: crypto.randomUUID(), data: { session_id: this.sessionId } });
     }, 4500);
   }
-  override async sendMessage(_id: string, input: { text: string }) {
+  override async sendMessage(_id: string, input: { text: string; modelSelection?: CaltraModelSelection }) {
+    const selection = input.modelSelection;
+    if (selection && this.running) throw new Error("Wait for the current reply before submitting a model selection.");
+    if (selection && !modelChoices.some(choice => choice.platform_model_id === selection.platformModelId && choice.reasoning_level === selection.reasoningLevel)) throw new Error("This model and reasoning combination is unavailable.");
+    this.submittedSelections.push(selection ? { ...selection } : undefined);
     const id = crypto.randomUUID();
     this.messages.push({ id, created_at: createdAt, role: "user", status: "completed", text: input.text });
-    if (input.text.startsWith("/think")) this.streamThinking();
+    if (input.text.startsWith("/think") || selection?.platformModelId === demoReasoningModelId) this.streamThinking(selection?.reasoningLevel);
     else this.streamSteps();
     return { message_id: id, turn_id: turnId };
   }

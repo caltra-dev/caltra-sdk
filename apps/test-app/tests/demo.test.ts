@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createServer, type ViteDevServer } from "vite";
 import { CaltraClient } from "@caltra/client";
 import { LocalStub } from "../server/local_stub.js";
+import { demoReasoningModelId, demoFastModelId } from "../src/demo/client.js";
 import { DemoConfig } from "../../../scripts/demo/config.ts";
 
 let server: ViteDevServer | undefined;
@@ -60,13 +61,18 @@ it("exercises auth, paginated history, tools, session creation, send, SSE and ca
   expect((await client.listSessionMessages(session.id)).data[0]!.text).toBe("Check transport");
   const runtime = client.createSessionRuntime({ sessionId: session.id });
   await runtime.start();
-  await runtime.send("/think");
+  const available = await client.getSessionModelChoices(session.id);
+  expect(available.choices.filter(choice => choice.platform_model_id === demoReasoningModelId).map(choice => choice.reasoning_level)).toEqual([null, "low", "high"]);
+  await expect(client.sendMessage(session.id, { text: "reject unsupported", modelSelection: { platformModelId: demoFastModelId, reasoningLevel: "high" } })).rejects.toThrow();
+  runtime.setModelSelection({ platformModelId: demoReasoningModelId, reasoningLevel: "high" });
+  await runtime.send("Explain a test using the selected model");
+  expect(() => runtime.setModelSelection(undefined)).toThrow("current reply");
   await vi.waitFor(() => expect(runtime.getSnapshot().messages.some(message => message.reasoning?.status === "streaming")).toBe(true));
   const thinking = runtime.getSnapshot().messages.find(message => message.reasoning?.status === "streaming")!;
   const reasoning = runtime.reasoning(thinking.id);
   try {
     await reasoning.start();
-    await vi.waitFor(() => expect(reasoning.getSnapshot().parts[0]!.text).toContain("Simulated reasoning summary"), { timeout: 2500 });
+    await vi.waitFor(() => expect(reasoning.getSnapshot().parts[0]!.text).toContain("high effort"), { timeout: 2500 });
     await vi.waitFor(() => expect(runtime.getSnapshot().isRunning).toBe(false), { timeout: 6000 });
     expect(reasoning.getSnapshot().error).toBeNull();
     expect((await client.getSessionReasoning(session.id, thinking.id)).status).toBe("completed");

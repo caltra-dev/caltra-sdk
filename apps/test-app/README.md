@@ -119,3 +119,19 @@ The standard tool UI does not load Caltra's lazy tool details automatically. It 
 show a completed marker for a failed result. CaltraChat handles durable tool status
 and lazy loading. Attachments, editing, regeneration and feedback are not supported
 by this text-only runtime. Neither production Piria nor the SDK default changes.
+
+## Model and reasoning choices (unreleased)
+
+Signal Room shares **Model** and **Reasoning effort** controls across CaltraChat
+and Standard Thread. Choices come from `GET /client/v1/sessions/:id/model-choices`;
+the UI never hard-codes production models or supported efforts. A selection
+applies to the next message in the current conversation and remains selected
+while that runtime is mounted. Both selectors are disabled during a turn.
+
+The HTTP stub offers Demo Fast and Demo Reasoning (provider default, low, high).
+Choose Demo Reasoning and send ordinary text to stream a deterministic reasoning
+summary; its effort label confirms the submitted setting. These are simulated
+models, not provider inference. Real mode requires the matching Caltra API
+release and hosted-agent user choices. Older servers retain session-default
+messaging and show a model-catalog error with Retry. This feature does not deploy
+or publish either repository automatically.

@@ -34,3 +34,5 @@ export type { CaltraConnectionState, CaltraSessionSnapshot, CaltraSessionRuntime
 export { CaltraReasoningRuntime } from "./reasoning_runtime.js";
 export type { CaltraReasoningState } from "./reasoning_runtime.js";
 export type { CaltraReasoningSnapshot, CaltraReasoningEvent, CaltraReasoningMetadataEvent } from "./types.js";
+
+export type { CaltraModelSelection, CaltraModelChoice } from "./types.js";

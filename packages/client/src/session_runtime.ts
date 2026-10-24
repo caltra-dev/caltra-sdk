@@ -1,4 +1,4 @@
-import type { CaltraMessageContext } from "./types.js";
+import type { CaltraMessageContext, CaltraModelSelection } from "./types.js";
 import { CaltraReasoningRuntime } from "./reasoning_runtime.js";
 import {
   type CaltraSessionEvent,
@@ -13,6 +13,8 @@ export type CaltraConnectionState = "connecting" | "connected" | "recovering" | 
 
 export interface CaltraSessionSnapshot {
   session: CaltraSession | null;
+  /** Selection for future sends only; never changes an accepted turn. */
+  modelSelection?: CaltraModelSelection;
   connection: CaltraConnectionState;
   error: Error | null;
   /** True only after an authoritative history response, including an empty one. */
@@ -242,9 +244,15 @@ export class CaltraSessionRuntime {
     await this.start();
   }
 
+  setModelSelection(selection: CaltraModelSelection | undefined): void {
+    if (this.snapshot.isRunning) throw new Error("Wait for the current reply before changing the model.");
+    this.update({ modelSelection: selection ? { ...selection } : undefined });
+  }
+
   async send(text: string, options: { context?: CaltraMessageContext } = {}): Promise<void> {
-    // Capture before connection/authentication awaits: navigation must not alter accepted input.
+    // Snapshot both inputs before connection/authentication awaits.
     const context = options.context === undefined ? undefined : structuredClone(options.context);
+    const modelSelection = this.snapshot.modelSelection ? { ...this.snapshot.modelSelection } : undefined;
     await this.start();
     const generation = this.generation;
     const temporaryId = `pending-${crypto.randomUUID()}`;
@@ -258,7 +266,7 @@ export class CaltraSessionRuntime {
     this.pendingSends.add(temporaryId);
     this.update({ messages: [...this.snapshot.messages, optimistic] });
     try {
-      const submitted = await this.client.sendMessage(this.sessionId, { text, ...(context === undefined ? {} : { context }) });
+      const submitted = await this.client.sendMessage(this.sessionId, { text, ...(context === undefined ? {} : { context }), ...(modelSelection ? { modelSelection } : {}) });
       if (generation !== this.generation) return;
       this.update({
         ...(this.snapshot.session?.is_running === undefined ? {} : {

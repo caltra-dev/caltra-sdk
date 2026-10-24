@@ -1,3 +1,4 @@
+import type { CaltraModelChoice } from "./types.js";
 import { CaltraSessionRuntime, type CaltraSessionRuntimeOptions } from "./session_runtime.js";
 import { CaltraAgentsClient } from "./agents.js";
 import { z } from "zod";
@@ -227,12 +228,18 @@ export class CaltraClient {
     return new CaltraSessionEventConnection(response);
   }
 
+  async getSessionModelChoices(sessionId: string): Promise<{ choices: CaltraModelChoice[] }> {
+    return this.request(`/sessions/${encodeURIComponent(sessionId)}/model-choices`, z.object({ choices: z.array(z.object({
+      platform_model_id: z.string().uuid(), model_name: z.string(), reasoning_level: z.string().nullable(), is_default: z.boolean(),
+    })) }), { method: "GET" });
+  }
+
   async sendMessage(sessionId: string, input: CaltraMessageInput): Promise<CaltraMessageSubmission> {
     return await this.request(
       `/sessions/${encodeURIComponent(sessionId)}/messages`,
       SubmissionSchema,
       {
-        body: JSON.stringify({ text: input.text, request_id: input.requestId, context: input.context }),
+        body: JSON.stringify({ text: input.text, request_id: input.requestId, context: input.context, ...(input.modelSelection ? { model_selection: { platform_model_id: input.modelSelection.platformModelId, reasoning_level: input.modelSelection.reasoningLevel } } : {}) }),
         headers: { "content-type": "application/json" },
         method: "POST",
       },

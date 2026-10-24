@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { Readable } from "node:stream";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Plugin } from "vite";
@@ -41,12 +42,16 @@ export class LocalStub {
     const client = match && this.sessions.get(match[1]!);
     if (!match || !client) return json({ error: "Unknown stub route or session" }, 404);
     const id = match[1]!; const suffix = match[2];
+    if (suffix === "/model-choices" && request.method === "GET") return json(await client.getSessionModelChoices(id));
     if (!suffix && request.method === "GET") return json(await client.getSessionById(id));
     if (suffix === "/messages" && request.method === "GET") {
       const page = await client.listSessionMessages(id, { ...(url.searchParams.has("cursor") ? { cursor: url.searchParams.get("cursor")! } : {}) });
       return json(page);
     }
-    if (suffix === "/messages" && request.method === "POST" && typeof body.text === "string") return json(await client.sendMessage(id, { text: body.text }), 202);
+    if (suffix === "/messages" && request.method === "POST") {
+      const input = z.object({ text: z.string().min(1), request_id: z.string().uuid().optional(), model_selection: z.object({ platform_model_id: z.string().uuid(), reasoning_level: z.string().nullable() }).strict().optional() }).strict().parse(body);
+      return json(await client.sendMessage(id, { text: input.text, ...(input.model_selection ? { modelSelection: { platformModelId: input.model_selection.platform_model_id, reasoningLevel: input.model_selection.reasoning_level } } : {}) }), 202);
+    }
     if (suffix === "/cancel" && request.method === "POST") return json(await client.cancelSession());
     const tool = /^\/messages\/([^/]+)\/tools\/([^/]+)$/.exec(suffix!);
     if (tool && request.method === "GET") return json(await client.getSessionToolDetails(id, tool[1]!, tool[2]!));
