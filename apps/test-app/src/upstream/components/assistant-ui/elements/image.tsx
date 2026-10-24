@@ -1,5 +1,7 @@
 "use client";
 
+import { useThreadText } from "@/lib/thread-i18n";
+
 import {
   memo,
   useState,
@@ -214,10 +216,12 @@ function ImagePreview({
   fit = "contain",
   onLoad,
   onError,
-  alt = "Image content",
+  alt: suppliedAlt,
   src,
   ...props
 }: ImagePreviewProps) {
+  const t = useThreadText();
+  const alt = suppliedAlt ?? t("Image content");
   const imgRef = useRef<HTMLImageElement>(null);
   const [loadedSrc, setLoadedSrc] = useState<string | undefined>(undefined);
   const [errorSrc, setErrorSrc] = useState<string | undefined>(undefined);
@@ -313,6 +317,7 @@ function ImageSource({
   iconUrl,
   ...props
 }: ImageSourceProps) {
+  const t = useThreadText();
   const href = safeHref(url);
   const host = hostOf(url);
   const displayLabel = label || host;
@@ -357,7 +362,7 @@ function ImageSource({
           className="hover:text-foreground truncate"
         >
           {displayLabel}
-          <span className="sr-only"> (opens in a new tab)</span>
+          <span className="sr-only">{t("(opens in a new tab)")}</span>
         </a>
       ) : (
         <span data-slot="image-source-label" className="truncate">
@@ -394,7 +399,9 @@ type ImageZoomProps = PropsWithChildren<{
   alt?: string;
 }>;
 
-function ImageZoom({ src, alt = "Image preview", children }: ImageZoomProps) {
+function ImageZoom({ src, alt: suppliedAlt, children }: ImageZoomProps) {
+  const t = useThreadText();
+  const alt = suppliedAlt ?? t("Image preview");
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -464,7 +471,7 @@ function ImageZoom({ src, alt = "Image preview", children }: ImageZoomProps) {
         role="button"
         tabIndex={0}
         className="aui-image-zoom-trigger cursor-zoom-in"
-        aria-label="Click to zoom image"
+        aria-label={t("Click to zoom image")}
       >
         {children}
       </div>
@@ -477,7 +484,7 @@ function ImageZoom({ src, alt = "Image preview", children }: ImageZoomProps) {
             aria-modal="true"
             className="aui-image-zoom-overlay fade-in animate-in fixed inset-0 z-50 flex items-center justify-center bg-black/80 duration-200"
             onClick={handleClose}
-            aria-label="Zoomed image"
+            aria-label={t("Zoomed image")}
           >
             <img
               data-slot="image-zoom-content"
@@ -492,7 +499,7 @@ function ImageZoom({ src, alt = "Image preview", children }: ImageZoomProps) {
             <button
               ref={closeRef}
               type="button"
-              aria-label="Close zoomed image"
+              aria-label={t("Close zoomed image")}
               onClick={(e) => {
                 e.stopPropagation();
                 handleClose();
@@ -509,6 +516,7 @@ function ImageZoom({ src, alt = "Image preview", children }: ImageZoomProps) {
 }
 
 function ImageGenerating({ className }: { className?: string }) {
+  const t = useThreadText();
   return (
     <div
       data-slot="image-generating"
@@ -518,7 +526,7 @@ function ImageGenerating({ className }: { className?: string }) {
       )}
     >
       <Loader2Icon className="text-muted-foreground size-8 animate-spin" />
-      <span className="sr-only">Generating image…</span>
+      <span className="sr-only">{t("Generating image…")}</span>
     </div>
   );
 }
@@ -530,6 +538,7 @@ function ImageContentFilterError({
   className?: string;
   reason?: string;
 }) {
+  const t = useThreadText();
   return (
     <div
       data-slot="image-content-filter-error"
@@ -539,7 +548,7 @@ function ImageContentFilterError({
       )}
     >
       <ShieldAlertIcon className="text-muted-foreground size-8" />
-      <p className="text-sm font-medium">Image could not be generated</p>
+      <p className="text-sm font-medium">{t("Image could not be generated")}</p>
       {reason && <p className="text-muted-foreground text-xs">{reason}</p>}
     </div>
   );
@@ -560,6 +569,7 @@ function RegenerateButton({
 }: {
   onRegenerate: () => void | Promise<void>;
 }) {
+  const t = useThreadText();
   const [isRegenerating, setIsRegenerating] = useState(false);
   return (
     <button
@@ -575,7 +585,7 @@ function RegenerateButton({
       }}
       disabled={isRegenerating}
       data-slot="image-regenerate"
-      aria-label="Regenerate image"
+      aria-label={t("Regenerate image")}
       className="hover:bg-muted inline-flex size-7 items-center justify-center rounded disabled:opacity-50"
     >
       <RefreshCwIcon
@@ -586,6 +596,7 @@ function RegenerateButton({
 }
 
 function ImageActions({ part, onRegenerate, className }: ImageActionsProps) {
+  const t = useThreadText();
   return (
     <div
       data-slot="image-actions"
@@ -595,7 +606,7 @@ function ImageActions({ part, onRegenerate, className }: ImageActionsProps) {
         type="button"
         onClick={() => downloadImagePart(part)}
         data-slot="image-download"
-        aria-label="Download image"
+        aria-label={t("Download image")}
         className="hover:bg-muted inline-flex size-7 items-center justify-center rounded"
       >
         <DownloadIcon className="size-4" />
@@ -606,7 +617,7 @@ function ImageActions({ part, onRegenerate, className }: ImageActionsProps) {
           copyImagePart(part).catch(() => {});
         }}
         data-slot="image-copy"
-        aria-label="Copy image"
+        aria-label={t("Copy image")}
         className="hover:bg-muted inline-flex size-7 items-center justify-center rounded"
       >
         <CopyIcon className="size-4" />
@@ -617,6 +628,7 @@ function ImageActions({ part, onRegenerate, className }: ImageActionsProps) {
 }
 
 const ImageImpl: ImageMessagePartComponent = (props) => {
+  const t = useThreadText();
   const { image, filename, status } = props;
 
   if (status?.type === "running") {
@@ -631,15 +643,15 @@ const ImageImpl: ImageMessagePartComponent = (props) => {
   if (status?.type === "incomplete" && status.reason === "content-filter") {
     return (
       <ImageRoot>
-        <ImageContentFilterError reason="The provider blocked this image." />
+        <ImageContentFilterError reason={t("The provider blocked this image.")} />
       </ImageRoot>
     );
   }
 
   return (
     <ImageRoot>
-      <ImageZoom src={image} alt={filename || "Image content"}>
-        <ImagePreview src={image} alt={filename || "Image content"} />
+      <ImageZoom src={image} alt={filename || t("Image content")}>
+        <ImagePreview src={image} alt={filename || t("Image content")} />
       </ImageZoom>
       <ImageFilename>{filename}</ImageFilename>
     </ImageRoot>

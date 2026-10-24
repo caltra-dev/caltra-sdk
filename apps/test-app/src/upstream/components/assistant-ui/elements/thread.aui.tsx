@@ -1,5 +1,7 @@
 "use client";
 
+import { useThreadText } from "@/lib/thread-i18n";
+
 import {
   ComposerAddAttachment,
   ComposerAttachments,
@@ -154,13 +156,15 @@ const isHistoryLoadingView = (s: AssistantState) =>
   !s.thread.isDisabled &&
   !s.threads.isLoading;
 
-const ThreadHistorySkeleton: FC = () => (
+const ThreadHistorySkeleton: FC = () => {
+  const t = useThreadText();
+  return (
   <div
     data-slot="aui_thread-history-skeleton"
     role="status"
     className="animate-in fade-in fill-mode-both flex flex-col gap-y-6 [animation-delay:150ms] [animation-duration:200ms]"
   >
-    <span className="sr-only">Loading conversation</span>
+    <span className="sr-only">{t("Loading conversation")}</span>
     <Skeleton className="ml-auto h-9 w-2/5 rounded-xl motion-reduce:animate-none" />
     <div className="flex flex-col gap-y-2">
       <Skeleton className="h-4 w-11/12 motion-reduce:animate-none" />
@@ -174,6 +178,7 @@ const ThreadHistorySkeleton: FC = () => (
     </div>
   </div>
 );
+};
 
 export const Thread: FC<ThreadProps> = ({
   components = EMPTY_COMPONENTS,
@@ -284,6 +289,7 @@ const SpokenText: TextMessagePartComponent = ({ text }) => (
 );
 
 const SpokenMessage: FC = () => {
+  const t = useThreadText();
   const role = useAuiState((s) => s.message.role);
   const position = useVoiceRunPosition();
   const isSpeaking = useAuiState(
@@ -311,7 +317,7 @@ const SpokenMessage: FC = () => {
           className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-xs"
         >
           <PhoneIcon className="size-3" aria-hidden />
-          <span>Voice conversation</span>
+          <span>{t("Voice conversation")}</span>
         </div>
       )}
       <div
@@ -326,7 +332,7 @@ const SpokenMessage: FC = () => {
           )}
         </span>
         <span className="sr-only">
-          {role === "user" ? "You said" : "Assistant said"}
+          {role === "user" ? t("You said") : t("Assistant said")}
         </span>
         <div className="min-w-0 flex-1 wrap-break-word">
           <MessagePrimitive.Parts components={{ Text: SpokenText }} />
@@ -335,7 +341,7 @@ const SpokenMessage: FC = () => {
               data-slot="aui_spoken-message-indicator"
               role="status"
               className="text-muted-foreground ms-1 animate-pulse font-sans"
-              aria-label="Assistant is speaking"
+              aria-label={t("Assistant is speaking")}
             >
               ●
             </span>
@@ -348,6 +354,7 @@ const SpokenMessage: FC = () => {
 };
 
 const SpokenActionBar: FC = () => {
+  const t = useThreadText();
   return (
     <ActionBarPrimitive.Root
       hideWhenRunning
@@ -355,7 +362,7 @@ const SpokenActionBar: FC = () => {
       className="aui-spoken-action-bar text-muted-foreground flex shrink-0 gap-1"
     >
       <ActionBarPrimitive.Copy asChild>
-        <TooltipIconButton tooltip="Copy" className="size-6">
+        <TooltipIconButton tooltip={t("Copy")} className="size-6">
           <AuiIf condition={(s) => s.message.isCopied}>
             <CheckIcon className="animate-in zoom-in-50 fade-in duration-200 ease-out" />
           </AuiIf>
@@ -386,6 +393,7 @@ const nextFocusable = (start: Element) => {
 };
 
 const ThreadLoadEarlier: FC = () => {
+  const t = useThreadText();
   const visible = useAuiState(
     (s) => s.thread.hasEarlier || s.thread.isLoadingEarlier,
   );
@@ -414,7 +422,7 @@ const ThreadLoadEarlier: FC = () => {
       }}
     >
       <span role="status" className="sr-only">
-        {loading ? "Loading earlier messages" : ""}
+        {loading ? t("Loading earlier messages") : ""}
       </span>
       {visible && (
         <ThreadPrimitive.LoadEarlier asChild>
@@ -427,7 +435,7 @@ const ThreadLoadEarlier: FC = () => {
             <span
               className={cn(loading && "shimmer motion-reduce:animate-none")}
             >
-              {loading ? "Loading earlier messages" : "Load earlier messages"}
+              {loading ? t("Loading earlier messages") : t("Load earlier messages")}
             </span>
           </Button>
         </ThreadPrimitive.LoadEarlier>
@@ -437,10 +445,11 @@ const ThreadLoadEarlier: FC = () => {
 };
 
 const ThreadScrollToBottom: FC = () => {
+  const t = useThreadText();
   return (
     <ThreadPrimitive.ScrollToBottom asChild>
       <TooltipIconButton
-        tooltip="Scroll to bottom"
+        tooltip={t("Scroll to bottom")}
         variant="outline"
         className="aui-thread-scroll-to-bottom dark:border-border dark:bg-background dark:hover:bg-accent absolute -top-12 z-10 self-center rounded-full p-4 disabled:invisible"
       >
@@ -451,11 +460,10 @@ const ThreadScrollToBottom: FC = () => {
 };
 
 const ThreadWelcome: FC = () => {
+  const t = useThreadText();
   return (
     <div className="aui-thread-welcome-root mb-6 flex flex-col px-2">
-      <p className="aui-thread-welcome-message-inner fade-in slide-in-from-bottom-1 animate-in fill-mode-both text-2xl font-medium tracking-tight duration-200">
-        How can I help you today?
-      </p>
+      <p className="aui-thread-welcome-message-inner fade-in slide-in-from-bottom-1 animate-in fill-mode-both text-2xl font-medium tracking-tight duration-200">{t("How can I help you today?")}</p>
     </div>
   );
 };
@@ -495,6 +503,7 @@ const ThreadSuggestionItem: FC = () => {
 };
 
 const Composer: FC<{ autoFocus: boolean }> = ({ autoFocus }) => {
+  const t = useThreadText();
   return (
     <ComposerPrimitive.Root className="aui-composer-root relative flex w-full flex-col">
       <ComposerPrimitive.AttachmentDropzone asChild>
@@ -504,12 +513,12 @@ const Composer: FC<{ autoFocus: boolean }> = ({ autoFocus }) => {
         >
           <ComposerAttachments />
           <ComposerPrimitive.Input
-            placeholder="Send a message..."
+            placeholder={t("Send a message...")}
             className="aui-composer-input caret-primary placeholder:text-muted-foreground/60 max-h-48 min-h-10 w-full resize-none bg-transparent px-2.5 py-1 text-base leading-6 outline-none"
             rows={1}
             autoFocus={autoFocus}
             enterKeyHint="send"
-            aria-label="Message input"
+            aria-label={t("Message input")}
           />
           <ComposerAction />
         </div>
@@ -519,6 +528,7 @@ const Composer: FC<{ autoFocus: boolean }> = ({ autoFocus }) => {
 };
 
 const ComposerAction: FC = () => {
+  const t = useThreadText();
   // The stop control only cancels the send while no run it could stop is going.
   const isSending = useAuiState(
     (s) =>
@@ -534,13 +544,13 @@ const ComposerAction: FC = () => {
           <AuiIf condition={(s) => s.composer.dictation == null}>
             <ComposerPrimitive.Dictate asChild>
               <TooltipIconButton
-                tooltip="Voice input"
+                tooltip={t("Voice input")}
                 side="bottom"
                 type="button"
                 variant="ghost"
                 size="icon"
                 className="aui-composer-dictate text-muted-foreground hover:text-foreground size-7 rounded-full"
-                aria-label="Start voice input"
+                aria-label={t("Start voice input")}
               >
                 <MicIcon className="aui-composer-dictate-icon size-4" />
               </TooltipIconButton>
@@ -549,13 +559,13 @@ const ComposerAction: FC = () => {
           <AuiIf condition={(s) => s.composer.dictation != null}>
             <ComposerPrimitive.StopDictation asChild>
               <TooltipIconButton
-                tooltip="Stop dictation"
+                tooltip={t("Stop dictation")}
                 side="bottom"
                 type="button"
                 variant="ghost"
                 size="icon"
                 className="aui-composer-stop-dictation text-destructive size-7 rounded-full"
-                aria-label="Stop voice input"
+                aria-label={t("Stop voice input")}
               >
                 <SquareIcon className="aui-composer-stop-dictation-icon size-3.5 animate-pulse fill-current" />
               </TooltipIconButton>
@@ -572,13 +582,13 @@ const ComposerAction: FC = () => {
         >
           <ComposerPrimitive.Send asChild>
             <TooltipIconButton
-              tooltip="Send message"
+              tooltip={t("Send message")}
               side="bottom"
               type="button"
               variant="default"
               size="icon"
               className="aui-composer-send size-7 rounded-full"
-              aria-label="Send message"
+              aria-label={t("Send message")}
             >
               <ArrowUpIcon className="aui-composer-send-icon size-4" />
             </TooltipIconButton>
@@ -587,13 +597,13 @@ const ComposerAction: FC = () => {
         <AuiIf condition={shouldShowComposerResume}>
           <ComposerPrimitive.Resume asChild>
             <TooltipIconButton
-              tooltip="Resume generating"
+              tooltip={t("Resume generating")}
               side="bottom"
               type="button"
               variant="default"
               size="icon"
               className="aui-composer-resume size-7 rounded-full"
-              aria-label="Resume generating"
+              aria-label={t("Resume generating")}
             >
               <PlayIcon className="aui-composer-resume-icon size-4" />
             </TooltipIconButton>
@@ -612,7 +622,7 @@ const ComposerAction: FC = () => {
               variant="default"
               size="icon"
               className="aui-composer-cancel size-7 rounded-full"
-              aria-label={isSending ? "Cancel sending" : "Stop generating"}
+              aria-label={isSending ? t("Cancel sending") : t("Stop generating")}
             >
               <SquareIcon className="aui-composer-cancel-icon size-3.5 fill-current" />
             </Button>
@@ -634,6 +644,7 @@ const MessageError: FC = () => {
 };
 
 export const AssistantMessage: FC = () => {
+  const t = useThreadText();
   const {
     ToolFallback: ToolFallbackComponent = ToolFallback,
     ToolGroup,
@@ -722,7 +733,7 @@ export const AssistantMessage: FC = () => {
                   <span
                     data-slot="aui_assistant-message-indicator"
                     className="animate-pulse font-sans"
-                    aria-label="Assistant is working"
+                    aria-label={t("Assistant is working")}
                   >
                     {"●"}
                   </span>
@@ -747,6 +758,7 @@ export const AssistantMessage: FC = () => {
 };
 
 const AssistantActionBar: FC = () => {
+  const t = useThreadText();
   return (
     <ActionBarPrimitive.Root
       hideWhenRunning
@@ -754,7 +766,7 @@ const AssistantActionBar: FC = () => {
       className="aui-assistant-action-bar-root text-muted-foreground animate-in fade-in col-start-3 row-start-2 -ms-1 flex gap-1 duration-200"
     >
       <ActionBarPrimitive.Copy asChild>
-        <TooltipIconButton tooltip="Copy">
+        <TooltipIconButton tooltip={t("Copy")}>
           <AuiIf condition={(s) => s.message.isCopied}>
             <CheckIcon className="animate-in zoom-in-50 fade-in duration-200 ease-out" />
           </AuiIf>
@@ -766,7 +778,7 @@ const AssistantActionBar: FC = () => {
       <AuiIf condition={(s) => s.thread.capabilities.feedback}>
         <ActionBarPrimitive.FeedbackPositive asChild>
           <TooltipIconButton
-            tooltip="Helpful"
+            tooltip={t("Helpful")}
             className="data-[submitted=true]:bg-accent data-[submitted=true]:text-accent-foreground"
           >
             <ThumbsUpIcon />
@@ -774,7 +786,7 @@ const AssistantActionBar: FC = () => {
         </ActionBarPrimitive.FeedbackPositive>
         <ActionBarPrimitive.FeedbackNegative asChild>
           <TooltipIconButton
-            tooltip="Not helpful"
+            tooltip={t("Not helpful")}
             className="data-[submitted=true]:bg-accent data-[submitted=true]:text-accent-foreground"
           >
             <ThumbsDownIcon />
@@ -841,6 +853,7 @@ const UserMessage: FC = () => {
 };
 
 const UserActionBar: FC = () => {
+  const t = useThreadText();
   return (
     <ActionBarPrimitive.Root
       hideWhenRunning
@@ -848,7 +861,7 @@ const UserActionBar: FC = () => {
       className="aui-user-action-bar-root flex flex-col items-end"
     >
       <ActionBarPrimitive.Edit asChild>
-        <TooltipIconButton tooltip="Edit" className="aui-user-action-edit">
+        <TooltipIconButton tooltip={t("Edit")} className="aui-user-action-edit">
           <PencilIcon />
         </TooltipIconButton>
       </ActionBarPrimitive.Edit>
@@ -857,6 +870,7 @@ const UserActionBar: FC = () => {
 };
 
 const EditComposer: FC = () => {
+  const t = useThreadText();
   return (
     <MessagePrimitive.Root
       data-slot="aui_edit-composer-wrapper"
@@ -869,14 +883,10 @@ const EditComposer: FC = () => {
         />
         <div className="aui-edit-composer-footer mx-2.5 mb-2.5 flex items-center gap-1.5 self-end">
           <ComposerPrimitive.Cancel asChild>
-            <Button variant="ghost" size="sm" className="h-8 px-3">
-              Cancel
-            </Button>
+            <Button variant="ghost" size="sm" className="h-8 px-3">{t("Cancel")}</Button>
           </ComposerPrimitive.Cancel>
           <ComposerPrimitive.Send asChild>
-            <Button size="sm" className="h-8 px-3">
-              Update
-            </Button>
+            <Button size="sm" className="h-8 px-3">{t("Update")}</Button>
           </ComposerPrimitive.Send>
         </div>
       </ComposerPrimitive.Root>
@@ -888,6 +898,7 @@ const BranchPicker: FC<BranchPickerPrimitive.Root.Props> = ({
   className,
   ...rest
 }) => {
+  const t = useThreadText();
   return (
     <BranchPickerPrimitive.Root
       hideWhenSingleBranch
@@ -898,7 +909,7 @@ const BranchPicker: FC<BranchPickerPrimitive.Root.Props> = ({
       {...rest}
     >
       <BranchPickerPrimitive.Previous asChild>
-        <TooltipIconButton tooltip="Previous">
+        <TooltipIconButton tooltip={t("Previous")}>
           <ChevronLeftIcon />
         </TooltipIconButton>
       </BranchPickerPrimitive.Previous>
@@ -906,7 +917,7 @@ const BranchPicker: FC<BranchPickerPrimitive.Root.Props> = ({
         <BranchPickerPrimitive.Number /> / <BranchPickerPrimitive.Count />
       </span>
       <BranchPickerPrimitive.Next asChild>
-        <TooltipIconButton tooltip="Next">
+        <TooltipIconButton tooltip={t("Next")}>
           <ChevronRightIcon />
         </TooltipIconButton>
       </BranchPickerPrimitive.Next>

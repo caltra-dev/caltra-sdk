@@ -1,5 +1,7 @@
 "use client";
 
+import { useThreadText } from "@/lib/thread-i18n";
+
 import {
   type PropsWithChildren,
   useState,
@@ -43,11 +45,12 @@ type AttachmentPreviewProps = {
 };
 
 const AttachmentPreview: FC<AttachmentPreviewProps> = ({ src, name }) => {
+  const t = useThreadText();
   const [isLoaded, setIsLoaded] = useState(false);
   return (
     <img
       src={src}
-      alt={`Preview of ${name}`}
+      alt={t("Preview of {name}", { name })}
       className={cn(
         "block h-auto max-h-[80vh] w-auto max-w-full rounded-sm object-contain transition-opacity duration-300 motion-reduce:transition-none",
         isLoaded
@@ -69,6 +72,7 @@ const AttachmentPreviewDialog: FC<AttachmentPreviewDialogProps> = ({
   src,
   name,
 }) => {
+  const t = useThreadText();
   if (!src) return children;
 
   return (
@@ -86,7 +90,7 @@ const AttachmentPreviewDialog: FC<AttachmentPreviewDialogProps> = ({
       />
       <DialogContent className="aui-attachment-preview-dialog-content [&>button]:bg-foreground/60 [&>button]:hover:bg-foreground/80 [&_svg]:text-background p-2 sm:max-w-3xl [&>button]:rounded-full [&>button]:p-1 [&>button]:opacity-100 [&>button]:ring-0!">
         <DialogTitle className="aui-sr-only sr-only">
-          Preview {name}
+          {t("Preview {name}", { name })}
         </DialogTitle>
         <div className="aui-attachment-preview bg-background relative mx-auto flex max-h-[80dvh] w-full items-center justify-center overflow-hidden rounded-sm">
           <AttachmentPreview src={src} name={name} />
@@ -112,6 +116,7 @@ const AttachmentThumb: FC<{ src: string | undefined }> = ({ src }) => {
 };
 
 const AttachmentUI: FC = () => {
+  const t = useThreadText();
   const aui = useAui();
   const isComposer = aui.attachment.source !== "message";
   const src = useAttachmentSrc();
@@ -122,11 +127,11 @@ const AttachmentUI: FC = () => {
     const type = s.attachment.type;
     switch (type) {
       case "image":
-        return "Image";
+        return t("Image");
       case "document":
-        return "Document";
+        return t("Document");
       case "file":
-        return "File";
+        return t("File");
       default:
         return type;
     }
@@ -150,7 +155,7 @@ const AttachmentUI: FC = () => {
   const errorMessage = useAuiState((s) =>
     s.attachment.status.type === "incomplete" &&
     s.attachment.status.reason === "error"
-      ? (s.attachment.status.message ?? "Upload failed")
+      ? (s.attachment.status.message ?? t("Upload failed"))
       : undefined,
   );
 
@@ -181,11 +186,11 @@ const AttachmentUI: FC = () => {
                   )}
                   role={src ? "button" : "group"}
                   tabIndex={0}
-                  aria-label={`${src ? `Preview ${name}` : `${typeLabel} attachment ${name}`}${
+                  aria-label={`${src ? t("Preview {name}", { name }) : t("{type} attachment {name}", { type: typeLabel, name })}${
                     isError
-                      ? ", upload failed"
+                      ? t(", upload failed")
                       : isUploading
-                        ? ", uploading"
+                        ? t(", uploading")
                         : ""
                   }`}
                 />
@@ -224,11 +229,12 @@ const AttachmentUI: FC = () => {
 };
 
 const AttachmentRemove: FC<{ name: string }> = ({ name }) => {
+  const t = useThreadText();
   return (
     <AttachmentPrimitive.Remove
       render={
         <TooltipIconButton
-          tooltip={`Remove ${name}`}
+          tooltip={t("Remove {name}", { name })}
           className="aui-attachment-tile-remove absolute end-1 top-1 size-5 rounded-full bg-black/50! text-white after:absolute after:-inset-1.5 hover:bg-black/70! hover:text-white! active:scale-[0.96] motion-reduce:transition-none"
           side="top"
         />
@@ -260,16 +266,17 @@ export const ComposerAttachments: FC = () => {
 };
 
 export const ComposerAddAttachment: FC = () => {
+  const t = useThreadText();
   return (
     <ComposerPrimitive.AddAttachment
       render={
         <TooltipIconButton
-          tooltip="Add Attachment"
+          tooltip={t("Add Attachment")}
           side="bottom"
           variant="ghost"
           size="icon"
           className="aui-composer-add-attachment text-muted-foreground hover:text-foreground hover:bg-muted-foreground/15 dark:border-muted-foreground/15 dark:hover:bg-muted-foreground/30 size-7 rounded-full active:scale-[0.96] motion-reduce:transition-none"
-          aria-label="Add Attachment"
+          aria-label={t("Add Attachment")}
         />
       }
     >

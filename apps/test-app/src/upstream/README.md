@@ -14,7 +14,7 @@ Imports resolve through the demo's `@` alias. See LICENSE.
 
 Signal Room embeds Thread as a selectable view. Tailwind preflight is scoped to
 `.signal-thread`; theme tokens are mapped from the shared controls. Tooltip and
-dialog portals target this panel to inherit its scoped styles. Language remains English-only. The exported AssistantMessage lets the demo
+dialog portals target this panel to inherit its scoped styles. English/Italian presentation strings use the demo-owned `lib/thread-i18n.tsx` context; common Italian labels are shared with CaltraChat. Locale changes preserve component identity. Keep these calls when refreshing upstream source; protocol constants and provider content are not translated. The exported AssistantMessage lets the demo
 compose a Caltra lazy-reasoning disclosure through the upstream AssistantMessage slot. No SDK consumer
 needs these demo-only dependencies.
 

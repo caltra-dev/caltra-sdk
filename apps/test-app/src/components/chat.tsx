@@ -1,23 +1,14 @@
 import { useAssistantUiRuntime } from "@caltra/assistant-ui";
+import { italian } from "../demo/italian-labels.js";
+import type { ThreadLocale } from "../upstream/lib/thread-i18n.js";
 import { SignalThread } from "../demo/signal-thread.js";
 import "../demo/standard-thread.css";
 import type { CaltraClient, CaltraSession } from "@caltra/client";
-import { CaltraChat, type CaltraReasoningDisplay, type CaltraChatLabels } from "@caltra/react/ui";
+import { CaltraChat, type CaltraReasoningDisplay } from "@caltra/react/ui";
 import { caltraThemes, createCaltraTheme, type CaltraColorMode, type CaltraThemeName } from "@caltra/react/themes";
 import { useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties } from "react";
 
-const italian: CaltraChatLabels = {
-  thinking: "Ragionamento…", thought: "Ragionamento", reasoningLoading: "Caricamento ragionamento…", reasoningFailed: "Impossibile caricare il ragionamento.",
-  olderLoading: "Caricamento messaggi precedenti…", olderFailed: "Impossibile caricare i messaggi precedenti. Riprova.",
-  chat: "Conversazione", welcomeTitle: "Come posso aiutarti oggi?", welcomeDescription: "",
-  placeholder: "Scrivi un messaggio…", messageInput: "Messaggio", send: "Invia messaggio",
-  copy: "Copia", copied: "Copiato", scrollToBottom: "Vai in fondo", loading: "Caricamento conversazione…",
-  connecting: "Connessione in corso…", recovering: "Riconnessione in corso. La conversazione è ancora qui.",
-  connectionFailed: "Impossibile connettersi alla conversazione. Riprova.", retry: "Riprova",
-  messageFailed: "Non è stato possibile completare il messaggio.", assistant: "Assistente", user: "Tu",
-  toolRunning: "In esecuzione…", toolCompleted: "Completato", toolFailed: "Non riuscito",
-  toolArguments: "Argomenti", toolResult: "Risultato", toolError: "Errore",
-};
+
 
 const brandTheme = createCaltraTheme({
   name: "brand", radius: "0.75rem",
@@ -40,7 +31,7 @@ export function Chat({ client, session }: { client: CaltraClient; session: Caltr
   const [reasoningDisplay, setReasoningDisplay] = useState<CaltraReasoningDisplay>("auto");
   const [theme, setTheme] = useState<CaltraThemeName | "brand">("assistant-ui");
   const [colorMode, setColorMode] = useState<CaltraColorMode>("system");
-  const [language, setLanguage] = useState("en");
+  const [language, setLanguage] = useState<ThreadLocale>("en");
   const [systemDark, setSystemDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
   useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
@@ -95,7 +86,7 @@ export function Chat({ client, session }: { client: CaltraClient; session: Caltr
           </select>
         </label>
         <label className="demo-appearance">Language
-          <select disabled={view === "standard"} aria-describedby={view === "standard" ? "thread-settings-limit" : undefined} aria-label="Language" value={view === "standard" ? "en" : language} onChange={(event) => setLanguage(event.target.value)}>
+          <select aria-label="Language" value={language} onChange={(event) => setLanguage(event.target.value as ThreadLocale)}>
             <option value="en">English</option><option value="it">Italiano</option>
           </select>
         </label>
@@ -103,12 +94,11 @@ export function Chat({ client, session }: { client: CaltraClient; session: Caltr
           disabled={sendingThinking || snapshot.isRunning || snapshot.connection !== "connected"}
           onClick={() => { void streamThinking(); }}>Stream thinking</button>
         <p className="demo-thinking-hint">Sends <code>/think</code>. Use the local API stub or Caltra’s deterministic model to stream a simulated reasoning summary.</p>
-        {view === "standard" && <p className="demo-thinking-hint" id="thread-settings-limit">Standard Thread uses English labels; its source has no language setting.</p>}
         {thinkingError && <p className="demo-thinking-hint" role="alert">Could not start thinking. Try again.</p>}
       </div>
     </header>
-    {view === "standard" ? <div className={`signal-thread${dark ? " dark" : ""}`} style={threadStyle}>
-      <SignalThread runtime={assistantRuntime} session={runtime} display={reasoningDisplay} />
+    {view === "standard" ? <div lang={language} className={`signal-thread${dark ? " dark" : ""}`} style={threadStyle}>
+      <SignalThread runtime={assistantRuntime} session={runtime} display={reasoningDisplay} locale={language} />
     </div> : <CaltraChat reasoningDisplay={reasoningDisplay} runtime={runtime} labels={language === "it" ? italian : undefined}
       theme={theme === "brand" ? brandTheme : theme} colorMode={colorMode} />}
   </main>;

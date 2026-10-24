@@ -1,5 +1,7 @@
 "use client";
 
+import { useThreadText, type ThreadTranslator, type ThreadLabel } from "@/lib/thread-i18n";
+
 import {
   forwardRef,
   memo,
@@ -149,6 +151,7 @@ function ToolFallbackTrigger({
   status?: ToolCallMessagePartStatus;
   responseDeliveryStatus?: ToolCallMessagePart["responseDeliveryStatus"];
 }) {
+  const t = useThreadText();
   const statusType = status?.type ?? "complete";
   const isRunning = statusType === "running";
   const isCancelled =
@@ -157,14 +160,14 @@ function ToolFallbackTrigger({
   const Icon = statusIconMap[statusType];
   const label =
     responseDeliveryStatus === "queued"
-      ? "Reply queued, not sent yet"
+      ? t("Reply queued, not sent yet")
       : statusType === "running"
-        ? "Running tool"
+        ? t("Running tool")
         : statusType === "requires-action"
-          ? "Waiting on tool"
+          ? t("Waiting on tool")
           : statusType === "incomplete"
-            ? `${isCancelled ? "Cancelled" : "Failed"} tool`
-            : "Used tool";
+            ? t(isCancelled ? "Cancelled tool" : "Failed tool")
+            : t("Used tool");
 
   return (
     <CollapsibleTrigger
@@ -288,6 +291,7 @@ function ToolFallbackResult({
 }: React.ComponentProps<"div"> & {
   result?: unknown;
 }) {
+  const t = useThreadText();
   if (result === undefined) return null;
 
   return (
@@ -296,9 +300,7 @@ function ToolFallbackResult({
       className={cn("aui-tool-fallback-result", className)}
       {...props}
     >
-      <p className="aui-tool-fallback-result-header text-muted-foreground text-xs font-medium">
-        Result:
-      </p>
+      <p className="aui-tool-fallback-result-header text-muted-foreground text-xs font-medium">{t("Result:")}</p>
       <pre className="aui-tool-fallback-result-content bg-muted/50 text-foreground/90 mt-1 rounded-md p-2.5 text-xs break-words whitespace-pre-wrap">
         {formatUnknownValue(result, 2)}
       </pre>
@@ -313,6 +315,7 @@ function ToolFallbackError({
 }: React.ComponentProps<"div"> & {
   status?: ToolCallMessagePartStatus;
 }) {
+  const t = useThreadText();
   if (status?.type !== "incomplete") return null;
 
   const error = status.error;
@@ -322,7 +325,7 @@ function ToolFallbackError({
   if (!errorText) return null;
 
   const isCancelled = status.reason === "cancelled";
-  const headerText = isCancelled ? "Cancelled reason:" : "Error:";
+  const headerText = isCancelled ? t("Cancelled reason:") : t("Error:");
 
   return (
     <div
@@ -343,7 +346,7 @@ function ToolFallbackError({
 const APPROVED_RESULT = "Approved by user";
 const DENIED_RESULT = "User denied tool execution";
 
-const APPROVAL_OPTION_DEFAULT_LABELS: Record<string, string> = {
+const APPROVAL_OPTION_DEFAULT_LABELS: Record<string, ThreadLabel> = {
   "allow-once": "Allow",
   "allow-always": "Always allow",
   "reject-once": "Deny",
@@ -356,10 +359,10 @@ const isKnownKind = (kind: string) =>
 const isAllowKind = (kind: string) =>
   kind === "allow-once" || kind === "allow-always";
 
-const approvalOptionLabel = (option: ToolApprovalOption) =>
+const approvalOptionLabel = (option: ToolApprovalOption, t: ThreadTranslator) =>
   option.label ??
   (isKnownKind(option.kind)
-    ? APPROVAL_OPTION_DEFAULT_LABELS[option.kind]
+    ? t(APPROVAL_OPTION_DEFAULT_LABELS[option.kind]!)
     : undefined) ??
   option.id;
 
@@ -402,14 +405,15 @@ type ApprovalReceipt = {
  */
 const approvalReceipt = (
   approval: NonNullable<ToolCallMessagePart["approval"]>,
+  t: ThreadTranslator,
 ): ApprovalReceipt => {
   if (approval.resolution !== undefined)
     return {
       outcome: "closed",
       label:
         approval.resolution === "cancelled"
-          ? "Cancelled before a decision"
-          : "Expired before a decision",
+          ? t("Cancelled before a decision")
+          : t("Expired before a decision"),
     };
 
   const chosen =
@@ -418,23 +422,22 @@ const approvalReceipt = (
       : approval.options?.find((option) => option.id === approval.optionId);
   const option =
     chosen !== undefined
-      ? approvalOptionLabel(chosen)
+      ? approvalOptionLabel(chosen, t)
       : approval.optionId === undefined
         ? undefined
         : approval.optionId;
   const answered =
     isQuestion(approval) || (chosen !== undefined && !isKnownKind(chosen.kind));
-  const automatic = approval.isAutomatic ? " automatically" : "";
 
   if (approval.approved)
     return {
       outcome: "allowed",
-      label: `${answered ? "Answered" : "Allowed"}${automatic}`,
+      label: t(approval.isAutomatic ? (answered ? "Answered automatically" : "Allowed automatically") : (answered ? "Answered" : "Allowed")),
       option,
     };
   return {
     outcome: "refused",
-    label: `${answered ? "Dismissed" : "Denied"}${automatic}`,
+    label: t(approval.isAutomatic ? (answered ? "Dismissed automatically" : "Denied automatically") : (answered ? "Dismissed" : "Denied")),
     option,
   };
 };
@@ -462,7 +465,8 @@ function ToolFallbackApprovalReceipt({
     if (shouldFocus) receiptRef.current?.focus({ preventScroll: true });
   }, [approval.id, focusReceiptRef, receiptRef]);
 
-  const receipt = approvalReceipt(approval);
+  const t = useThreadText();
+  const receipt = approvalReceipt(approval, t);
   const Icon = receiptIcons[receipt.outcome];
   const notes = [
     ...new Set(
@@ -542,6 +546,7 @@ function ToolFallbackApprovalQuestions({
   onSend: (answers: Record<string, ToolApprovalAnswer>) => void;
   onDismiss: () => void;
 }) {
+  const t = useThreadText();
   const [selected, setSelected] = useState<
     ReadonlyMap<string, readonly string[]>
   >(() => new Map());
@@ -656,8 +661,8 @@ function ToolFallbackApprovalQuestions({
                 aria-label={question.prompt}
                 placeholder={
                   question.options?.length
-                    ? "Or type an answer"
-                    : "Type your answer"
+                    ? t("Or type an answer")
+                    : t("Type your answer")
                 }
               />
             ) : null}
@@ -670,9 +675,7 @@ function ToolFallbackApprovalQuestions({
           className={pressable}
           onClick={send}
           disabled={locked || !complete}
-        >
-          Send
-        </Button>
+        >{t("Send")}</Button>
         {dismissible ? (
           <Button
             size="sm"
@@ -680,9 +683,7 @@ function ToolFallbackApprovalQuestions({
             className={pressable}
             onClick={onDismiss}
             disabled={locked}
-          >
-            Dismiss
-          </Button>
+          >{t("Dismiss")}</Button>
         ) : null}
       </div>
     </>
@@ -740,6 +741,7 @@ function ToolFallbackApprovalImpl({
   forwardedRef: React.ForwardedRef<HTMLDivElement>;
   carryFocusRef: React.MutableRefObject<boolean>;
 }) {
+  const t = useThreadText();
   const [submitted, setSubmitted] = useState(false);
   const voiceActive = useAuiState((s) => s.thread.voice !== undefined);
   const canAnswer = useAuiState((s) => s.thread.capabilities.answerToolCall);
@@ -954,9 +956,7 @@ function ToolFallbackApprovalImpl({
       className={pressable}
       onClick={dismiss}
       disabled={locked}
-    >
-      Dismiss
-    </Button>
+    >{t("Dismiss")}</Button>
   ) : null;
 
   const errorText = error ? (
@@ -974,9 +974,9 @@ function ToolFallbackApprovalImpl({
         value={answer}
         onChange={(event) => setAnswer(event.target.value)}
         disabled={locked}
-        aria-label={question ? (approval?.prompt ?? "Answer") : "Note"}
+        aria-label={question ? (approval?.prompt ?? t("Answer")) : t("Note")}
         placeholder={
-          question ? "Type your answer" : "Add a note to your decision"
+          question ? t("Type your answer") : t("Add a note to your decision")
         }
       />
       {question && (
@@ -986,9 +986,7 @@ function ToolFallbackApprovalImpl({
             className={pressable}
             onClick={submitAnswer}
             disabled={locked}
-          >
-            Send
-          </Button>
+          >{t("Send")}</Button>
           {dismissButton}
         </div>
       )}
@@ -1037,7 +1035,7 @@ function ToolFallbackApprovalImpl({
         ref={setPendingGroup}
       >
         <p className="aui-tool-fallback-approval-confirm-title font-semibold">
-          {confirmMeta?.title ?? `${approvalOptionLabel(confirming)}?`}
+          {confirmMeta?.title ?? `${approvalOptionLabel(confirming, t)}?`}
         </p>
         {confirmDescription && (
           <p className="aui-tool-fallback-approval-confirm-description text-muted-foreground whitespace-pre-line">
@@ -1061,9 +1059,7 @@ function ToolFallbackApprovalImpl({
             className={pressable}
             onClick={() => respondWithOption(confirming)}
             disabled={locked}
-          >
-            Confirm
-          </Button>
+          >{t("Confirm")}</Button>
           <Button
             size="sm"
             variant="outline"
@@ -1073,9 +1069,7 @@ function ToolFallbackApprovalImpl({
               setConfirmingId(null);
             }}
             disabled={locked}
-          >
-            Back
-          </Button>
+          >{t("Back")}</Button>
         </div>
       </div>
     );
@@ -1110,7 +1104,7 @@ function ToolFallbackApprovalImpl({
                 onClick={() => handleOption(option)}
                 disabled={locked}
               >
-                {approvalOptionLabel(option)}
+                {approvalOptionLabel(option, t)}
               </Button>
             ),
           )}
@@ -1121,9 +1115,7 @@ function ToolFallbackApprovalImpl({
               className={pressable}
               onClick={() => respond(false)}
               disabled={locked}
-            >
-              Deny
-            </Button>
+            >{t("Deny")}</Button>
           )}
           {!acceptsText && dismissButton}
         </div>
@@ -1175,18 +1167,14 @@ function ToolFallbackApprovalImpl({
           className={pressable}
           onClick={() => respond(true)}
           disabled={locked}
-        >
-          Allow
-        </Button>
+        >{t("Allow")}</Button>
         <Button
           size="sm"
           variant="outline"
           className={pressable}
           onClick={() => respond(false)}
           disabled={locked}
-        >
-          Deny
-        </Button>
+        >{t("Deny")}</Button>
       </div>
       {answerField}
       {errorText}

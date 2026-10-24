@@ -86,14 +86,17 @@ Stream thinking. Settings stay selected when switching views. Theme presets map
 to the standard Thread's CSS tokens; System mode follows the OS preference live.
 The Thread reset and tokens are scoped to its panel, including tooltip/dialog portals.
 
-Standard Thread limitations are shown beside the controls:
+Both views support English and Italian. Thread's copied components consume a
+small typed locale context; changing language updates labels, placeholders,
+tooltips, tool/reasoning controls and accessibility text without remounting Thread
+or clearing the composer draft. Common Italian strings reuse the CaltraChat labels.
+Upstream Thread, message layout, composer, and runtime remain in use. Locale changes
+do not translate existing messages, provider errors, tool names/results or approval
+payloads. The Signal Room shell controls remain English, as in CaltraChat.
 
-- **Language** is disabled and shows English. This pinned upstream component has
-  hard-coded English labels, with no language/labels prop. Italian remains available
-  in CaltraChat. Adding Thread localization requires adapting its source strings.
-- **Stream thinking** sends `/think Thinking demo complete` through the shared runtime.
-  It works with the HTTP stub and Caltra's local deterministic model. A production
-  model is not guaranteed to honor this command.
+**Stream thinking** sends `/think Thinking demo complete` through the shared runtime.
+It works with the HTTP stub and Caltra's local deterministic model. A production
+model is not guaranteed to honor this command.
 
 Both views support Thinking display. A demo adapter composes the stock Thread
 message and reasoning disclosure with `useCaltraReasoning`; reasoning text is

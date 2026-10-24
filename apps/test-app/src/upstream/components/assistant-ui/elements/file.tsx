@@ -1,5 +1,7 @@
 "use client";
 
+import { useThreadText, type ThreadTranslator } from "@/lib/thread-i18n";
+
 import { memo, type FC } from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import {
@@ -137,13 +139,13 @@ function getDataUrlSize(data: string): number {
     .byteLength;
 }
 
-function getFileLabel(mimeType: string): string {
+function getFileLabel(mimeType: string, t: ThreadTranslator): string {
   const subtype = /^[^/;]+\/(?:x-)?(?:[^;+]*\.)?([^;+.\s]+)/.exec(
     mimeType.toLowerCase(),
   )?.[1];
-  if (!subtype || subtype === "octet-stream") return "File";
-  if (subtype === "plain") return "Text file";
-  return `${subtype.toUpperCase()} file`;
+  if (!subtype || subtype === "octet-stream") return t("File");
+  if (subtype === "plain") return t("Text file");
+  return t("{type} file", { type: subtype.toUpperCase() });
 }
 
 function formatFileSize(bytes: number): string {
@@ -208,13 +210,14 @@ function FileName({
   children,
   ...props
 }: React.ComponentProps<"span">) {
+  const t = useThreadText();
   return (
     <span
       data-slot="file-name"
       className={cn("min-w-0 flex-1 truncate font-medium", className)}
       {...props}
     >
-      {children || "Unnamed file"}
+      {children || t("Unnamed file")}
     </span>
   );
 }
@@ -251,6 +254,7 @@ function FileDownload({
   children,
   ...props
 }: FileDownloadProps) {
+  const t = useThreadText();
   if (typeof data !== "string") return null;
   const kind = getFileDataKind(data, sourceType);
   const href = getFileHref(data, mimeType, sourceType);
@@ -266,7 +270,7 @@ function FileDownload({
         "text-muted-foreground hover:bg-accent hover:text-accent-foreground shrink-0 rounded-md p-1 transition-colors",
         className,
       )}
-      aria-label={!children ? `Download ${filename || "file"}` : undefined}
+      aria-label={!children ? t("Download {name}", { name: filename || t("File") }) : undefined}
       {...props}
     >
       {children || <DownloadIcon className="size-4" />}
@@ -320,6 +324,7 @@ const FileImpl: FileMessagePartComponent = ({
   mimeType,
   sourceType,
 }) => {
+  const t = useThreadText();
   const kind = getFileDataKind(data, sourceType);
   const showSize =
     typeof data === "string" && (kind === "base64" || kind === "data-uri");
@@ -361,7 +366,7 @@ const FileImpl: FileMessagePartComponent = ({
     <FileRoot>
       <FileIconDisplay mimeType={mimeType} />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <FileName>{filename || getFileLabel(mimeType)}</FileName>
+        <FileName>{filename || getFileLabel(mimeType, t)}</FileName>
         {showSize && (
           <FileSize
             bytes={

@@ -1,5 +1,7 @@
 "use client";
 
+import { useThreadText } from "@/lib/thread-i18n";
+
 import {
   useEffect,
   useRef,
@@ -82,6 +84,7 @@ export function AudioPlayer({
   className,
   ...props
 }: AudioPlayerProps) {
+  const t = useThreadText();
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playback, setPlayback] = useState({
     src,
@@ -106,7 +109,7 @@ export function AudioPlayer({
         : { src, currentTime: 0, playing: false, hasError: false }),
       ...patch,
     }));
-  const displayTitle = title ?? "Audio";
+  const displayTitle = title ?? t("Audio");
   const playbackLabel = title ? ` ${title}` : " audio";
   const durationLabel =
     duration === undefined ? "--:--" : formatDuration(duration);
@@ -155,7 +158,7 @@ export function AudioPlayer({
       ) : null}
       <button
         type="button"
-        aria-label={`${playing ? "Pause" : "Play"}${playbackLabel}`}
+        aria-label={`${playing ? t("Pause") : t("Play")}${playbackLabel}`}
         disabled={hasError}
         onClick={togglePlayback}
         className={cn(
@@ -179,7 +182,7 @@ export function AudioPlayer({
           max={duration ?? 0}
           step={0.1}
           value={Math.min(currentTime, duration ?? 0)}
-          aria-label="Seek"
+          aria-label={t("Seek")}
           aria-valuetext={`${formatDuration(currentTime)} of ${durationLabel}`}
           disabled={hasError}
           onChange={(event) => {
@@ -211,9 +214,7 @@ export function AudioPlayer({
         onError={() => update({ hasError: true, playing: false })}
       />
       {hasError ? (
-        <span role="alert" className="text-muted-foreground text-xs">
-          Can't play this audio
-        </span>
+        <span role="alert" className="text-muted-foreground text-xs">{t("Can't play this audio")}</span>
       ) : null}
     </div>
   );
@@ -228,6 +229,7 @@ export function VideoPlayer({
   className,
   ...props
 }: VideoPlayerProps) {
+  const t = useThreadText();
   const videoRef = useRef<HTMLVideoElement>(null);
   const { duration, setDurationFromMetadata } = useMediaDuration(
     videoRef,
@@ -259,7 +261,7 @@ export function VideoPlayer({
           controls
           playsInline
           preload="metadata"
-          aria-label={title ?? "Video"}
+          aria-label={title ?? t("Video")}
           className={cn(
             "block max-w-full",
             ratio !== "auto" && "h-full w-full object-contain",

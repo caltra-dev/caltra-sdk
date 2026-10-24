@@ -1,5 +1,7 @@
 "use client";
 
+import { useThreadText } from "@/lib/thread-i18n";
+
 import {
   memo,
   useCallback,
@@ -101,7 +103,8 @@ function ToolGroupTrigger({
   count: number;
   active?: boolean;
 }) {
-  const label = `${count} tool ${count === 1 ? "call" : "calls"}`;
+  const t = useThreadText();
+  const label = t(count === 1 ? "{count} tool call" : "{count} tool calls", { count });
 
   return (
     <CollapsibleTrigger

@@ -1,5 +1,7 @@
 "use client";
 
+import { useThreadText } from "@/lib/thread-i18n";
+
 import {
   createContext,
   forwardRef,
@@ -178,6 +180,7 @@ function ReasoningTrigger({
   active?: boolean;
   duration?: number | undefined;
 }) {
+  const t = useThreadText();
   const durationText = duration ? ` (${duration}s)` : "";
 
   return (
@@ -199,8 +202,7 @@ function ReasoningTrigger({
           "aui-reasoning-trigger-label-wrapper inline-block leading-none tabular-nums",
           active && "shimmer motion-reduce:animate-none",
         )}
-      >
-        Reasoning{durationText}
+      >{t("Reasoning")}{durationText}
       </span>
       <ChevronDownIcon
         data-slot="reasoning-trigger-chevron"

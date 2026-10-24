@@ -1,3 +1,4 @@
+import { ThreadLocaleProvider, useThreadText, type ThreadLocale } from "../upstream/lib/thread-i18n.js";
 import { AssistantRuntimeProvider, useAuiState, type AssistantRuntime } from "@assistant-ui/react";
 import { useCaltraReasoning } from "@caltra/assistant-ui";
 import type { CaltraSessionRuntime } from "@caltra/client";
@@ -22,6 +23,7 @@ function CaltraThreadMessage() {
 
 /** Adapt Caltra's lazy resource without replacing upstream's message presentation. */
 function ThreadReasoning({ session, display, messageId, status }: Settings & { messageId: string; status: "streaming" | "completed" }) {
+  const t = useThreadText();
   const [choice, setChoice] = useState<{ display: CaltraReasoningDisplay; status: string; open: boolean }>();
   const selected = choice?.display === display && (display !== "auto" || choice.status === status) ? choice.open : undefined;
   const open = display === "expanded" || (display !== "hidden" && (selected ?? (display === "auto" && status === "streaming")));
@@ -33,8 +35,8 @@ function ThreadReasoning({ session, display, messageId, status }: Settings & { m
       <ReasoningTrigger active={status === "streaming"} disabled={display === "expanded"} />
       <ReasoningContent aria-busy={reasoning.loading}>
         <ReasoningText>
-          {reasoning.loading && !reasoning.parts.some(part => part.text) && <p role="status">Loading reasoning…</p>}
-          {reasoning.error && <p role="alert">Could not load reasoning. <button type="button" onClick={() => { void reasoning.retry(); }}>Try again</button></p>}
+          {reasoning.loading && !reasoning.parts.some(part => part.text) && <p role="status">{t("Loading reasoning…")}</p>}
+          {reasoning.error && <p role="alert">{t("Could not load reasoning.")}{" "}<button type="button" onClick={() => { void reasoning.retry(); }}>{t("Try again")}</button></p>}
           {reasoning.parts.map(part => <p key={part.position}>{part.text}</p>)}
         </ReasoningText>
       </ReasoningContent>
@@ -43,8 +45,8 @@ function ThreadReasoning({ session, display, messageId, status }: Settings & { m
 }
 
 const components = { AssistantMessage: CaltraThreadMessage };
-export function SignalThread({ session, display, runtime }: Settings & { runtime: AssistantRuntime }) {
-  return <ReasoningSettings.Provider value={{ session, display }}>
+export function SignalThread({ session, display, runtime, locale }: Settings & { runtime: AssistantRuntime; locale: ThreadLocale }) {
+  return <ThreadLocaleProvider value={locale}><ReasoningSettings.Provider value={{ session, display }}>
     <AssistantRuntimeProvider runtime={runtime}><Thread autoFocus={false} components={components} /></AssistantRuntimeProvider>
-  </ReasoningSettings.Provider>;
+  </ReasoningSettings.Provider></ThreadLocaleProvider>;
 }

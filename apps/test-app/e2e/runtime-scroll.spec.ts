@@ -18,16 +18,22 @@ test("both views share the runtime while a turn is streaming", async ({ page }) 
   await expect(page.getByRole("button", { name: "Stop generating", exact: true })).toHaveCount(0);
 });
 
-test("Thread keeps shared controls and explains unsupported settings", async ({ page }) => {
+test("Thread localizes controls without resetting the composer", async ({ page }) => {
   await page.goto(sample);
   await page.getByLabel("Language", { exact: true }).selectOption("it");
   await page.getByLabel("Theme", { exact: true }).selectOption("ocean");
   await page.getByLabel("Color mode", { exact: true }).selectOption("dark");
   await page.getByLabel("Chat view", { exact: true }).selectOption("standard");
-  await expect(page.getByLabel("Language", { exact: true })).toBeDisabled();
-  await expect(page.getByLabel("Language", { exact: true })).toHaveValue("en");
+  await expect(page.getByLabel("Language", { exact: true })).toBeEnabled();
+  await expect(page.getByLabel("Language", { exact: true })).toHaveValue("it");
+  const composer = page.getByRole("textbox", { name: "Messaggio", exact: true });
+  await composer.fill("Bozza da conservare");
+  await expect(page.getByRole("button", { name: "Copia", exact: true }).last()).toBeVisible();
+  await page.getByLabel("Language", { exact: true }).selectOption("en");
+  await expect(page.getByRole("textbox", { name: "Message input", exact: true })).toHaveValue("Bozza da conservare");
+  await page.getByLabel("Language", { exact: true }).selectOption("it");
+  await expect(composer).toHaveValue("Bozza da conservare");
   await expect(page.getByLabel("Thinking display", { exact: true })).toBeEnabled();
-  await expect(page.locator("#thread-settings-limit")).toContainText("English labels");
   await expect(page.locator(".signal-thread")).toHaveCSS("background-color", "rgb(15, 23, 42)");
   await expect(page.getByRole("button", { name: "Stream thinking", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /Reload|Export as Markdown/ })).toHaveCount(0);
