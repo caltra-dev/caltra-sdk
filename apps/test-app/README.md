@@ -137,3 +137,19 @@ messaging and show a model-catalog error with Retry. This feature does not deplo
 or publish either repository automatically.
 
 The Model and reasoning control uses upstream assistant-ui ModelSelector and its native ModelContext registration. Caltra's session model-choices endpoint supplies all choices and effort levels; the local stub supplies deterministic equivalents. Both chat views consume the same context, and changing view preserves the selection. Controls are disabled while a reply is active. ModelContext selection is separate from Thinking display, which only controls disclosure visibility. When an older API does not expose choices, default messaging remains available.
+
+### Preview verification (2026-10-24)
+
+The connection picker and composer ModelSelector were verified on the private
+branch Sprite, including a 390px viewport, selection across chat views, and the
+stub's high-effort response. All 14 demo tests, demo type checking, and the demo
+build passed. The real connection authenticated and loaded its separate saved
+sessions. The production session model-choices route currently returns HTTP 404;
+production model selection requires the matching Caltra backend release. The demo
+keeps session-default messaging available while reporting this catalog failure.
+
+When supplying the Caltra-owned demo credential to a preview, load the development
+tooling environment first and then explicitly supply the demo configuration.
+Node's `--env-file` does not overwrite inherited variables; an unrelated inherited
+`CALTRA_API_KEY` can otherwise shadow the encrypted demo credential. Never copy
+that credential into the SDK checkout.
