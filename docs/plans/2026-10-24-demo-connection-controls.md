@@ -18,3 +18,18 @@ including credentials/origin isolation and absent-key behavior. Run demo checks 
 the existing branch Sprite, then use the browser extension to verify both chat
 views, composer selection, responsive layout, connection switching and recovery.
 Commit and provide the updated preview for user acceptance before merging.
+
+## Stock selector presentation
+
+User requested removing all selector styling overrides. Remove custom trigger and
+menu classes and the always-visible explanatory copy. Retain stock upstream
+markup, default variants/sizes, ModelContext registration and allowed choices.
+Mount the popup within the owning theme scope so standard Tailwind reset and theme
+tokens apply in both views. Check light/dark, keyboard selection and mobile width
+on the private Sprite before committing and handing off the preview.
+
+Stock-presentation verification: package/demo builds, demo type checking and all
+14 demo tests passed on the branch Sprite after rebasing onto the server SDK
+0.9.0 release. Visual validation remains pending: the browser extension timed
+out on the existing tab, a new tab, and surface inventory. Keep this change
+unmerged until visual validation and user acceptance are complete.

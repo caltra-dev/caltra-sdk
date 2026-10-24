@@ -64,7 +64,7 @@ export function Chat({ client, session, localStub }: { client: CaltraClient; ses
     <header className="chat-header" data-success-toast-anchor>
       <div data-success-toast-avoid><span className="eyebrow">CALTRA REACT SDK</span><h1>{session.agent.name}</h1></div>
       <div className="demo-controls" data-success-toast-avoid>
-        {view === "caltra" && <ModelControls />}
+        {view === "caltra" && <div className={`signal-ui${dark ? " dark" : ""}`} style={threadStyle}><ModelControls /></div>}
         <label className="demo-appearance">Chat view
           <select aria-label="Chat view" value={view} onChange={event => setView(event.target.value)}>
             <option value="caltra">CaltraChat</option><option value="standard">Standard Thread</option>

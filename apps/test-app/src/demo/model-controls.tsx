@@ -1,3 +1,4 @@
+import { PopoverPortalContainer } from "../upstream/components/ui/popover.js";
 import { ModelSelector, type ModelOption } from "../upstream/components/assistant-ui/elements/model-selector.aui.js";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { CaltraApiError, type CaltraClient, type CaltraModelChoice, type CaltraSessionRuntime, type CaltraSessionSnapshot } from "@caltra/client";
@@ -40,21 +41,17 @@ function useModelControls({ client, runtime, snapshot }: ModelControlsProps) {
 
 export function ModelControls() {
   const { models, selected, disabled, open, setOpen, choices, setSelection, loading, error, setReload } = useContext(ModelControlsContext)!;
-  return <div className="demo-model-controls">
-    <div className="demo-model-control demo-appearance">
-      <span>Model and reasoning</span>
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
+  return <PopoverPortalContainer.Provider value={container}><div ref={setContainer}>
       {selected ? <ModelSelector models={models} value={selected.platform_model_id} effort={selected.reasoning_level ?? "provider-default"}
         aria-label="Model and reasoning" disabled={disabled} open={!disabled && open} onOpenChange={setOpen}
-        className="demo-model-trigger" contentClassName="demo-model-menu"
         onValueChange={model => {
           const first = choices.find(choice => choice.platform_model_id === model);
           if (first) setSelection({ model, effort: first.reasoning_level ?? "provider-default" });
         }}
         onEffortChange={effort => setSelection({ model: selected.platform_model_id, effort })} />
-        : <button className="demo-model-trigger" type="button" disabled>{loading ? "Loading models…" : "Session default"}</button>}
-    </div>
-    <p className="demo-thinking-hint">{error ?? (choices.length === 0 && !loading ? "No selectable combinations are available for this session." : "Model and effort apply to your next message. Thinking display only changes visibility.")}
-      {error && <button type="button" onClick={() => setReload(value => value + 1)}> Retry</button>}
-    </p>
-  </div>;
+        : <ModelSelector.Root models={[]}><ModelSelector.Trigger aria-label="Model and reasoning" disabled>{loading ? "Loading models…" : "Session default"}</ModelSelector.Trigger></ModelSelector.Root>}
+    {error && <p role="alert">{error} <button type="button" onClick={() => setReload(value => value + 1)}>Retry</button></p>}
+    {!error && !loading && choices.length === 0 && <p>No selectable combinations are available for this session.</p>}
+  </div></PopoverPortalContainer.Provider>;
 }

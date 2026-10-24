@@ -5,6 +5,9 @@ import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 
 import { cn } from "../../lib/utils.js";
 
+/** Mount in the owning theme scope without changing upstream presentation. */
+export const PopoverPortalContainer = React.createContext<HTMLElement | null>(null);
+
 function Popover({ ...props }: PopoverPrimitive.Root.Props) {
   return <PopoverPrimitive.Root data-slot="popover" {...props} />;
 }
@@ -31,8 +34,9 @@ const PopoverContent = React.forwardRef<
   },
   ref,
 ) {
+  const container = React.useContext(PopoverPortalContainer);
   return (
-    <PopoverPrimitive.Portal>
+    <PopoverPrimitive.Portal container={container}>
       <PopoverPrimitive.Positioner
         align={align}
         alignOffset={alignOffset}

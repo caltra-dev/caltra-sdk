@@ -153,3 +153,5 @@ tooling environment first and then explicitly supply the demo configuration.
 Node's `--env-file` does not overwrite inherited variables; an unrelated inherited
 `CALTRA_API_KEY` can otherwise shadow the encrypted demo credential. Never copy
 that credential into the SDK checkout.
+
+The model picker uses the stock assistant-ui appearance, including its default trigger and popup sizing. No selector-specific CSS or descriptive hint is added. Its popup mounts within the owning UI theme scope so light/dark and the selected chat theme remain consistent. Catalog errors still appear when actionable.

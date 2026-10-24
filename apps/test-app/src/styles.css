@@ -24,8 +24,9 @@ body {
   background-size: 32px 32px;
 }
 
-button, input, select, textarea { font: inherit; }
-button { color: inherit; }
+/* Keep shell defaults out of the stock assistant-ui component scopes. */
+:is(button, input, select, textarea):not(:where(.signal-thread *, .signal-ui *)) { font: inherit; }
+button:not(:where(.signal-thread *, .signal-ui *)) { color: inherit; }
 
 .app-frame {
   display: grid;
@@ -239,12 +240,6 @@ button { color: inherit; }
   }
 }
 
-.demo-model-control { grid-column: 1 / -1; }
-.demo-model-trigger { min-height: 44px; width: 100%; padding: .5rem .75rem; color: #ecebdc; background: var(--panel); border: 1px solid var(--line); border-radius: .5rem; text-align: left; }
-.demo-model-trigger:disabled { opacity: .55; cursor: not-allowed; }
-.demo-model-menu { --popover: #171810; --popover-foreground: #ecebdc; --foreground: #ecebdc; --muted: #25271b; --muted-foreground: #b4b59e; --accent: #d7ff48; --accent-foreground: #121509; --border: #3a3d28; --ring: #d7ff48; --input: #3a3d28; --background: #10120c; --radius-lg: .75rem; --radius-sm: .25rem; max-width: calc(100vw - 2rem); color: var(--popover-foreground); background: var(--popover); font-family: inherit; }
-.demo-model-menu, .demo-model-menu * { box-sizing: border-box; }
-.demo-model-menu button, .demo-model-menu input { font: inherit; }
 
 .demo-app { --connection-bar-height: 94px; }
 .demo-connection-bar { height: var(--connection-bar-height); display: flex; align-items: center; gap: 1rem; padding: .75rem 1.25rem; border-bottom: 1px solid var(--line); background: var(--ink); }
@@ -253,12 +248,6 @@ button { color: inherit; }
 .demo-app .app-frame { min-height: calc(100dvh - var(--connection-bar-height)); }
 .demo-app .session-rail, .demo-app .chat-shell { height: calc(100dvh - var(--connection-bar-height)); }
 .demo-app .boot-state { min-height: calc(100dvh - var(--connection-bar-height)); }
-.demo-model-controls { grid-column: 1 / -1; min-width: 0; }
-.demo-model-controls .demo-thinking-hint { margin-top: .4rem; }
-.signal-thread .demo-model-controls { max-width: 100%; padding-right: .75rem; }
-.signal-thread .demo-model-control > span { display: none; }
-.signal-thread .demo-model-trigger { width: auto; max-width: 100%; min-height: 36px; color: var(--foreground); background: var(--muted); border-color: var(--border); font-size: .75rem; }
-.signal-thread .demo-thinking-hint { color: var(--muted-foreground); font-size: .65rem; }
 @media (max-width: 640px) {
   .demo-connection-bar { gap: .5rem; padding-inline: 1rem; }
   .demo-connection-bar label { width: 145px; }
@@ -268,3 +257,5 @@ button { color: inherit; }
 @media (max-width: 760px) {
   .demo-app .session-rail, .demo-app .chat-shell { height: auto; }
 }
+
+.demo-controls > .signal-ui { grid-column: 1 / -1; }
