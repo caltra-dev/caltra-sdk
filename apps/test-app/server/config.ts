@@ -2,10 +2,10 @@ import { z } from "zod";
 
 const ServerEnvironmentSchema = z.object({
   CALTRA_API_KEY: z.string().min(1),
-  CALTRA_API_URL: z.url().default("http://api.caltra"),
+  CALTRA_API_URL: z.url().default("https://api.caltra.dev"),
   CALTRA_BROWSER_API_URL: z.url().optional(),
   CALTRA_TENANT_USER_EXTERNAL_ID: z.string().min(1).default("sdk-test-user"),
-  CALTRA_WORKSPACE_ID: z.string().uuid(),
+  CALTRA_WORKSPACE_ID: z.string().uuid().optional(),
 });
 
 /** Resolves secrets at the Vite server boundary so browser modules cannot import them. */
@@ -14,13 +14,13 @@ export class TestAppServerConfig {
   readonly apiUrl: string;
   readonly browserApiUrl: string;
   readonly tenantUserExternalId: string;
-  readonly workspaceId: string;
+  readonly workspaceId: string | undefined;
 
   constructor(environment: Record<string, string | undefined>) {
     // npm exposes `npm run` options as npm_config_* values. Resolve those first so
     // command-line overrides remain optional and the .env configuration stays useful.
     const value = ServerEnvironmentSchema.parse({
-      CALTRA_API_KEY: environment.npm_config_api_key ?? environment.CALTRA_API_KEY,
+      CALTRA_API_KEY: environment.npm_config_caltra_api_key ?? environment.npm_config_api_key ?? environment.CALTRA_API_KEY,
       CALTRA_API_URL: environment.npm_config_caltra_url ?? environment.CALTRA_API_URL,
       CALTRA_BROWSER_API_URL: environment.CALTRA_BROWSER_API_URL,
       CALTRA_TENANT_USER_EXTERNAL_ID:

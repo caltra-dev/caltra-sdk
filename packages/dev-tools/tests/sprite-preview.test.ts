@@ -65,7 +65,8 @@ describe("Sprite SDK preview", () => {
 
   it("requires and redacts credentials", () => {
     expect(requiredSpritesToken({ SPRITES_API_TOKEN: " token " }, "SPRITES_API_TOKEN")).toBe("token");
-    expect(() => requiredSdkEnvironment({})).toThrow("CALTRA_API_URL");
+    expect(requiredSdkEnvironment({})).toEqual({ CALTRA_DEMO_MODE: "stub" });
+    expect(requiredSdkEnvironment({ CALTRA_API_KEY: "secret", CALTRA_DEMO_MODE: "stub" })).toEqual({ CALTRA_DEMO_MODE: "stub" });
     expect(redactPreviewError(new Error("failed key-value"), { CALTRA_API_KEY: "key-value" }))
       .toBe("failed [REDACTED]");
   });
@@ -99,7 +100,7 @@ describe("Sprite SDK preview", () => {
     expect(sprite.deleteService).not.toHaveBeenCalled();
     expect(execFile.mock.calls).toContainEqual([
       "npm",
-      ["run", "build", "--workspace=@caltra/react"],
+      ["run", "build", "--workspace=@caltra/server", "--workspace=@caltra/react"],
       expect.objectContaining({ cwd: config.workspaceDir }),
     ]);
     expect(writeFile).toHaveBeenCalledWith(

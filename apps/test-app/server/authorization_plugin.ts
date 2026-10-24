@@ -1,3 +1,4 @@
+import { TestAppApiProxy } from "./api_proxy.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Plugin } from "vite";
 import type { TestAppAuthorizationProxy } from "./authorization_proxy.js";
@@ -23,13 +24,13 @@ export class TestAppAuthorizationPlugin {
 
   private async respond(request: IncomingMessage, response: ServerResponse): Promise<void> {
     try {
-      const origin = request.headers.origin;
+      const origin = TestAppApiProxy.browserOrigin(request);
       if (!origin) {
         response.statusCode = 400;
         response.end(JSON.stringify({ error: "Browser Origin header is required." }));
         return;
       }
-      const authorization = await this.proxy.create(origin);
+      const authorization = await this.proxy.create(TestAppApiProxy.upstreamOrigin(origin));
       response.statusCode = 201;
       response.setHeader("cache-control", "no-store");
       response.setHeader("content-type", "application/json");

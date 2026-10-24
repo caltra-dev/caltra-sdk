@@ -4,47 +4,27 @@ This app exercises the local `@caltra/client` and `@caltra/react` packages again
 
 For UI changes, start at the [UI convention entry point](../../docs/ui/README.md).
 
-## Configure
+## Run the Thread demo
 
-Copy the example environment file:
-
-```sh
-cp .env.example .env.local
-```
-
-Set these values in `.env.local`:
-
-```dotenv
-CALTRA_API_URL=https://api.caltra.dev
-CALTRA_API_KEY=csk_replace_me
-CALTRA_WORKSPACE_ID=00000000-0000-4000-8000-000000000000
-CALTRA_TENANT_USER_EXTERNAL_ID=sdk-test-user
-```
-
-`CALTRA_API_KEY` is read only by the local Vite server. The server creates a one-time Caltra
-client authorization and returns only its one-time code to `CaltraClient`; neither the API key nor the
-tenant-scoped browser token is exposed by the application's backend route.
-
-Provision a hosted agent for `CALTRA_TENANT_USER_EXTERNAL_ID` through the server SDK before opening the app. Sessions are created within that agent.
-
-## Run
-
-From this directory:
+From the SDK repository root, after `npm install`:
 
 ```sh
-npm install
-npm run dev
+npm run demo                        # local API stub, no key required
+npm run demo -- --local-stub         # explicitly ignore any inherited API key
+npm run demo -- --caltra-api-key=<key>
 ```
 
-Open the URL printed by Vite. Changes to the local SDK packages are picked up through the repository's npm workspaces.
+`CALTRA_API_KEY` in the launch environment also selects real mode. Prefer environment injection for a saved credential; the Caltra repository's `npm run demo` launcher supplies its GitVaulty-managed demo key without copying it here. CLI keys are optional and may remain in shell history. The repository-pinned npm version rejects unknown flags before the script runs; the `--` separator is required.
 
-To override individual `.env.local` values for one run, pass npm options:
+The launcher builds the local workspace packages and opens `/thread.html`. The same interface offers Standard Thread, CaltraChat, a session selector, and New conversation. Both modes use the normal CaltraClient authorization exchange, REST schemas, and SSE parser.
 
-```sh
-npm run dev --api-key=csk_replace_me --caltra-url=https://api.caltra.dev
-```
+The stub implements the demo's authorization, agent lookup, session creation/listing, paginated messages, tool details, sending, cancellation and SSE routes. It is an in-memory simulator of this API subset, not a complete Caltra backend. It starts with 60 deterministic messages and tool success/failure examples. Sending produces eight streamed steps. New conversations are empty; state resets when the server restarts.
 
-The supported options are `--api-key`, `--caltra-url`, `--workspace-id`, and `--tenant-user-external-id`. Each supplied option takes precedence over its matching `.env.local` value; omitted options continue to use `.env.local` or the documented default.
+Real mode defaults to `https://api.caltra.dev`. Its environment key stays in the Vite server. With only a key, the server resolves/creates workspace `sdk-demo` and the hosted assistant for `sdk-test-user`; the key needs `agents:provision` and `client_tokens:create`. `CALTRA_TENANT_USER_EXTERNAL_ID` overrides that user. If `CALTRA_WORKSPACE_ID` is provided, the workspace and user's hosted agent must already exist. `CALTRA_API_URL` or `--caltra-api-url` selects another backend.
+
+Browser requests use a same-origin server proxy. It validates Origin/Referer against the request host, strips browser cookies before forwarding, and maps loopback HTTP origins to HTTPS for Caltra's production origin policy. The launcher binds to loopback. On private Sprites the actual HTTPS preview origin is preserved and `X-Preview-Authorization` is restored upstream. One-time codes and scoped client tokens reach the browser; the environment API key never does. Keep hosted demos behind authentication.
+
+To run the older Signal Room UI, open `/` on the same server. `npm run dev -w @caltra/test-app` remains available for direct Vite development, with the same environment selection.
 
 ## Packaged chat preview
 

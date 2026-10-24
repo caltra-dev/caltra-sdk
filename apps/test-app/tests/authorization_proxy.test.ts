@@ -79,3 +79,9 @@ describe("TestAppAuthorizationProxy", () => {
     expect(config.workspaceId).toBe("20000000-0000-4000-8000-000000000001");
   });
 });
+
+it("does not reflect upstream error bodies into the browser", async () => {
+  const proxy = new TestAppAuthorizationProxy(new TestAppServerConfig({ CALTRA_API_KEY: "secret", CALTRA_WORKSPACE_ID: "20000000-0000-4000-8000-000000000001" }),
+    async () => new Response("sensitive upstream diagnostics", { status: 403 }));
+  await expect(proxy.create("https://demo.example")).rejects.toThrow("HTTP 403.");
+});

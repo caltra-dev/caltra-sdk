@@ -195,3 +195,6 @@ Pass a JSON object as `context` when sending a message, or supply `getContext` t
 ```
 
 The hosted API accepts up to 16 KiB and 12 levels of JSON context. It stores the snapshot with the message and provides it to the model as untrusted user data. Context is omitted from transcript responses and optimistic UI messages. Send `{ page: null }` to explicitly clear a previous page; omit context for ordinary text-only clients. Workspace identity and authorization still come from the authenticated session.
+## Interactive demo
+
+After `npm install`, run `npm run demo` for the local API stub or provide `CALTRA_API_KEY` in the launch environment for a real connection. `npm run demo -- --local-stub` forces simulation; `npm run demo -- --caltra-api-key=<key>` accepts a one-off key. See [demo setup](apps/test-app/README.md) for server-side credentials, automatic workspace setup, and the standard assistant-ui Thread comparison.

@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "prebuild": "npm run build --workspace=@caltra/react",
-    "predev": "npm run build --workspace=@caltra/react",
-    "pretest": "npm run build --workspace=@caltra/react",
-    "pretypecheck": "npm run build --workspace=@caltra/react",
+    "prebuild": "npm run build --workspace=@caltra/server --workspace=@caltra/react",
+    "predev": "npm run build --workspace=@caltra/server --workspace=@caltra/react",
+    "pretest": "npm run build --workspace=@caltra/server --workspace=@caltra/react",
+    "pretypecheck": "npm run build --workspace=@caltra/server --workspace=@caltra/react",
     "build": "vite build",
     "dev": "vite --host 0.0.0.0",
     "test": "vitest run tests",
@@ -30,7 +30,8 @@
     "remark-gfm": "4.0.1",
     "tailwind-merge": "3.7.0",
     "zod": "4.4.3",
-    "zustand": "5.0.15"
+    "zustand": "5.0.15",
+    "@caltra/server": "0.8.0"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",

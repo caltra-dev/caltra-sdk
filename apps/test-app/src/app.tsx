@@ -12,13 +12,14 @@ import { TestAppAuthorizationCodeProvider } from "./authorization_code_provider.
 import { TestAppPreviewFetch } from "./preview_fetch.js";
 
 declare const __CALTRA_API_URL__: string;
+declare const __CALTRA_LOCAL_STUB__: boolean;
 
 export function App() {
   const { success } = useSuccessToast();
   const sdkClient = useMemo(() => {
     const authorizationCodeProvider = new TestAppAuthorizationCodeProvider();
     return new CaltraClient({
-      apiUrl: __CALTRA_API_URL__,
+      apiUrl: window.location.origin,
       fetch: TestAppPreviewFetch.fetch,
       authorizationCodeProvider: async () => await authorizationCodeProvider.create(),
     });

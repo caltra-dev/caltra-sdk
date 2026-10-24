@@ -58,11 +58,14 @@ export function createRevisionBundle(input: {
 
 export function requiredSdkEnvironment(environment: NodeJS.ProcessEnv): Record<string, string> {
   const result: Record<string, string> = {};
+  if (environment.CALTRA_DEMO_MODE === "stub") return { CALTRA_DEMO_MODE: "stub" };
   for (const name of sdkEnvironmentNames) {
     const value = environment[name]?.trim();
-    if (!value) throw new Error(`${name} is required in .env.dev-tools.gitvaulty.`);
-    result[name] = value;
+    if (value) result[name] = value;
   }
+  if (!result.CALTRA_API_KEY) return { CALTRA_DEMO_MODE: "stub" };
+  result.CALTRA_DEMO_MODE = "real";
+  if (environment.CALTRA_BROWSER_API_URL) result.CALTRA_BROWSER_API_URL = environment.CALTRA_BROWSER_API_URL;
   return result;
 }
 
@@ -145,7 +148,7 @@ async function refreshWorkspace(sprite: Sprite, config: DevToolsConfig["sprites"
     cwd: config.workspaceDir,
     timeout: 900_000,
   });
-  await execChecked(sprite, "npm", ["run", "build", "--workspace=@caltra/react"], {
+  await execChecked(sprite, "npm", ["run", "build", "--workspace=@caltra/server", "--workspace=@caltra/react"], {
     cwd: config.workspaceDir,
     timeout: 120_000,
   });
