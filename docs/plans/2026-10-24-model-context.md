@@ -13,3 +13,7 @@
 5. Run focused tests, package builds and demo typecheck on the branch Sprite; validate model/effort changes and a next-message send in both views, keyboard interaction and narrow viewport through the browser extension. Commit verified changes, deploy the exact preview commit and request user validation before merge.
 
 No backend migration, production change, or SDK publication is needed. Rollback is the feature commit; request validation continues to belong to Caltra.
+
+## Verification
+
+The Sprite passed 34 focused tests (14 session runtime, 8 assistant-ui mapping/integration, 12 demo), package builds, demo typecheck and production build. Browser-extension checks verified high-effort reasoning in both CaltraChat and Standard Thread, selection preservation on view changes, disabled controls during replies, Auto collapse, keyboard model selection, and the dropdown at a 390px viewport. The preview uses `CALTRA_DEMO_MODE=stub`; no production API behavior or SDK publication is implied. A transient stream reconnect during viewport validation revealed overly specific send-error text; the demo now distinguishes reconnection from request failure. User preview acceptance remains pending.

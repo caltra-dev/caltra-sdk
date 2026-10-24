@@ -97,7 +97,10 @@ export function Chat({ client, session }: { client: CaltraClient; session: Caltr
         <p id="thinking-demo-help" className="demo-thinking-hint">{__CALTRA_LOCAL_STUB__
           ? <>Streams a simulated reasoning summary. Auto opens while thinking and collapses when finished.</>
           : <>The thinking test requires <code>npm run demo --local-stub</code>. On the real API, a Reasoning row appears only when the model returns reasoning; display settings cannot enable it.</>}</p>
-        {view === "standard" && snapshot.error && <p className="demo-thinking-hint" role="alert">Could not send the message. Check the selection and try again.</p>}
+        {view === "standard" && snapshot.error && <p className="demo-thinking-hint" role="alert">{snapshot.connection === "recovering" || snapshot.connection === "connecting"
+          ? "Connection interrupted. Reconnecting…"
+          : snapshot.connection === "failed" ? <>Connection unavailable. <button type="button" onClick={() => { void runtime.reconnect().catch(() => undefined); }}>Retry</button></>
+          : "Could not complete the request. Check the selection and try again."}</p>}
       </div>
     </header>
     {view === "standard" ? <div lang={language} className={`signal-thread${dark ? " dark" : ""}`} style={threadStyle}>
