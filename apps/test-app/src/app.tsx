@@ -3,7 +3,7 @@ import {
   type CaltraSession,
 } from "@caltra/client";
 import { LoaderCircle } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Chat } from "./components/chat.js";
 import { SessionList } from "./components/session_list.js";
 import { useSuccessToast } from "./components/success_toast.js";
@@ -47,6 +47,7 @@ function ConnectedApp({ connection }: { connection: Connection }) {
       authorizationCodeProvider: async () => await authorizationCodeProvider.create(),
     });
   }, [connection]);
+  const mounted = useRef(false);
   const [client, setClient] = useState<CaltraClient>();
   const [agent, setAgent] = useState<{ id: string; name: string }>();
   const [sessions, setSessions] = useState<CaltraSession[]>([]);
@@ -56,6 +57,7 @@ function ConnectedApp({ connection }: { connection: Connection }) {
 
   useEffect(() => {
     let active = true;
+    mounted.current = true;
     void Promise.resolve()
       .then(async () => {
         const [hostedAgent, sessionPage] = await Promise.all([
@@ -73,7 +75,7 @@ function ConnectedApp({ connection }: { connection: Connection }) {
       .catch((reason: unknown) => { if (active) setError(
         reason instanceof Error ? reason : new Error("SDK initialization failed."),
       ); });
-    return () => { active = false; };
+    return () => { active = false; mounted.current = false; };
   }, [sdkClient]);
 
   const selectSession = (session: CaltraSession) => {
@@ -89,6 +91,7 @@ function ConnectedApp({ connection }: { connection: Connection }) {
     setError(undefined);
     try {
       const session = await client.agents.sessions(agent.id).create();
+      if (!mounted.current) return;
       setSessions((current) => [session, ...current.filter((item) => item.id !== session.id)]);
       selectSession(session);
       success({
@@ -96,9 +99,9 @@ function ConnectedApp({ connection }: { connection: Connection }) {
         operationId: `create-session:${session.id}`,
       });
     } catch (reason) {
-      setError(reason instanceof Error ? reason : new Error("Session creation failed."));
+      if (mounted.current) setError(reason instanceof Error ? reason : new Error("Session creation failed."));
     } finally {
-      setCreating(false);
+      if (mounted.current) setCreating(false);
     }
   };
 
