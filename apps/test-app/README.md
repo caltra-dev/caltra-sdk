@@ -125,3 +125,25 @@ Copy and paste into the composer to verify only the message text is copied.
 Stream steps to check that earlier controls remain available and tool-only steps
 have no Copy button. These deterministic fixtures verify shared SDK presentation,
 not a production Piria session or hosted-agent execution.
+
+## Standard Thread comparison
+
+Open `/thread.html` for the upstream assistant-ui Thread (Base UI, pinned to the
+React 0.15.30 release source). **Standard Thread** and **CaltraChat** switch layouts
+over one deterministic in-memory conversation. The separate HTML entry keeps its
+Tailwind theme isolated from the Signal Room's global styling. Neither production
+Piria nor the SDK default changes.
+
+Expand **1 tool call**, then the tool row to inspect saved arguments/results. Copy
+remains in upstream's message footer after content/tool groups. Use **Stream steps**
+or send any sample text to exercise send/stop; **Load earlier messages** loads the
+previous page. Reload resets all sample data. Switching layouts preserves messages
+but remounts the composer, so its unsent draft is layout-local.
+
+This is deliberately the standard presentation with the Caltra runtime adapter.
+Full tool parts are supplied for this demo; Caltra's lazy-details and reasoning
+wrappers are not installed. The stock tool UI can show a completed marker for a
+failed tool result, which CaltraChat corrects using durable tool metadata. Attachments,
+editing, regeneration and feedback are not implemented by this text-only demo
+runtime; visible stock controls are not evidence of backend support. Production
+adoption needs that capability and lifecycle integration review.

@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 import { TestAppServerConfig } from "./server/config.js";
@@ -5,7 +7,7 @@ import { TestAppAuthorizationPlugin } from "./server/authorization_plugin.js";
 import { TestAppAuthorizationProxy } from "./server/authorization_proxy.js";
 
 export default defineConfig(({ command, mode }) => {
-  const plugins = [...react()];
+  const plugins = [...react(), tailwindcss()];
   let apiUrl = mode === "test" ? "http://caltra.test" : "https://api.caltra.dev";
   if (command === "serve" && mode !== "test") {
     const environment = loadEnv(mode, process.cwd(), "");
@@ -14,6 +16,8 @@ export default defineConfig(({ command, mode }) => {
     plugins.push(new TestAppAuthorizationPlugin(new TestAppAuthorizationProxy(config)).toVitePlugin());
   }
   return {
+    resolve: { alias: { "@": fileURLToPath(new URL("./src/upstream", import.meta.url)) } },
+    build: { rollupOptions: { input: { main: fileURLToPath(new URL("./index.html", import.meta.url)), thread: fileURLToPath(new URL("./thread.html", import.meta.url)) } } },
     define: { __CALTRA_API_URL__: JSON.stringify(apiUrl) },
     plugins,
     server: { allowedHosts: [".sprites.app"] },
