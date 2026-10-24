@@ -31,7 +31,7 @@
     "tailwind-merge": "3.7.0",
     "zod": "4.4.3",
     "zustand": "5.0.15",
-    "@caltra/server": "0.8.0"
+    "@caltra/server": "0.9.0"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",
