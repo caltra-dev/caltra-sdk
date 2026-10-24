@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CaltraServerError } from "./error.js";
+import { CaltraAgentModelPolicyClient, type CaltraAgentModelPolicy, type CaltraAgentModelPolicyTarget, type CaltraAgentModelPolicyUpdate } from "./agent_model_policy.js";
 
 export interface CaltraAgentLookup {
   workspaceId: string;
@@ -18,6 +19,14 @@ export interface CaltraServerAgent { id: string; name: string }
 /** Resolves a user's hosted agent independently of agent_identity profiles. */
 export class CaltraAgentsClient {
   constructor(private readonly apiKey: string, private readonly apiUrl: string, private readonly fetchImplementation: typeof fetch) {}
+  /** Requires an environment server key with agents:provision authority over the target workspace. */
+  async getModelPolicy(input: CaltraAgentModelPolicyTarget): Promise<CaltraAgentModelPolicy> {
+    return new CaltraAgentModelPolicyClient(this.apiKey, this.apiUrl, this.fetchImplementation).request(input);
+  }
+  /** Atomically updates agent policy; existing session defaults and recorded turns are preserved. */
+  async updateModelPolicy(input: CaltraAgentModelPolicyUpdate): Promise<CaltraAgentModelPolicy> {
+    return new CaltraAgentModelPolicyClient(this.apiKey, this.apiUrl, this.fetchImplementation).request(input, input);
+  }
   async get(input: CaltraAgentCreateIfMissing): Promise<CaltraServerAgent>;
   async get(input: CaltraAgentLookup): Promise<CaltraServerAgent | null>;
   async get(input: CaltraAgentLookup | CaltraAgentCreateIfMissing): Promise<CaltraServerAgent | null> {

@@ -91,3 +91,28 @@ the integration supplies only that key. Obsolete environment fields are rejected
 `workspaceNamespace` optionally prefixes workspace external IDs as `namespace:externalId`.
 Use distinct namespaces for development instances and previews sharing a key.
 Browser workspace IDs and host-application authorization checks stay unchanged.
+
+### Hosted-agent model policy
+
+An environment server key with `agents:provision` can manage a hosted agent in an active workspace belonging to that key's organization and environment:
+
+```ts
+const policy = await server.agents.getModelPolicy({ workspaceId, agentId });
+await server.agents.updateModelPolicy({
+  workspaceId,
+  agentId,
+  default: { platformModelId, reasoningLevel: "high" },
+  allowedChoices: [
+    { platformModelId, reasoningLevel: null },
+    { platformModelId, reasoningLevel: "high" },
+  ],
+});
+```
+
+`default: null` restores workspace/organization inheritance. Omit `default` to preserve it. `allowedChoices` replaces the additional model/reasoning pairs; omit it to preserve the list or pass `[]` to clear it. Duplicate pairs are collapsed. `reasoningLevel: null` means automatic reasoning, not every supported effort. Reads return `inheritsModelPolicy`, `default` (null when inherited), `effectiveDefault` (null when unavailable), and `allowedChoices`.
+
+Updates are atomic. Every explicit model must be active with an active route, and a non-null reasoning level must be supported by every active route. Invalid choices return `400 invalid_model_policy`; malformed bodies return `400 invalid_request`. Invalid, expired, or revoked keys return 401, missing scope or inaccessible workspaces return 403, and absent, inactive, external, or wrong-workspace agents return 404. Errors are `CaltraServerError` instances.
+
+Defaults apply to future sessions only. Existing sessions retain their original default, which stays selectable independently of the additional choices. Clearing additional choices does not alter recorded turns or an in-progress reply. Per-message model selection remains authorized against the session's currently available choices when a new turn is submitted.
+
+The wire endpoints are `GET` and `PATCH /server/v1/workspaces/{workspace_id}/agents/{agent_id}/model-policy`. Keep server keys on your trusted server; browser client tokens cannot manage policy.
