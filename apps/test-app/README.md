@@ -135,3 +135,5 @@ models, not provider inference. Real mode requires the matching Caltra API
 release and hosted-agent user choices. Older servers retain session-default
 messaging and show a model-catalog error with Retry. This feature does not deploy
 or publish either repository automatically.
+
+The Model and reasoning control uses upstream assistant-ui ModelSelector and its native ModelContext registration. Caltra's session model-choices endpoint supplies all choices and effort levels; the local stub supplies deterministic equivalents. Both chat views consume the same context, and changing view preserves the selection. Controls are disabled while a reply is active. ModelContext selection is separate from Thinking display, which only controls disclosure visibility. When an older API does not expose choices, default messaging remains available.

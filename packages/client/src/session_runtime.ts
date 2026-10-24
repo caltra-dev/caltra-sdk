@@ -249,10 +249,11 @@ export class CaltraSessionRuntime {
     this.update({ modelSelection: selection ? { ...selection } : undefined });
   }
 
-  async send(text: string, options: { context?: CaltraMessageContext } = {}): Promise<void> {
+  async send(text: string, options: { context?: CaltraMessageContext; modelSelection?: CaltraModelSelection } = {}): Promise<void> {
     // Snapshot both inputs before connection/authentication awaits.
     const context = options.context === undefined ? undefined : structuredClone(options.context);
-    const modelSelection = this.snapshot.modelSelection ? { ...this.snapshot.modelSelection } : undefined;
+    const selection = options.modelSelection ?? this.snapshot.modelSelection;
+    const modelSelection = selection ? { ...selection } : undefined;
     await this.start();
     const generation = this.generation;
     const temporaryId = `pending-${crypto.randomUUID()}`;

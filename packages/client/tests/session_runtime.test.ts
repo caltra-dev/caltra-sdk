@@ -37,13 +37,15 @@ describe("CaltraSessionRuntime", () => {
     const runtime = new CaltraSessionRuntime(client as never, sessionId);
     const context = { page: { resource: { id: "before-navigation" } } };
     runtime.setModelSelection({ platformModelId: sessionId, reasoningLevel: "high" });
-    const sending = runtime.send("Explain this", { context });
+    const selection = { platformModelId: sessionId, reasoningLevel: "medium" };
+    const sending = runtime.send("Explain this", { context, modelSelection: selection });
+    selection.reasoningLevel = "low";
     runtime.setModelSelection({ platformModelId: sessionId, reasoningLevel: "low" });
     context.page.resource.id = "after-navigation";
     await vi.waitFor(() => expect(connect).toBeDefined());
     connect(new StubEventConnection([]));
     await sending;
-    expect(client.sendMessage).toHaveBeenCalledWith(sessionId, { text: "Explain this", modelSelection: { platformModelId: sessionId, reasoningLevel: "high" }, context: { page: { resource: { id: "before-navigation" } } } });
+    expect(client.sendMessage).toHaveBeenCalledWith(sessionId, { text: "Explain this", modelSelection: { platformModelId: sessionId, reasoningLevel: "medium" }, context: { page: { resource: { id: "before-navigation" } } } });
     expect(runtime.getSnapshot().messages).toEqual([expect.objectContaining({ text: "Explain this" })]);
     expect(JSON.stringify(runtime.getSnapshot().messages)).not.toContain("before-navigation");
     await runtime.stop();

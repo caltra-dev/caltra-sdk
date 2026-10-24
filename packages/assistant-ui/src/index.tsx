@@ -9,7 +9,8 @@ import {
   useExternalStoreRuntime,
 } from "@assistant-ui/react";
 import type { CaltraMessageContext, CaltraSessionRuntime } from "@caltra/client";
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useRef, useSyncExternalStore } from "react";
+import { modelSelectionFromContext } from "./model_context.js";
 /** Maps an already-started Caltra session runtime into assistant-ui. Never starts or stops it. */
 export interface AssistantUiRuntimeOptions {
   /** Evaluated synchronously for each send, never for transcript rendering. */
@@ -17,6 +18,7 @@ export interface AssistantUiRuntimeOptions {
 }
 
 export function useAssistantUiRuntime(store: CaltraSessionRuntime, { getContext }: AssistantUiRuntimeOptions = {}): AssistantRuntime {
+  const runtimeRef = useRef<AssistantRuntime | null>(null);
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
 
   const onNew = useCallback(async (message: AppendMessage) => {
@@ -25,7 +27,8 @@ export function useAssistantUiRuntime(store: CaltraSessionRuntime, { getContext 
       .map((part) => part.text)
       .join("\n");
     if (text === "") throw new Error("Caltra currently accepts text messages only.");
-    await store.send(text, { context: getContext?.() });
+    const modelSelection = modelSelectionFromContext(runtimeRef.current?.thread.getModelContext());
+    await store.send(text, { context: getContext?.(), modelSelection });
   }, [store, getContext]);
 
   const messages = useMemo<ThreadMessageLike[]>(() => snapshot.messages.map((message) => ({
@@ -69,6 +72,7 @@ export function useAssistantUiRuntime(store: CaltraSessionRuntime, { getContext 
     onCancel: async () => { await store.cancel().catch(() => undefined); },
   });
 
+  runtimeRef.current = runtime;
   return runtime;
 }
 

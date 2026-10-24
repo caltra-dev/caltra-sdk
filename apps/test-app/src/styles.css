@@ -238,3 +238,10 @@ button { color: inherit; }
       max(20px, env(safe-area-inset-left, 0px));
   }
 }
+
+.demo-model-control { grid-column: 1 / -1; }
+.demo-model-trigger { min-height: 44px; width: 100%; padding: .5rem .75rem; color: #ecebdc; background: var(--panel); border: 1px solid var(--line); border-radius: .5rem; text-align: left; }
+.demo-model-trigger:disabled { opacity: .55; cursor: not-allowed; }
+.demo-model-menu { --popover: #171810; --popover-foreground: #ecebdc; --foreground: #ecebdc; --muted: #25271b; --muted-foreground: #b4b59e; --accent: #d7ff48; --accent-foreground: #121509; --border: #3a3d28; --ring: #d7ff48; --input: #3a3d28; --background: #10120c; --radius-lg: .75rem; --radius-sm: .25rem; max-width: calc(100vw - 2rem); color: var(--popover-foreground); background: var(--popover); font-family: inherit; }
+.demo-model-menu, .demo-model-menu * { box-sizing: border-box; }
+.demo-model-menu button, .demo-model-menu input { font: inherit; }

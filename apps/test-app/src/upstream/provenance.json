@@ -100,6 +100,26 @@
     {
       "local": "apps/test-app/src/upstream/components/ui/skeleton.tsx",
       "upstream": "packages/ui/src/components/react/ui/base/skeleton.tsx"
+    },
+    {
+      "local": "apps/test-app/src/upstream/components/assistant-ui/elements/model-selector.aui.tsx",
+      "upstream": "packages/ui/src/components/react/assistant-ui/elements/model-selector.aui.tsx"
+    },
+    {
+      "local": "apps/test-app/src/upstream/components/assistant-ui/elements/model-selector.tsx",
+      "upstream": "packages/ui/src/components/react/assistant-ui/elements/model-selector.tsx"
+    },
+    {
+      "local": "apps/test-app/src/upstream/components/assistant-ui/utils/model-selection.ts",
+      "upstream": "packages/ui/src/components/react/assistant-ui/utils/model-selection.ts"
+    },
+    {
+      "local": "apps/test-app/src/upstream/components/ui/command.tsx",
+      "upstream": "packages/ui/src/components/react/ui/base/command.tsx"
+    },
+    {
+      "local": "apps/test-app/src/upstream/components/ui/popover.tsx",
+      "upstream": "packages/ui/src/components/react/ui/base/popover.tsx"
     }
   ]
 }

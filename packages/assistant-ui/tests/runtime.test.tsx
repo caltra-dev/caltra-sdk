@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { AssistantRuntimeProvider, RuntimeAdapterProvider, useAui } from "@assistant-ui/react";
+import { useEffect } from "react";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { CaltraSessionRuntime } from "@caltra/client";
@@ -17,6 +19,46 @@ function fixture() {
 }
 
 describe("useAssistantUiRuntime", () => {
+  it("consumes native useAui ModelContext registration in both shared presentation adapters", async () => {
+    const f = fixture();
+    const id = "90000000-0000-4000-8000-000000000002";
+    const primary = renderHook(() => useAssistantUiRuntime(f.session));
+    const registration = renderHook(({ effort }) => {
+      const aui = useAui();
+      useEffect(() => aui.modelContext.register({ getModelContext: () => ({ config: { modelName: id, reasoningEffort: effort } }) }), [aui, effort]);
+    }, { initialProps: { effort: "low" }, wrapper: ({ children }) => <AssistantRuntimeProvider runtime={primary.result.current}>{children}</AssistantRuntimeProvider> });
+    const secondary = renderHook(() => useAssistantUiRuntime(f.session), { wrapper: ({ children }) => <RuntimeAdapterProvider adapters={{ modelContext: { getModelContext: () => primary.result.current.thread.getModelContext() } }}>{children}</RuntimeAdapterProvider> });
+    await act(() => f.session.start());
+    act(() => primary.result.current.thread.append("Primary"));
+    await waitFor(() => expect(f.client.sendMessage).toHaveBeenLastCalledWith("session", { text: "Primary", modelSelection: { platformModelId: id, reasoningLevel: "low" } }));
+    registration.rerender({ effort: "high" });
+    act(() => secondary.result.current.thread.append("Secondary"));
+    await waitFor(() => expect(f.client.sendMessage).toHaveBeenLastCalledWith("session", { text: "Secondary", modelSelection: { platformModelId: id, reasoningLevel: "high" } }));
+    registration.unmount();
+    act(() => primary.result.current.thread.append("Default"));
+    await waitFor(() => expect(f.client.sendMessage).toHaveBeenLastCalledWith("session", { text: "Default" }));
+    secondary.unmount(); primary.unmount(); await f.session.stop();
+  });
+  it("uses registered ModelContext for each send without changing the runtime default", async () => {
+    const f = fixture();
+    const id = "90000000-0000-4000-8000-000000000001";
+    f.session.setModelSelection({ platformModelId: id, reasoningLevel: "low" });
+    const hook = renderHook(() => useAssistantUiRuntime(f.session, { getContext: () => ({ page: "customer" }) }));
+    await act(() => f.session.start());
+    let effort = "high";
+    const unregister = hook.result.current.registerModelContextProvider({ getModelContext: () => ({ config: { modelName: id, reasoningEffort: effort } }) });
+    act(() => { hook.result.current.thread.append("First"); });
+    await waitFor(() => expect(f.client.sendMessage).toHaveBeenLastCalledWith("session", { text: "First", modelSelection: { platformModelId: id, reasoningLevel: "high" }, context: { page: "customer" } }));
+    effort = "provider-default";
+    act(() => { hook.result.current.thread.append("Second"); });
+    await waitFor(() => expect(f.client.sendMessage).toHaveBeenLastCalledWith("session", { text: "Second", modelSelection: { platformModelId: id, reasoningLevel: null }, context: { page: "customer" } }));
+    unregister();
+    act(() => { hook.result.current.thread.append("Third"); });
+    await waitFor(() => expect(f.client.sendMessage).toHaveBeenLastCalledWith("session", { text: "Third", modelSelection: { platformModelId: id, reasoningLevel: "low" }, context: { page: "customer" } }));
+    expect(f.session.getSnapshot().modelSelection).toEqual({ platformModelId: id, reasoningLevel: "low" });
+    expect(JSON.stringify(f.session.getSnapshot().messages)).not.toContain(id);
+    hook.unmount(); await f.session.stop();
+  });
   it("reads the newest context callback at send time without replacing the session", async () => {
     const f = fixture();
     const hook = renderHook(({ id }) => useAssistantUiRuntime(f.session, { getContext: () => ({ page: { id } }) }), { initialProps: { id: "first" } });

@@ -47,3 +47,23 @@ final snapshot is reused without a request. Live thinking connects before fetchi
 The hook returns `parts`, `loading`, `streaming`,
 `error`, and `retry()`. Render each part's `text` and use `position` as its stable key.
 Closing or unmounting stops this subscription and leaves the main session connected.
+
+## ModelContext model and reasoning selection
+
+The adapter reads the merged `runtime.thread.getModelContext()` for each new message. Standard assistant-ui `ModelSelector` and `aui.modelContext.register()` therefore work without selection callbacks that call the Caltra runtime.
+
+- Set `config.modelName` to the **platform model UUID** returned by `client.getSessionModelChoices(sessionId)`, not a provider model name.
+- Set `config.reasoningEffort` to an allowed reasoning level. `provider-default` (or an omitted effort with a selected model) maps to Caltra's `null` reasoning level. Include this choice only when the catalog permits it. An effort-only registration requires another provider to supply the model UUID.
+- ModelContext selection overrides `session.setModelSelection()` for that send only. With neither selection field registered, the runtime default still applies; unregistering restores that behavior. Both selection and application `getContext()` data are captured before transport waits. Changes affect subsequent sends, never accepted turns.
+- Caltra validates the combination against the session's permitted choices. ModelContext does not grant access or update agent policy.
+
+```tsx
+useEffect(() => aui.modelContext.register({
+  getModelContext: () => ({ config: {
+    modelName: selectedChoice.platform_model_id,
+    reasoningEffort: selectedChoice.reasoning_level ?? "provider-default",
+  } }),
+}), [aui, selectedChoice]);
+```
+
+Only model and reasoning selection are supported from ModelContext. The adapter does not forward `system`, `tools`, `callSettings`, `config.apiKey`, or `config.baseUrl` to Caltra. Hosted agent instructions, tools, provider credentials, and endpoints stay server-managed. Application/page data continues to use the separate `getContext` option.

@@ -1,3 +1,4 @@
+import { AssistantRuntimeProvider, RuntimeAdapterProvider } from "@assistant-ui/react";
 import { ModelControls } from "../demo/model-controls.js";
 import { useAssistantUiRuntime } from "@caltra/assistant-ui";
 import { italian } from "../demo/italian-labels.js";
@@ -29,8 +30,7 @@ export function Chat({ client, session }: { client: CaltraClient; session: Caltr
   const snapshot = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot, runtime.getSnapshot);
   const assistantRuntime = useAssistantUiRuntime(runtime);
   const [view, setView] = useState("caltra");
-  const [sendingThinking, setSendingThinking] = useState(false);
-  const [thinkingError, setThinkingError] = useState(false);
+  const sharedAdapters = useMemo(() => ({ modelContext: { getModelContext: () => assistantRuntime.thread.getModelContext() } }), [assistantRuntime]);
   const [reasoningDisplay, setReasoningDisplay] = useState<CaltraReasoningDisplay>("auto");
   const [theme, setTheme] = useState<CaltraThemeName | "brand">("assistant-ui");
   const [colorMode, setColorMode] = useState<CaltraColorMode>("system");
@@ -57,15 +57,10 @@ export function Chat({ client, session }: { client: CaltraClient; session: Caltr
     "--destructive": palette.error, "--radius": selectedTheme.radius,
     fontFamily: selectedTheme.fontFamily, colorScheme: dark ? "dark" : "light",
   } as CSSProperties;
-  const streamThinking = async () => {
-    if (!__CALTRA_LOCAL_STUB__) return;
-    setSendingThinking(true);
-    setThinkingError(false);
-    try { await runtime.send("/think Thinking demo complete"); }
-    catch { setThinkingError(true); }
-    finally { setSendingThinking(false); }
+  const streamThinking = () => {
+    if (__CALTRA_LOCAL_STUB__) assistantRuntime.thread.append("/think Thinking demo complete");
   };
-  return <main className="chat-shell">
+  return <AssistantRuntimeProvider runtime={assistantRuntime}><main className="chat-shell">
     <header className="chat-header" data-success-toast-anchor>
       <div data-success-toast-avoid><span className="eyebrow">CALTRA REACT SDK</span><h1>{session.agent.name}</h1></div>
       <div className="demo-controls" data-success-toast-avoid>
@@ -96,18 +91,18 @@ export function Chat({ client, session }: { client: CaltraClient; session: Caltr
           </select>
         </label>
         <button className="demo-thinking-button" type="button"
-          disabled={!__CALTRA_LOCAL_STUB__ || sendingThinking || snapshot.isRunning || snapshot.connection !== "connected"}
+          disabled={!__CALTRA_LOCAL_STUB__ || snapshot.isRunning || snapshot.connection !== "connected"}
           aria-describedby="thinking-demo-help"
           onClick={() => { void streamThinking(); }}>Stream thinking</button>
         <p id="thinking-demo-help" className="demo-thinking-hint">{__CALTRA_LOCAL_STUB__
           ? <>Streams a simulated reasoning summary. Auto opens while thinking and collapses when finished.</>
           : <>The thinking test requires <code>npm run demo --local-stub</code>. On the real API, a Reasoning row appears only when the model returns reasoning; display settings cannot enable it.</>}</p>
-        {thinkingError && <p className="demo-thinking-hint" role="alert">Could not start thinking. Try again.</p>}
+        {view === "standard" && snapshot.error && <p className="demo-thinking-hint" role="alert">Could not send the message. Check the selection and try again.</p>}
       </div>
     </header>
     {view === "standard" ? <div lang={language} className={`signal-thread${dark ? " dark" : ""}`} style={threadStyle}>
       <SignalThread runtime={assistantRuntime} session={runtime} display={reasoningDisplay} locale={language} />
-    </div> : <CaltraChat reasoningDisplay={reasoningDisplay} runtime={runtime} labels={language === "it" ? italian : undefined}
-      theme={theme === "brand" ? brandTheme : theme} colorMode={colorMode} />}
-  </main>;
+    </div> : <RuntimeAdapterProvider adapters={sharedAdapters}><CaltraChat reasoningDisplay={reasoningDisplay} runtime={runtime} labels={language === "it" ? italian : undefined}
+      theme={theme === "brand" ? brandTheme : theme} colorMode={colorMode} /></RuntimeAdapterProvider>}
+  </main></AssistantRuntimeProvider>;
 }

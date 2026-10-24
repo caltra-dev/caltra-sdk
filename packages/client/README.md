@@ -106,3 +106,5 @@ the same selection. Agent policy edits apply to later submissions, and do not
 rewrite accepted turns. External executor agents do not expose hosted choices.
 Reasoning effort controls generation; thinking-display controls only visibility
 of reasoning actually returned by the provider.
+
+For a single-send override, use `runtime.send(text, { modelSelection, context })`. It snapshots both values before awaiting transport and does not modify the runtime's saved selection. When `modelSelection` is omitted, the value set by `runtime.setModelSelection()` remains the fallback. The assistant-ui adapter uses this override to translate its registered ModelContext.

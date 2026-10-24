@@ -24,3 +24,5 @@ server launch. Switching views preserves history; each layout owns its composer 
 See the [demo setup](../../README.md) for connection modes and credential handling.
 
 The pending assistant indicator uses steady localized text instead of the upstream pulsing dot. This indicates a pending answer, not available reasoning. Preserve this presentation override on refresh.
+
+ModelSelector and its shared model-selection utility, command and popover components use the same pinned upstream commit. Import paths are adapted to this source tree. The high-level selector additionally forwards `disabled` and `aria-label` to its trigger so the demo can prevent changes during a turn and give the combined control an accessible name. Its native ModelContext registration is retained.
