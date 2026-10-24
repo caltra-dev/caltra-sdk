@@ -26,8 +26,8 @@ test("Thread keeps shared controls and explains unsupported settings", async ({ 
   await page.getByLabel("Chat view", { exact: true }).selectOption("standard");
   await expect(page.getByLabel("Language", { exact: true })).toBeDisabled();
   await expect(page.getByLabel("Language", { exact: true })).toHaveValue("en");
-  await expect(page.getByLabel("Thinking display", { exact: true })).toBeDisabled();
-  await expect(page.locator("#thread-settings-limit")).toContainText("English only");
+  await expect(page.getByLabel("Thinking display", { exact: true })).toBeEnabled();
+  await expect(page.locator("#thread-settings-limit")).toContainText("English labels");
   await expect(page.locator(".signal-thread")).toHaveCSS("background-color", "rgb(15, 23, 42)");
   await expect(page.getByRole("button", { name: "Stream thinking", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /Reload|Export as Markdown/ })).toHaveCount(0);

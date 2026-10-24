@@ -14,8 +14,8 @@ Imports resolve through the demo's `@` alias. See LICENSE.
 
 Signal Room embeds Thread as a selectable view. Tailwind preflight is scoped to
 `.signal-thread`; theme tokens are mapped from the shared controls. Tooltip and
-dialog portals target this panel to inherit its scoped styles. Language and Caltra
-lazy reasoning are explicitly unavailable in this stock view. No SDK consumer
+dialog portals target this panel to inherit its scoped styles. Language remains English-only. The exported AssistantMessage lets the demo
+compose a Caltra lazy-reasoning disclosure through the upstream AssistantMessage slot. No SDK consumer
 needs these demo-only dependencies.
 
 Caltra's runtime adapter supplies the same session to both comparison views.

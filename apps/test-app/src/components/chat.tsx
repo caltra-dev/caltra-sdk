@@ -1,6 +1,5 @@
-import { AssistantRuntimeProvider } from "@assistant-ui/react";
 import { useAssistantUiRuntime } from "@caltra/assistant-ui";
-import { Thread } from "../upstream/components/assistant-ui/elements/thread.aui.js";
+import { SignalThread } from "../demo/signal-thread.js";
 import "../demo/standard-thread.css";
 import type { CaltraClient, CaltraSession } from "@caltra/client";
 import { CaltraChat, type CaltraReasoningDisplay, type CaltraChatLabels } from "@caltra/react/ui";
@@ -81,7 +80,7 @@ export function Chat({ client, session }: { client: CaltraClient; session: Caltr
           </select>
         </label>
         <label className="demo-appearance">Thinking display
-          <select disabled={view === "standard"} aria-describedby={view === "standard" ? "thread-settings-limit" : undefined} aria-label="Thinking display" value={reasoningDisplay} onChange={event => setReasoningDisplay(event.target.value as CaltraReasoningDisplay)}>
+          <select aria-label="Thinking display" value={reasoningDisplay} onChange={event => setReasoningDisplay(event.target.value as CaltraReasoningDisplay)}>
             <option value="hidden">Hidden</option><option value="auto">Auto</option><option value="collapsed">Collapsed</option><option value="expanded">Expanded</option>
           </select>
         </label>
@@ -103,13 +102,13 @@ export function Chat({ client, session }: { client: CaltraClient; session: Caltr
         <button className="demo-thinking-button" type="button"
           disabled={sendingThinking || snapshot.isRunning || snapshot.connection !== "connected"}
           onClick={() => { void streamThinking(); }}>Stream thinking</button>
-        <p className="demo-thinking-hint">Requires the local deterministic Caltra model; the API stub does not simulate reasoning. Sends <code>/think</code>.</p>
-        {view === "standard" && <p className="demo-thinking-hint" id="thread-settings-limit">Standard Thread: English only. Thinking display is unavailable for Caltra’s separately loaded reasoning.</p>}
+        <p className="demo-thinking-hint">Sends <code>/think</code>. Use the local API stub or Caltra’s deterministic model to stream a simulated reasoning summary.</p>
+        {view === "standard" && <p className="demo-thinking-hint" id="thread-settings-limit">Standard Thread uses English labels; its source has no language setting.</p>}
         {thinkingError && <p className="demo-thinking-hint" role="alert">Could not start thinking. Try again.</p>}
       </div>
     </header>
     {view === "standard" ? <div className={`signal-thread${dark ? " dark" : ""}`} style={threadStyle}>
-      <AssistantRuntimeProvider runtime={assistantRuntime}><Thread autoFocus={false} /></AssistantRuntimeProvider>
+      <SignalThread runtime={assistantRuntime} session={runtime} display={reasoningDisplay} />
     </div> : <CaltraChat reasoningDisplay={reasoningDisplay} runtime={runtime} labels={language === "it" ? italian : undefined}
       theme={theme === "brand" ? brandTheme : theme} colorMode={colorMode} />}
   </main>;

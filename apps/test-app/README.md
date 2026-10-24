@@ -18,7 +18,7 @@ npm run demo -- --caltra-api-key=<key>
 
 The launcher builds the local workspace packages and opens Signal Room at `/`. Its Chat view selector offers CaltraChat and Standard Thread over the same selected session and runtime. Both modes use the normal CaltraClient authorization exchange, REST schemas, and SSE parser.
 
-The stub implements the demo's authorization, agent lookup, session creation/listing, paginated messages, tool details, sending, cancellation and SSE routes. It is an in-memory simulator of this API subset, not a complete Caltra backend. It starts with 60 deterministic messages and tool success/failure examples. Sending produces eight streamed steps. New conversations are empty; state resets when the server restarts.
+The stub implements the demo's authorization, agent lookup, session creation/listing, paginated messages, tool details, sending, cancellation and SSE routes. It is an in-memory simulator of this API subset, not a complete Caltra backend. It starts with 60 deterministic messages and tool success/failure examples. Sending produces eight streamed steps; `/think` produces a simulated reasoning summary on the separate reasoning endpoint and SSE stream. New conversations are empty; state resets when the server restarts.
 
 Real mode defaults to `https://api.caltra.dev`. Its environment key stays in the Vite server. With only a key, the server resolves/creates workspace `sdk-demo` and the hosted assistant for `sdk-test-user`; the key needs `agents:provision` and `client_tokens:create`. `CALTRA_TENANT_USER_EXTERNAL_ID` overrides that user. If `CALTRA_WORKSPACE_ID` is provided, the workspace and user's hosted agent must already exist. `CALTRA_API_URL` or `--caltra-api-url` selects another backend.
 
@@ -91,15 +91,13 @@ Standard Thread limitations are shown beside the controls:
 - **Language** is disabled and shows English. This pinned upstream component has
   hard-coded English labels, with no language/labels prop. Italian remains available
   in CaltraChat. Adding Thread localization requires adapting its source strings.
-- **Thinking display** is disabled. Upstream supports inline reasoning parts, but
-  the Caltra adapter exposes text-free metadata and loads reasoning through a
-  separate resource. A custom disclosure adapter is needed for this view.
 - **Stream thinking** sends `/think Thinking demo complete` through the shared runtime.
-  It requires Caltra's local deterministic model; the HTTP stub does not implement
-  reasoning and a production model is not guaranteed to honor this command. Standard
-  Thread can display the final answer but not the separate reasoning stream.
+  It works with the HTTP stub and Caltra's local deterministic model. A production
+  model is not guaranteed to honor this command.
 
-In CaltraChat, Auto expands during reasoning and collapses afterward; Collapsed
+Both views support Thinking display. A demo adapter composes the stock Thread
+message and reasoning disclosure with `useCaltraReasoning`; reasoning text is
+fetched only when the disclosure opens. Auto expands during reasoning and collapses afterward; Collapsed
 fetches only when opened, Hidden never fetches, and Expanded stays open. Changing
 these controls does not remount the composer.
 

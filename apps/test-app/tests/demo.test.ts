@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createServer, type ViteDevServer } from "vite";
 import { CaltraClient } from "@caltra/client";
 import { LocalStub } from "../server/local_stub.js";
@@ -41,6 +41,8 @@ it("exercises auth, paginated history, tools, session creation, send, SSE and ca
   expect(page.data).toHaveLength(20);
   expect(page.next_cursor).toBe("40");
   expect((await client.listSessionMessages(saved.id, { cursor: page.next_cursor! })).data[0]!.text).toContain("Saved message 21");
+  const reasoningMessage = page.data.find(message => message.reasoning)!;
+  expect((await client.getSessionReasoning(saved.id, reasoningMessage.id)).parts[0]!.text).toContain("Simulated reasoning summary");
   const toolMessage = page.data.find(message => message.tool_calls?.length)!;
   expect((await client.getSessionToolDetails(saved.id, toolMessage.id, toolMessage.tool_calls![0]!.id)).arguments).toEqual({ text: "Loaded on expansion" });
   const session = await client.agents.sessions(agent.id).create();
@@ -56,6 +58,20 @@ it("exercises auth, paginated history, tools, session creation, send, SSE and ca
   await connection.close();
   expect((await client.getSessionById(session.id)).is_running).toBe(false);
   expect((await client.listSessionMessages(session.id)).data[0]!.text).toBe("Check transport");
+  const runtime = client.createSessionRuntime({ sessionId: session.id });
+  await runtime.start();
+  await runtime.send("/think");
+  await vi.waitFor(() => expect(runtime.getSnapshot().messages.some(message => message.reasoning?.status === "streaming")).toBe(true));
+  const thinking = runtime.getSnapshot().messages.find(message => message.reasoning?.status === "streaming")!;
+  const reasoning = runtime.reasoning(thinking.id);
+  try {
+    await reasoning.start();
+    await vi.waitFor(() => expect(reasoning.getSnapshot().parts[0]!.text).toContain("Simulated reasoning summary"), { timeout: 2500 });
+    await vi.waitFor(() => expect(runtime.getSnapshot().isRunning).toBe(false), { timeout: 6000 });
+    expect(reasoning.getSnapshot().error).toBeNull();
+    expect((await client.getSessionReasoning(session.id, thinking.id)).status).toBe("completed");
+    expect(runtime.getSnapshot().messages.find(message => message.id === thinking.id)?.text).toBe("Thinking demo complete.");
+  } finally { await reasoning.stop(); await runtime.stop(); }
 }, 15_000);
 
 

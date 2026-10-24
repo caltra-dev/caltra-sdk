@@ -633,7 +633,7 @@ const MessageError: FC = () => {
   );
 };
 
-const AssistantMessage: FC = () => {
+export const AssistantMessage: FC = () => {
   const {
     ToolFallback: ToolFallbackComponent = ToolFallback,
     ToolGroup,

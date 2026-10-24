@@ -50,9 +50,11 @@ export class LocalStub {
     if (suffix === "/cancel" && request.method === "POST") return json(await client.cancelSession());
     const tool = /^\/messages\/([^/]+)\/tools\/([^/]+)$/.exec(suffix!);
     if (tool && request.method === "GET") return json(await client.getSessionToolDetails(id, tool[1]!, tool[2]!));
-    if (suffix === "/events" && request.method === "GET") {
+    const reasoning = /^\/messages\/([^/]+)\/reasoning(\/events)?$/.exec(suffix!);
+    if (reasoning && request.method === "GET" && !reasoning[2]) return json(await client.getSessionReasoning(id, reasoning[1]!));
+    if ((suffix === "/events" || reasoning?.[2]) && request.method === "GET") {
       const controller = new AbortController();
-      const stream = client.eventResponse({ signal: controller.signal });
+      const stream = client.eventResponse({ signal: controller.signal, reasoning: Boolean(reasoning) });
       response.setHeader("content-type", "text/event-stream"); response.flushHeaders();
       response.on("close", () => controller.abort());
       Readable.fromWeb(stream.body as import("node:stream/web").ReadableStream<Uint8Array>).pipe(response);
