@@ -86,6 +86,7 @@ const ModelSelectorImpl = ({
   align,
   className,
   contentClassName,
+  children,
   ...rootProps
 }: ModelSelectorProps) => {
   return (
@@ -102,7 +103,9 @@ const ModelSelectorImpl = ({
         {...(align !== undefined ? { align } : {})}
         className={contentClassName}
         searchable={searchable ?? false}
-      />
+      >
+        {children}
+      </ModelSelectorContent>
     </ModelSelectorRoot>
   );
 };

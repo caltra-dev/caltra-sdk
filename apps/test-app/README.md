@@ -144,9 +144,10 @@ The connection picker and composer ModelSelector were verified on the private
 branch Sprite, including a 390px viewport, selection across chat views, and the
 stub's high-effort response. All 14 demo tests, demo type checking, and the demo
 build passed. The real connection authenticated and loaded its separate saved
-sessions. The production session model-choices route currently returns HTTP 404;
-production model selection requires the matching Caltra backend release. The demo
-keeps session-default messaging available while reporting this catalog failure.
+sessions. The initial production model-choices 404 was resolved by the backend
+release. Subsequent client API verification returned all 40 allowed model/effort
+pairs for the demo agent. This API check does not establish visual validation of
+the later Thinking dropdown.
 
 When supplying the Caltra-owned demo credential to a preview, load the development
 tooling environment first and then explicitly supply the demo configuration.
@@ -155,3 +156,5 @@ Node's `--env-file` does not overwrite inherited variables; an unrelated inherit
 that credential into the SDK checkout.
 
 The model picker uses the stock assistant-ui appearance, including its default trigger and popup sizing. No selector-specific CSS or descriptive hint is added. Its popup mounts within the owning UI theme scope so light/dark and the selected chat theme remain consistent. Catalog errors still appear when actionable.
+
+Thinking uses a dropdown of the selected model’s permitted efforts, including Provider default. This follows assistant-ui’s documented custom-effort composition because its stock horizontal row clips larger catalogs. The native ModelContext registration still forwards the selected model and effort on the next message.

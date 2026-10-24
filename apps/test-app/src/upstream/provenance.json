@@ -120,6 +120,10 @@
     {
       "local": "apps/test-app/src/upstream/components/ui/popover.tsx",
       "upstream": "packages/ui/src/components/react/ui/base/popover.tsx"
+    },
+    {
+      "local": "apps/test-app/src/upstream/components/ui/dropdown-menu.tsx",
+      "upstream": "packages/ui/src/components/react/ui/base/dropdown-menu.tsx"
     }
   ]
 }

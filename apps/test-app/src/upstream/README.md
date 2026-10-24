@@ -1,6 +1,6 @@
 # Standard assistant-ui Thread demo
 
-These 25 source files are from assistant-ui commit
+These 26 source files are from assistant-ui commit
 `79e5919d8c9c72bd4697c672f0f228c2a62edec4` (`@assistant-ui/react` 0.15.30),
 using its Base UI variants. `provenance.json` records every original path.
 The downloaded registry Thread matched this pinned source exactly.
@@ -29,3 +29,5 @@ ModelSelector and its shared model-selection utility, command and popover compon
 The demo-owned `ComposerControls` slot inserts ModelSelector into the existing Thread composer action row. Keep this small extension when refreshing upstream source; it does not replace the managed Thread, input, or send/stop controls. Selection state is held above both views so moving between the header and composer retains the selected model and effort.
 
 ModelSelector uses the upstream default presentation without trigger/content class overrides or demo-specific selector CSS. Popover accepts the owning theme container through context so its portal inherits the same Tailwind reset and theme tokens as its trigger. The header host uses the same UI theme scope; it does not supply a separate selector palette.
+
+The demo replaces the horizontal Effort segments with the documented `useModelSelectorEfforts` dropdown composition. The high-level ModelSelector forwards optional children into Content, retaining its native ModelContext registration and hidden keyboard focus anchor. The copied Base UI dropdown-menu comes from the same pinned source; its portal uses the owning theme container. Menu key events do not bubble into the surrounding cmdk model list. ModelSelector trigger, popup, and model-list presentation remain stock.

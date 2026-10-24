@@ -1,4 +1,5 @@
 import { PopoverPortalContainer } from "../upstream/components/ui/popover.js";
+import { ThinkingDropdown } from "./thinking-dropdown.js";
 import { ModelSelector, type ModelOption } from "../upstream/components/assistant-ui/elements/model-selector.aui.js";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { CaltraApiError, type CaltraClient, type CaltraModelChoice, type CaltraSessionRuntime, type CaltraSessionSnapshot } from "@caltra/client";
@@ -49,7 +50,10 @@ export function ModelControls() {
           const first = choices.find(choice => choice.platform_model_id === model);
           if (first) setSelection({ model, effort: first.reasoning_level ?? "provider-default" });
         }}
-        onEffortChange={effort => setSelection({ model: selected.platform_model_id, effort })} />
+        onEffortChange={effort => setSelection({ model: selected.platform_model_id, effort })}>
+        <ModelSelector.List />
+        <ThinkingDropdown />
+      </ModelSelector>
         : <ModelSelector.Root models={[]}><ModelSelector.Trigger aria-label="Model and reasoning" disabled>{loading ? "Loading models…" : "Session default"}</ModelSelector.Trigger></ModelSelector.Root>}
     {error && <p role="alert">{error} <button type="button" onClick={() => setReload(value => value + 1)}>Retry</button></p>}
     {!error && !loading && choices.length === 0 && <p>No selectable combinations are available for this session.</p>}

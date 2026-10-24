@@ -548,6 +548,8 @@ function ModelSelectorEffort({
 
 export type ModelSelectorProps = Omit<ModelSelectorRootProps, "children"> &
   VariantProps<typeof modelSelectorTriggerVariants> & {
+    /** Demo extension: compose Content while retaining native ModelContext registration. */
+    children?: ReactNode;
     disabled?: boolean;
     "aria-label"?: string;
     /** Render a search input above the model list. */
