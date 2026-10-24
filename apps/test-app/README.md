@@ -82,7 +82,7 @@ position, not only scrollTop, because layout changes can trigger native anchorin
 ## Controls in both chat views
 
 Both views show Chat view, Thinking display, Theme, Color mode, Language, and
-Stream thinking. Settings stay selected when switching views. Theme presets map
+Stream thinking (enabled only in local-stub mode). Settings stay selected when switching views. Theme presets map
 to the standard Thread's CSS tokens; System mode follows the OS preference live.
 The Thread reset and tokens are scoped to its panel, including tooltip/dialog portals.
 
@@ -95,8 +95,12 @@ do not translate existing messages, provider errors, tool names/results or appro
 payloads. The Signal Room shell controls remain English, as in CaltraChat.
 
 **Stream thinking** sends `/think Thinking demo complete` through the shared runtime.
-It works with the HTTP stub and Caltra's local deterministic model. A production
-model is not guaranteed to honor this command.
+It is enabled only with the HTTP stub. `/think` is not a production API command;
+the real demo model may answer it as ordinary text without returning reasoning.
+Real mode explains this restriction and disables the test button. Display settings
+control existing reasoning; they cannot enable reasoning in a model.
+The Standard Thread pending indicator is steady, localized “Working…” text,
+separate from a Reasoning disclosure. It disappears when an answer arrives.
 
 Both views support Thinking display. A demo adapter composes the stock Thread
 message and reasoning disclosure with `useCaltraReasoning`; reasoning text is

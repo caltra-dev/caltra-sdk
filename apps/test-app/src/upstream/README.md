@@ -22,3 +22,5 @@ Caltra's runtime adapter supplies the same session to both comparison views.
 The demo can use its local HTTP API stub or a real Caltra connection, selected at
 server launch. Switching views preserves history; each layout owns its composer draft.
 See the [demo setup](../../README.md) for connection modes and credential handling.
+
+The pending assistant indicator uses steady localized text instead of the upstream pulsing dot. This indicates a pending answer, not available reasoning. Preserve this presentation override on refresh.

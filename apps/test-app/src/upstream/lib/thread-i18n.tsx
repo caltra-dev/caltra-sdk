@@ -23,6 +23,7 @@ const italianThreadLabels = {
   "Resume generating": "Riprendi generazione",
   "Cancel sending": "Annulla invio",
   "Stop generating": "Interrompi generazione",
+  "Working…": "Elaborazione…",
   "Assistant is working": "L’assistente sta lavorando",
   "Helpful": "Utile",
   "Not helpful": "Non utile",

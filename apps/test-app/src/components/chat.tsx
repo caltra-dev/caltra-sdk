@@ -10,6 +10,8 @@ import { useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties 
 
 
 
+declare const __CALTRA_LOCAL_STUB__: boolean;
+
 const brandTheme = createCaltraTheme({
   name: "brand", radius: "0.75rem",
   light: { background: "#fffaf5", muted: "#ffedd5", accent: "#9a3412", accentForeground: "#ffffff", border: "#fed7aa" },
@@ -55,6 +57,7 @@ export function Chat({ client, session }: { client: CaltraClient; session: Caltr
     fontFamily: selectedTheme.fontFamily, colorScheme: dark ? "dark" : "light",
   } as CSSProperties;
   const streamThinking = async () => {
+    if (!__CALTRA_LOCAL_STUB__) return;
     setSendingThinking(true);
     setThinkingError(false);
     try { await runtime.send("/think Thinking demo complete"); }
@@ -91,9 +94,12 @@ export function Chat({ client, session }: { client: CaltraClient; session: Caltr
           </select>
         </label>
         <button className="demo-thinking-button" type="button"
-          disabled={sendingThinking || snapshot.isRunning || snapshot.connection !== "connected"}
+          disabled={!__CALTRA_LOCAL_STUB__ || sendingThinking || snapshot.isRunning || snapshot.connection !== "connected"}
+          aria-describedby="thinking-demo-help"
           onClick={() => { void streamThinking(); }}>Stream thinking</button>
-        <p className="demo-thinking-hint">Sends <code>/think</code>. Use the local API stub or Caltra’s deterministic model to stream a simulated reasoning summary.</p>
+        <p id="thinking-demo-help" className="demo-thinking-hint">{__CALTRA_LOCAL_STUB__
+          ? <>Streams a simulated reasoning summary. Auto opens while thinking and collapses when finished.</>
+          : <>The thinking test requires <code>npm run demo --local-stub</code>. On the real API, a Reasoning row appears only when the model returns reasoning; display settings cannot enable it.</>}</p>
         {thinkingError && <p className="demo-thinking-hint" role="alert">Could not start thinking. Try again.</p>}
       </div>
     </header>
