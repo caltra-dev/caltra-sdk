@@ -115,3 +115,13 @@ and collapses when it ends; expand again or reload to inspect the saved summary.
 opens no reasoning-text connection until clicked. Hidden opens none. Mode changes retain drafts.
 The command button shares the chat's runtime, preserves the composer draft, and disables while
 a turn is running. Thinking and tool expansion use the same accessible loading spinner.
+
+## Transcript Copy placement review
+
+The existing `/?demo=runtime` saved messages 58 and 60 contain text followed by
+successful/failed tool calls. Copy belongs directly under each message's text,
+before the collapsed tool row; expanding the row must not move Copy below it.
+Copy and paste into the composer to verify only the message text is copied.
+Stream steps to check that earlier controls remain available and tool-only steps
+have no Copy button. These deterministic fixtures verify shared SDK presentation,
+not a production Piria session or hosted-agent execution.

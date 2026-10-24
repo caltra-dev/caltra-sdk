@@ -171,10 +171,6 @@ export function CaltraHistoryLoading({ labels }: CaltraChatSlotProps) {
 
 export function CaltraMessage({ labels }: CaltraChatSlotProps) {
   const role = useAuiState((state) => state.message.role);
-  const isCopied = useAuiState((state) => state.message.isCopied);
-  const hasCopyableText = useAuiState((state) => state.message.content.some(part => part.type === "text" && part.text.length > 0));
-  // Thread-wide running state must not remove controls from earlier completed messages.
-  const isMessageRunning = useAuiState((state) => state.message.status?.type === "running");
   const { session, reasoningDisplay = "hidden" } = useContext(ToolContext);
   const hasReasoning = useAuiState(state => Boolean(state.message.metadata.custom?.caltraReasoning));
   const emptyCompleted = useAuiState((state) => state.message.role === "assistant"
@@ -186,11 +182,25 @@ export function CaltraMessage({ labels }: CaltraChatSlotProps) {
     <span className="caltra-chat__sr-only">{role === "user" ? labels.user : labels.assistant}</span>
     <div className="caltra-chat__message-body">
       {session && hasReasoning && <ReasoningRenderer session={session} />}
-      <MessagePrimitive.Parts components={{ Text: MarkdownText, tools: { Fallback: ToolRenderer } }} />
+      <MessagePrimitive.Parts components={{ Text: MessageText, tools: { Fallback: ToolRenderer } }} />
       <AuiIf condition={(state) => state.message.status?.type === "incomplete"}>
         <p className="caltra-chat__message-error" role="alert">{labels.messageFailed}</p>
       </AuiIf>
     </div>
+  </MessagePrimitive.Root>;
+}
+
+// The Caltra adapter exposes one text part followed by tool parts. Keep the
+// message-level Copy action with that text instead of below tool disclosures.
+function MessageText() {
+  const { labels } = useContext(ToolContext);
+  const role = useAuiState(state => state.message.role);
+  const isCopied = useAuiState((state) => state.message.isCopied);
+  const hasCopyableText = useAuiState((state) => state.message.content.some(part => part.type === "text" && part.text.length > 0));
+  // Thread-wide running state must not remove controls from earlier completed messages.
+  const isMessageRunning = useAuiState((state) => state.message.status?.type === "running");
+  return <>
+    <MarkdownText />
     {role === "assistant" && hasCopyableText && !isMessageRunning && <ActionBarPrimitive.Root className="caltra-chat__actions">
       <ActionBarPrimitive.Copy className="caltra-chat__copy" aria-label={isCopied ? labels.copied : labels.copy} title={isCopied ? labels.copied : labels.copy}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
@@ -201,7 +211,7 @@ export function CaltraMessage({ labels }: CaltraChatSlotProps) {
         </svg>
       </ActionBarPrimitive.Copy>
     </ActionBarPrimitive.Root>}
-  </MessagePrimitive.Root>;
+  </>;
 }
 
 function ToolRenderer(props: ToolCallMessagePartProps) {

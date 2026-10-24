@@ -29,6 +29,38 @@ function fixture() {
 }
 
 describe("CaltraChat", () => {
+  it("keeps Copy directly after assistant text and before trailing tools", async () => {
+    const f = fixture();
+    const writeText = vi.fn(async () => undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    render(<CaltraChat client={f.client as never} sessionId="mixed-message" />);
+    await f.resolve("I will save the confirmed details.", [{ id: "save", name: "demo.save", status: "completed",
+      arguments: { internal: "tool-only-input" }, result: { internal: "tool-only-result" } }]);
+    const text = screen.getByText("I will save the confirmed details.");
+    const copy = screen.getByRole("button", { name: "Copy", exact: true });
+    const tool = screen.getByRole("button", { name: "Used tool: demo.save" });
+    expect(text.compareDocumentPosition(copy) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(copy.compareDocumentPosition(tool) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(copy);
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("I will save the confirmed details."));
+    expect(screen.getByRole("button", { name: "Copied", exact: true })).toBe(copy);
+    fireEvent.click(tool);
+    expect(screen.getByText(/tool-only-result/)).toBeTruthy();
+    expect(copy.compareDocumentPosition(tool) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("does not add Copy to user or tool-only messages", async () => {
+    const f = fixture();
+    f.client.listSessionMessages.mockImplementation(async () => ({ data: [
+      { id: "user", role: "user", text: "Please save the details.", status: "completed", created_at: "2026-10-23T00:00:00Z" },
+      { id: "tool", role: "assistant", text: "", status: "completed", created_at: "2026-10-23T00:00:01Z",
+        tool_calls: [{ id: "save", name: "demo.save", status: "completed", arguments: {}, result: { ok: true } }] },
+    ], next_cursor: null }));
+    render(<CaltraChat client={f.client as never} sessionId="without-copy" />);
+    await screen.findByRole("button", { name: "Used tool: demo.save" });
+    expect(screen.queryByRole("button", { name: "Copy", exact: true })).toBeNull();
+  });
+
   it("keeps previous copy controls mounted through thinking, answer streaming, and a running tool gap", async () => {
     const f = fixture();
     const history: CaltraSessionMessage[] = ["First answer", "Second answer"].map(text => ({

@@ -225,7 +225,12 @@ this SDK change. Legacy `include_tools=true` still returns full details.
 Client 0.8.3 originally opted in to structured tool history and tool-start events. Deploy the matching
 Caltra API support before publishing this client version; older clients keep their existing
 text-only wire format. The API exposes public tool arguments/results, never raw model metadata
-or reasoning. A successful copy uses assistant-ui's standard three-second checkmark feedback.
+or reasoning. Copy appears immediately beneath the assistant text, before any trailing
+tool disclosures. It copies the message's text only, never tool arguments or results.
+User and tool-only messages have no Copy action. The active message gets Copy once
+its text response finishes; earlier completed messages keep their controls while
+the rest of the turn is running. A successful copy uses assistant-ui's standard
+three-second checkmark feedback.
 
 ## Session runtime integration (0.11.0)
 
