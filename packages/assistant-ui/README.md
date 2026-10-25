@@ -30,6 +30,13 @@ The adapter forwards the session runtime's authoritative turn state. `isRunning`
 
 ## Earlier history
 
+Consecutive assistant steps containing only tools are projected into one UI message,
+so native `MessagePrimitive.GroupedParts` can show one tool count. Text, user messages,
+empty/reasoning-only messages and interrupted steps remain boundaries. This changes
+only the presentation: the Caltra transcript retains its original messages. A group
+uses its first source message's ID and each tool's artifact retains `caltraMessageId`
+for loading details. Earlier history can extend a group at a page boundary.
+
 Requires `@assistant-ui/react` 0.15.30 or later in the supported 0.15 range. The adapter maps
 Caltra's cursor availability and `loadOlder()` into `hasEarlier` and `onLoadEarlier`.
 Custom interfaces can use `thread.hasEarlier`, `thread.isLoadingEarlier`,
@@ -41,6 +48,10 @@ with a retry control. CaltraChat additionally triggers loading when the reader s
 ## Optional thinking text
 
 The adapter carries availability/status in `message.metadata.custom.caltraReasoning`.
+For the current UI message, `useCaltraReasoningMessages()` returns every source
+`{ messageId, status }`, including reasoning attached to coalesced tool steps.
+Render one disclosure per entry and pass that source ID to `useCaltraReasoning`;
+the UI message ID alone does not identify all reasoning resources in a group.
 Use `useCaltraReasoning(sessionRuntime, messageId, open)` inside your disclosure to load its
 separate text resource only while open. Completed thinking fetches without a stream; a cached
 final snapshot is reused without a request. Live thinking connects before fetching its snapshot.

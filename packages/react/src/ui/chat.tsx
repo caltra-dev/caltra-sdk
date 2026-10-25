@@ -8,7 +8,7 @@ import {
 } from "@assistant-ui/react";
 import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ComponentType, type ComponentPropsWithoutRef } from "react";
 import { CaltraSessionRuntime, type CaltraMessageContext } from "@caltra/client";
-import { useAssistantUiRuntime } from "@caltra/assistant-ui";
+import { useAssistantUiRuntime, useCaltraReasoningMessages } from "@caltra/assistant-ui";
 import { type UseCaltraRuntimeOptions, type UseCaltraRuntimeResult } from "../use_caltra_runtime.js";
 import { caltraThemes, type CaltraColorMode, type CaltraTheme, type CaltraThemeName } from "../themes/index.js";
 import { themeStyle, type CaltraChatStyle } from "./theme_style.js";
@@ -263,9 +263,7 @@ export function CaltraConnection({ labels, connection, error, historyLoaded, ret
 /** Adapts the text-free reasoning metadata to Caltra's separately loaded disclosure. */
 function ReasoningRenderer({ session }: { session: CaltraSessionRuntime }) {
   const { labels, reasoningDisplay = "hidden", Reasoning = CaltraReasoning } = useContext(ToolContext);
-  const messageId = useAuiState(state => state.message.id);
-  const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
-  const metadata = snapshot.messages.find(message => message.id === messageId)?.reasoning;
-  if (!metadata) return null;
-  return <Reasoning session={session} messageId={messageId} status={metadata.status} display={reasoningDisplay} labels={labels} />;
+  const messages = useCaltraReasoningMessages();
+  return <>{messages.map(message => <Reasoning key={message.messageId} session={session}
+    {...message} display={reasoningDisplay} labels={labels} />)}</>;
 }

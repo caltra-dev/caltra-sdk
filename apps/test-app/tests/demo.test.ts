@@ -77,8 +77,13 @@ it("exercises auth, paginated history, tools, session creation, send, SSE and ca
     expect(reasoning.getSnapshot().error).toBeNull();
     expect((await client.getSessionReasoning(session.id, thinking.id)).status).toBe("completed");
     expect(runtime.getSnapshot().messages.find(message => message.id === thinking.id)?.text).toBe("Thinking demo complete.");
+    await runtime.send("/tools");
+    await vi.waitFor(() => expect(runtime.getSnapshot().isRunning).toBe(false), { timeout: 6000 });
+    const toolSteps = runtime.getSnapshot().messages.slice(-4);
+    expect(toolSteps.slice(0, 3).every(message => message.text === "" && message.tool_calls?.length === 1)).toBe(true);
+    expect(toolSteps.at(-1)?.text).toBe("Three tool steps complete.");
   } finally { await reasoning.stop(); await runtime.stop(); }
-}, 15_000);
+}, 20_000);
 
 
 it("accepts both options through npm argument forwarding", () => {

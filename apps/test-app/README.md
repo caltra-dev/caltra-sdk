@@ -64,6 +64,11 @@ The seed is idempotent, grants demo tools to the development workspace audience,
 
 ## Local API stub scenarios
 
+Send `/tools` in Local stub mode to stream three consecutive tool-only steps and
+a final answer. Standard Thread should show one native **3 tool calls** group;
+expand it to see all three calls. Reload the session to check history grouping.
+This command is a deterministic local fixture, not a production agent command.
+
 Launch with `npm run demo -- --local-stub`. Signal Room loads 60 saved messages,
 initially displaying the newest 20. Scroll up in CaltraChat, or use **Load earlier
 messages** in Standard Thread, to load older pages. Send any text for eight streamed
@@ -99,7 +104,7 @@ It is enabled only with the HTTP stub. `/think` is not a production API command;
 the real demo model may answer it as ordinary text without returning reasoning.
 Real mode explains this restriction and disables the test button. Display settings
 control existing reasoning; they cannot enable reasoning in a model.
-The Standard Thread pending indicator is steady, localized “Working…” text,
+The Standard Thread pending indicator uses the upstream pulsing dot,
 separate from a Reasoning disclosure. It disappears when an answer arrives.
 
 Both views support Thinking display. A demo adapter composes the stock Thread

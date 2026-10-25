@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
-import { AssistantRuntimeProvider, RuntimeAdapterProvider, useAui } from "@assistant-ui/react";
+import { AssistantRuntimeProvider, RuntimeAdapterProvider, useAui, ThreadPrimitive, MessagePrimitive, groupPartByType } from "@assistant-ui/react";
 import { useEffect } from "react";
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, render, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { CaltraSessionRuntime } from "@caltra/client";
-import { useAssistantUiRuntime } from "../src/index.js";
+import { useAssistantUiRuntime, useCaltraReasoningMessages } from "../src/index.js";
 
 function fixture() {
   const close = vi.fn(async () => {});
@@ -19,6 +19,48 @@ function fixture() {
 }
 
 describe("useAssistantUiRuntime", () => {
+  it("lets native GroupedParts count tools across steps and exposes every reasoning resource", async () => {
+    const f = fixture();
+    f.client.listSessionMessages.mockResolvedValueOnce({ data: ["one", "two", "three"].map(id => ({
+      id, role: "assistant", text: "", status: "completed", created_at: "2026-10-24T00:00:00Z",
+      tool_calls: [{ id: `tool-${id}`, name: "demo.read", status: "completed" }], reasoning: { status: "completed" },
+    })), next_cursor: null } as never);
+    const hook = renderHook(() => useAssistantUiRuntime(f.session));
+    await act(() => f.session.start());
+    function Message() {
+      const reasoning = useCaltraReasoningMessages();
+      return <>
+        <span>{reasoning.map(message => message.messageId).join(",")}</span>
+        <MessagePrimitive.GroupedParts groupBy={groupPartByType({ "tool-call": ["group-tool"] })}>
+          {({ part }) => part.type === "group-tool" ? <output>{part.indices.length} tool calls</output> : null}
+        </MessagePrimitive.GroupedParts>
+      </>;
+    }
+    const view = render(<AssistantRuntimeProvider runtime={hook.result.current}>
+      <ThreadPrimitive.Messages>{() => <Message />}</ThreadPrimitive.Messages>
+    </AssistantRuntimeProvider>);
+    expect(view.getAllByText("3 tool calls")).toHaveLength(1);
+    expect(view.getByText("one,two,three")).toBeTruthy();
+    view.unmount(); hook.unmount(); await f.session.stop();
+  });
+  it("regroups paginated tool steps without duplicates or phantom branches", async () => {
+    const f = fixture();
+    const step = (id: string) => ({ id, role: "assistant", text: "", status: "completed",
+      created_at: "2026-10-24T00:00:00Z", tool_calls: [{ id: `tool-${id}`, name: "demo.read", status: "completed" }] });
+    f.client.listSessionMessages.mockResolvedValueOnce({ data: [step("two"), step("three")], next_cursor: "older" } as never)
+      .mockResolvedValueOnce({ data: [step("one")], next_cursor: null } as never);
+    const hook = renderHook(() => useAssistantUiRuntime(f.session));
+    await act(() => f.session.start());
+    expect(hook.result.current.thread.getState().messages).toHaveLength(1);
+    expect(hook.result.current.thread.getState().messages[0]?.content).toHaveLength(2);
+    await act(() => hook.result.current.thread.loadEarlier());
+    const messages = hook.result.current.thread.getState().messages;
+    expect(messages).toHaveLength(1);
+    expect(messages[0]?.id).toBe("one");
+    expect(messages[0]?.content).toHaveLength(3);
+    expect(f.session.getSnapshot().messages).toHaveLength(3);
+    hook.unmount(); await f.session.stop();
+  });
   it("consumes native useAui ModelContext registration in both shared presentation adapters", async () => {
     const f = fixture();
     const id = "90000000-0000-4000-8000-000000000002";

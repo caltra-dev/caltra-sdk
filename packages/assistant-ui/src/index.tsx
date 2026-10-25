@@ -4,13 +4,13 @@ import {
   ExportedMessageRepository,
   type AppendMessage,
   type AssistantRuntime,
-  type ThreadMessageLike,
   type ThreadMessage,
   useExternalStoreRuntime,
 } from "@assistant-ui/react";
 import type { CaltraMessageContext, CaltraSessionRuntime } from "@caltra/client";
 import { useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 import { modelSelectionFromContext } from "./model_context.js";
+import { MessageProjection } from "./message_projection.js";
 /** Maps an already-started Caltra session runtime into assistant-ui. Never starts or stops it. */
 export interface AssistantUiRuntimeOptions {
   /** Evaluated synchronously for each send, never for transcript rendering. */
@@ -31,29 +31,7 @@ export function useAssistantUiRuntime(store: CaltraSessionRuntime, { getContext 
     await store.send(text, { context: getContext?.(), modelSelection });
   }, [store, getContext]);
 
-  const messages = useMemo<ThreadMessageLike[]>(() => snapshot.messages.map((message) => ({
-    content: [
-      ...(message.text ? [{ type: "text" as const, text: message.text }] : []),
-      ...(message.tool_calls ?? []).map(tool => ({ type: "tool-call" as const, toolCallId: tool.id, toolName: tool.name,
-        args: (tool.arguments ?? {}) as import("@assistant-ui/react").ToolCallMessagePart["args"], argsText: tool.arguments === undefined ? "" : JSON.stringify(tool.arguments),
-        ...(tool.status === "running" ? {} : { result: tool.result ?? null }),
-        isError: tool.status === "failed" || tool.status === "cancelled",
-        // Keep per-tool lifecycle distinct from the enclosing assistant message.
-        artifact: { caltraToolStatus: tool.status, caltraToolDetailsLoaded: tool.arguments !== undefined, caltraMessageId: message.id },
-      })),
-    ],
-    metadata: { custom: { caltraReasoning: message.reasoning } },
-    createdAt: new Date(message.created_at),
-    id: message.id,
-    role: message.role,
-    ...(message.role === "assistant" ? {
-      status: message.status === "streaming"
-        ? { type: "running" as const }
-        : message.status === "completed"
-          ? { type: "complete" as const, reason: "stop" as const }
-          : { type: "incomplete" as const, reason: message.status === "cancelled" ? "cancelled" as const : "error" as const },
-    } : {}),
-  })), [snapshot.messages]);
+  const messages = useMemo(() => MessageProjection.project(snapshot.messages), [snapshot.messages]);
 
   // Caltra owns a linear transcript. Replace the repository so removed optimistic
   // IDs cannot survive as phantom edit/regeneration branches in assistant-ui.
@@ -76,4 +54,4 @@ export function useAssistantUiRuntime(store: CaltraSessionRuntime, { getContext 
   return runtime;
 }
 
-export { useCaltraReasoning } from "./use_reasoning.js";
+export { useCaltraReasoning, useCaltraReasoningMessages } from "./use_reasoning.js";

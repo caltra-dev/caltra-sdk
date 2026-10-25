@@ -92,11 +92,12 @@ export class DemoClient extends CaltraClient {
     const timer = setTimeout(() => { this.timers.delete(timer); fn(); }, delay);
     this.timers.add(timer);
   }
-  streamSteps() {
+  streamSteps(toolsOnly = false) {
     const generation = ++this.generation;
     this.running = true;
     this.emit({ event: "session.updated", id: crypto.randomUUID(), data: { session_id: this.sessionId } });
-    for (let index = 0; index < 8; index++) this.later(() => {
+    const count = toolsOnly ? 4 : 8;
+    for (let index = 0; index < count; index++) this.later(() => {
       if (generation !== this.generation) return;
       const messageId = crypto.randomUUID();
       const data = { session_id: this.sessionId, turn_id: turnId, message_id: messageId };
@@ -105,11 +106,11 @@ export class DemoClient extends CaltraClient {
       this.later(() => {
         if (generation !== this.generation) return;
         const message = this.messages.find(value => value.id === messageId)!;
-        if (index % 2) {
+        if (toolsOnly ? index < 3 : index % 2) {
           message.tool_calls = [{ id: messageId, name: "demo.read", arguments: {}, status: "running" }];
           this.emit({ event: "tool.started", id: `${messageId}:tool`, data: { ...data, tool_call_id: messageId, tool_name: "demo.read" } });
         } else {
-          message.text = `Incoming step ${index + 1}: reading position preserved.`;
+          message.text = toolsOnly ? "Three tool steps complete." : `Incoming step ${index + 1}: reading position preserved.`;
           this.emit({ event: "message.delta", id: `${messageId}:text`, data: { ...data, delta: message.text } });
         }
       }, 150);
@@ -119,7 +120,7 @@ export class DemoClient extends CaltraClient {
         message.status = "completed";
         for (const tool of message.tool_calls ?? []) { tool.status = "completed"; tool.result = { ok: true }; }
         this.emit({ event: "message.completed", id: `${messageId}:end`, data });
-        if (index === 7) {
+        if (index === count - 1) {
           this.running = false;
           this.emit({ event: "session.updated", id: crypto.randomUUID(), data: { session_id: this.sessionId } });
         }
@@ -168,7 +169,8 @@ export class DemoClient extends CaltraClient {
     this.submittedSelections.push(selection ? { ...selection } : undefined);
     const id = crypto.randomUUID();
     this.messages.push({ id, created_at: createdAt, role: "user", status: "completed", text: input.text });
-    if (input.text.startsWith("/think") || selection?.platformModelId === demoReasoningModelId) this.streamThinking(selection?.reasoningLevel);
+    if (input.text === "/tools") this.streamSteps(true);
+    else if (input.text.startsWith("/think") || selection?.platformModelId === demoReasoningModelId) this.streamThinking(selection?.reasoningLevel);
     else this.streamSteps();
     return { message_id: id, turn_id: turnId };
   }

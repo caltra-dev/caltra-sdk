@@ -1,10 +1,10 @@
 import { ModelControls } from "./model-controls.js";
 import { ThreadLocaleProvider, useThreadText, type ThreadLocale } from "../upstream/lib/thread-i18n.js";
-import { AssistantRuntimeProvider, useAuiState, type AssistantRuntime } from "@assistant-ui/react";
-import { useCaltraReasoning } from "@caltra/assistant-ui";
+import { AssistantRuntimeProvider, type AssistantRuntime } from "@assistant-ui/react";
+import { useCaltraReasoning, useCaltraReasoningMessages } from "@caltra/assistant-ui";
 import type { CaltraSessionRuntime } from "@caltra/client";
 import type { CaltraReasoningDisplay } from "@caltra/react/ui";
-import { createContext, useContext, useState, useSyncExternalStore } from "react";
+import { createContext, useContext, useState } from "react";
 import { AssistantMessage, Thread } from "../upstream/components/assistant-ui/elements/thread.aui.js";
 import { ReasoningRoot, ReasoningTrigger, ReasoningContent, ReasoningText } from "../upstream/components/assistant-ui/elements/reasoning.aui.js";
 
@@ -13,11 +13,9 @@ const ReasoningSettings = createContext<Settings | null>(null);
 
 function CaltraThreadMessage() {
   const settings = useContext(ReasoningSettings)!;
-  const id = useAuiState(state => state.message.id);
-  const snapshot = useSyncExternalStore(settings.session.subscribe, settings.session.getSnapshot, settings.session.getSnapshot);
-  const metadata = snapshot.messages.find(message => message.id === id)?.reasoning;
+  const reasoningMessages = useCaltraReasoningMessages();
   return <>
-    {metadata && <ThreadReasoning {...settings} messageId={id} status={metadata.status} />}
+    {reasoningMessages.map(message => <ThreadReasoning key={message.messageId} {...settings} {...message} />)}
     <AssistantMessage />
   </>;
 }
