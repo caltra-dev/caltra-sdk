@@ -1,0 +1,129 @@
+{
+  "commit": "79e5919d8c9c72bd4697c672f0f228c2a62edec4",
+  "files": [
+    {
+      "local": "packages/react/src/ui/upstream/components/assistant-ui/elements/thread.aui.tsx",
+      "upstream": "packages/ui/src/components/react/assistant-ui/elements/thread.aui.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/assistant-ui/elements/attachment.aui.tsx",
+      "upstream": "packages/ui/src/components/react/assistant-ui/elements/attachment.aui.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/ui/tooltip.tsx",
+      "upstream": "packages/ui/src/components/react/ui/base/tooltip.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/lib/utils.ts",
+      "upstream": "packages/ui/src/lib/utils.ts"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/ui/dialog.tsx",
+      "upstream": "packages/ui/src/components/react/ui/base/dialog.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/ui/button.tsx",
+      "upstream": "packages/ui/src/components/react/ui/base/button.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/ui/avatar.tsx",
+      "upstream": "packages/ui/src/components/react/ui/base/avatar.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/assistant-ui/elements/tooltip-icon-button.tsx",
+      "upstream": "packages/ui/src/components/react/assistant-ui/elements/tooltip-icon-button.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/hooks/use-attachment-src.ts",
+      "upstream": "packages/ui/src/hooks/use-attachment-src.ts"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/assistant-ui/elements/file.tsx",
+      "upstream": "packages/ui/src/components/react/assistant-ui/elements/file.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/assistant-ui/elements/media-player.tsx",
+      "upstream": "packages/ui/src/components/react/assistant-ui/elements/media-player.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/assistant-ui/elements/surfaces.tsx",
+      "upstream": "packages/ui/src/components/react/assistant-ui/elements/surfaces.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/assistant-ui/utils/useIsomorphicLayoutEffect.ts",
+      "upstream": "packages/ui/src/components/react/assistant-ui/utils/useIsomorphicLayoutEffect.ts"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/assistant-ui/elements/follow-up-suggestions.aui.tsx",
+      "upstream": "packages/ui/src/components/react/assistant-ui/elements/follow-up-suggestions.aui.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/assistant-ui/elements/image.tsx",
+      "upstream": "packages/ui/src/components/react/assistant-ui/elements/image.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/assistant-ui/utils/href.ts",
+      "upstream": "packages/ui/src/components/react/assistant-ui/utils/href.ts"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/assistant-ui/elements/markdown-text.tsx",
+      "upstream": "packages/ui/src/components/react/assistant-ui/elements/markdown-text.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/hooks/use-copy-to-clipboard.ts",
+      "upstream": "packages/ui/src/hooks/use-copy-to-clipboard.ts"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/assistant-ui/elements/reasoning.aui.tsx",
+      "upstream": "packages/ui/src/components/react/assistant-ui/elements/reasoning.aui.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/assistant-ui/elements/reasoning.tsx",
+      "upstream": "packages/ui/src/components/react/assistant-ui/elements/reasoning.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/assistant-ui/elements/collapsible-root.tsx",
+      "upstream": "packages/ui/src/components/react/assistant-ui/elements/collapsible-root.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/assistant-ui/elements/tool-fallback.aui.tsx",
+      "upstream": "packages/ui/src/components/react/assistant-ui/elements/tool-fallback.aui.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/ui/textarea.tsx",
+      "upstream": "packages/ui/src/components/react/ui/base/textarea.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/assistant-ui/elements/tool-group.aui.tsx",
+      "upstream": "packages/ui/src/components/react/assistant-ui/elements/tool-group.aui.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/ui/skeleton.tsx",
+      "upstream": "packages/ui/src/components/react/ui/base/skeleton.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/assistant-ui/elements/model-selector.aui.tsx",
+      "upstream": "packages/ui/src/components/react/assistant-ui/elements/model-selector.aui.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/assistant-ui/elements/model-selector.tsx",
+      "upstream": "packages/ui/src/components/react/assistant-ui/elements/model-selector.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/assistant-ui/utils/model-selection.ts",
+      "upstream": "packages/ui/src/components/react/assistant-ui/utils/model-selection.ts"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/ui/command.tsx",
+      "upstream": "packages/ui/src/components/react/ui/base/command.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/ui/popover.tsx",
+      "upstream": "packages/ui/src/components/react/ui/base/popover.tsx"
+    },
+    {
+      "local": "packages/react/src/ui/upstream/components/ui/dropdown-menu.tsx",
+      "upstream": "packages/ui/src/components/react/ui/base/dropdown-menu.tsx"
+    }
+  ]
+}

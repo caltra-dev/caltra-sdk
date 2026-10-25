@@ -29,7 +29,7 @@ function fixture() {
 }
 
 describe("CaltraChat", () => {
-  it("keeps Copy directly after assistant text and before trailing tools", async () => {
+  it("uses the native action bar after the full response and copies only answer text", async () => {
     const f = fixture();
     const writeText = vi.fn(async () => undefined);
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
@@ -38,18 +38,19 @@ describe("CaltraChat", () => {
       arguments: { internal: "tool-only-input" }, result: { internal: "tool-only-result" } }]);
     const text = screen.getByText("I will save the confirmed details.");
     const copy = screen.getByRole("button", { name: "Copy", exact: true });
+    fireEvent.click(screen.getByRole("button", { name: "1 tool call" }));
     const tool = screen.getByRole("button", { name: "Used tool: demo.save" });
     expect(text.compareDocumentPosition(copy) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(copy.compareDocumentPosition(tool) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(tool.compareDocumentPosition(copy) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     fireEvent.click(copy);
     await waitFor(() => expect(writeText).toHaveBeenCalledWith("I will save the confirmed details."));
-    expect(screen.getByRole("button", { name: "Copied", exact: true })).toBe(copy);
+    await waitFor(() => expect(copy.getAttribute("data-copied")).toBe("true"));
     fireEvent.click(tool);
     expect(screen.getByText(/tool-only-result/)).toBeTruthy();
-    expect(copy.compareDocumentPosition(tool) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(tool.compareDocumentPosition(copy) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("does not add Copy to user or tool-only messages", async () => {
+  it("keeps Copy disabled when a response contains only tools", async () => {
     const f = fixture();
     f.client.listSessionMessages.mockImplementation(async () => ({ data: [
       { id: "user", role: "user", text: "Please save the details.", status: "completed", created_at: "2026-10-23T00:00:00Z" },
@@ -57,11 +58,11 @@ describe("CaltraChat", () => {
         tool_calls: [{ id: "save", name: "demo.save", status: "completed", arguments: {}, result: { ok: true } }] },
     ], next_cursor: null }));
     render(<CaltraChat client={f.client as never} sessionId="without-copy" />);
-    await screen.findByRole("button", { name: "Used tool: demo.save" });
-    expect(screen.queryByRole("button", { name: "Copy", exact: true })).toBeNull();
+    await screen.findByRole("button", { name: "1 tool call" });
+    expect((screen.getByRole("button", { name: "Copy", exact: true }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it("keeps previous copy controls mounted through thinking, answer streaming, and a running tool gap", async () => {
+  it("keeps transcript nodes mounted through thinking, answer streaming, and a running tool gap", async () => {
     const f = fixture();
     const history: CaltraSessionMessage[] = ["First answer", "Second answer"].flatMap(text => [
       { id: `user-${text}`, role: "user", text: `Question for ${text}`, status: "completed", created_at: "2026-10-21T00:00:00Z" },
@@ -74,8 +75,7 @@ describe("CaltraChat", () => {
     const runtime = new CaltraSessionRuntime(f.client as never, "stable-actions");
     await runtime.start();
     render(<CaltraChat runtime={runtime} reasoningDisplay="collapsed" />);
-    const savedButtons = screen.getAllByRole("button", { name: "Copy", exact: true });
-    expect(savedButtons).toHaveLength(2);
+    const savedMessages = [screen.getByText("First answer"), screen.getByText("Second answer")];
 
     history.push({ id: "new-question", role: "user", text: "New question", status: "completed", created_at: "2026-10-21T00:01:00Z" });
 
@@ -85,20 +85,20 @@ describe("CaltraChat", () => {
     messages = [...history, active];
     await act(async () => { await runtime.refresh(); await runtime.refreshMetadata(); });
     expect(screen.getByRole("button", { name: "Stop generating" })).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: "Copy", exact: true })).toEqual(savedButtons);
+    expect([screen.getByText("First answer"), screen.getByText("Second answer")]).toEqual(savedMessages);
 
-    // A completed step in a running turn does not expose Copy; earlier controls stay mounted.
+    // Native action bars may hide during a turn; prior transcript content must not remount.
     messages = [...history, { ...active, text: "New answer", reasoning: { status: "completed" } }];
     await act(async () => runtime.refresh());
-    expect(screen.getAllByRole("button", { name: "Copy", exact: true })).toEqual(savedButtons);
+    expect([screen.getByText("First answer"), screen.getByText("Second answer")]).toEqual(savedMessages);
     messages = [...history, { ...active, text: "New answer", status: "completed", reasoning: { status: "completed" } }];
     await act(async () => runtime.refresh());
-    expect(screen.getAllByRole("button", { name: "Copy", exact: true })).toEqual(savedButtons);
+    expect([screen.getByText("First answer"), screen.getByText("Second answer")]).toEqual(savedMessages);
     running = false;
     await act(async () => runtime.refreshMetadata());
     const completedButtons = screen.getAllByRole("button", { name: "Copy", exact: true });
-    expect(completedButtons).toHaveLength(3);
-    expect(completedButtons.slice(0, 2)).toEqual(savedButtons);
+    expect(completedButtons).toHaveLength(1);
+    expect([screen.getByText("First answer"), screen.getByText("Second answer")]).toEqual(savedMessages);
     expect(screen.queryByRole("button", { name: "Stop generating" })).toBeNull();
     await runtime.stop();
   });
@@ -113,7 +113,7 @@ describe("CaltraChat", () => {
       { id: "two", role: "assistant", text: "Repeated text", status: "completed", created_at: "2026-10-24T00:00:01Z" },
     ], next_cursor: null }));
     render(<CaltraChat client={f.client as never} sessionId="multiple-text-parts" />);
-    await screen.findByRole("button", { name: "Used tool: demo.read" });
+    await screen.findByRole("button", { name: "1 tool call" });
     expect(screen.getAllByText("Repeated text")).toHaveLength(2);
     const copy = screen.getByRole("button", { name: "Copy", exact: true });
     expect(screen.getAllByText("Repeated text")[1]!.compareDocumentPosition(copy) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -136,7 +136,7 @@ describe("CaltraChat", () => {
   it("never shows a welcome while existing history is pending, including a session switch", async () => {
     const f = fixture();
     const rendered = render(<CaltraChat client={f.client as never} sessionId="first" />);
-    expect(screen.getByText("Loading conversation…")).toBeTruthy();
+    expect(screen.getByText("Loading conversation")).toBeTruthy();
     expect(screen.queryByText("How can I help you today?")).toBeNull();
     await f.resolve("Existing history");
     expect(screen.getByText("Existing history")).toBeTruthy();
@@ -167,7 +167,7 @@ describe("CaltraChat", () => {
     expect(screen.queryByText("Project assistant")).toBeNull();
     await f.resolve();
     expect(screen.getByText("Project assistant")).toBeTruthy();
-    expect(screen.getByRole("textbox", { name: "Message" })).toBeTruthy();
+    expect(screen.getByRole("textbox", { name: "Message input" })).toBeTruthy();
   });
 
   it("keeps failed initial history distinct from an empty conversation and supports retry", async () => {
@@ -214,8 +214,9 @@ it("renders inspectable tool progress, results and failures without executing fr
     { id: "three", name: "records.read", arguments: {}, status: "running" },
     { id: "four", name: "cancelled.read", arguments: {}, status: "cancelled" },
   ]);
+  fireEvent.click(screen.getByRole("button", { name: "4 tool calls" }));
   expect(screen.getByText("demo.echo")).toBeTruthy();
-  const triggers = screen.getAllByRole("button", { name: /Used tool:/ });
+  const triggers = screen.getAllByRole("button", { name: /(Used|Failed|Running) tool:/ });
   expect(triggers).toHaveLength(3);
   expect(triggers[0]!.getAttribute("aria-expanded")).toBe("false");
   expect(triggers[0]!.querySelector(".lucide-check")).toBeTruthy();
@@ -272,7 +273,7 @@ it("observes a caller-owned runtime without opening or closing its transport", a
   await f.resolve("Shared history");
   await started;
   expect(screen.getByPlaceholderText("Custom input")).toBeTruthy();
-  expect(view.container.querySelector(".caltra-chat__viewport.custom-viewport")).toBeTruthy();
+  expect(view.container.querySelector('[data-slot="aui_thread-viewport"].custom-viewport')).toBeTruthy();
   const connection = await f.client.openSessionEvents.mock.results[0]!.value;
   view.unmount();
   expect(connection.close).not.toHaveBeenCalled();
@@ -294,4 +295,40 @@ it("isolates transcript and draft when switching supplied runtime identities", a
   expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("");
   expect((await a.client.openSessionEvents.mock.results[0]!.value).close).not.toHaveBeenCalled();
   view.unmount(); await first.stop(); await second.stop();
+});
+
+it("forwards explicit composer options while keeping the native composer and extra controls", async () => {
+  const f = fixture();
+  function Controls() { return <button type="button">Caller controls</button>; }
+  const onKeyDown = vi.fn();
+  const view = render(<CaltraChat client={f.client as never} sessionId="options" submitMode="ctrlEnter"
+    labels={{ placeholder: "Ask here", send: "Submit question", messageInput: "Question" }}
+    components={{ ComposerControls: Controls }} slotProps={{ composerInput: { onKeyDown } }} />);
+  await f.resolve();
+  const input = screen.getByRole("textbox", { name: "Question" });
+  expect(screen.getByPlaceholderText("Ask here")).toBe(input);
+  expect(screen.getByRole("button", { name: "Caller controls" }).closest("form")).toBe(input.closest("form"));
+  fireEvent.change(input, { target: { value: "Forwarded options" } });
+  fireEvent.keyDown(input, { key: "Enter" });
+  expect(f.client.sendMessage).not.toHaveBeenCalled();
+  fireEvent.keyDown(input, { key: "Enter", ctrlKey: true });
+  await waitFor(() => expect(f.client.sendMessage).toHaveBeenCalledWith("options", { text: "Forwarded options" }));
+  expect(onKeyDown).toHaveBeenCalledTimes(2);
+  view.unmount();
+});
+
+it("changes native locale without remounting the composer or grouped tool controls", async () => {
+  const f = fixture();
+  const view = render(<CaltraChat client={f.client as never} sessionId="locale" />);
+  await f.resolve("Saved response", [{ id: "read", name: "demo.read", status: "completed", arguments: {}, result: "value" }]);
+  const input = screen.getByRole("textbox");
+  const group = screen.getByRole("button", { name: "1 tool call" });
+  fireEvent.change(input, { target: { value: "Keep this draft" } });
+  view.rerender(<CaltraChat client={f.client as never} sessionId="locale" locale="it" />);
+  expect(screen.getByRole("textbox")).toBe(input);
+  expect((input as HTMLTextAreaElement).value).toBe("Keep this draft");
+  expect(screen.getByRole("button", { name: "1 chiamata a uno strumento" })).toBe(group);
+  fireEvent.click(group);
+  expect(screen.getByRole("button", { name: "Strumento usato: demo.read" })).toBeTruthy();
+  expect(f.client.openSessionEvents).toHaveBeenCalledOnce();
 });

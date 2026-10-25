@@ -3,7 +3,7 @@
 import type { ToolCallMessagePartProps } from "@assistant-ui/react";
 import type { CaltraSessionRuntime, CaltraToolCall } from "@caltra/client";
 import { useEffect, useState } from "react";
-import { ToolFallback } from "./assistant-ui/tool-fallback.js";
+import { ToolFallback } from "./upstream/components/assistant-ui/elements/tool-fallback.aui.js";
 import type { CaltraChatLabels } from "./labels.js";
 import { DetailsLoading } from "./details_loading.js";
 

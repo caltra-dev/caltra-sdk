@@ -1,6 +1,6 @@
-import { PopoverPortalContainer } from "../upstream/components/ui/popover.js";
+import { PopoverPortalContainer } from "@caltra/react/ui/model-selector";
 import { ThinkingDropdown } from "./thinking-dropdown.js";
-import { ModelSelector, type ModelOption } from "../upstream/components/assistant-ui/elements/model-selector.aui.js";
+import { ModelSelector, type ModelOption } from "@caltra/react/ui/model-selector";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { CaltraApiError, type CaltraClient, type CaltraModelChoice, type CaltraSessionRuntime, type CaltraSessionSnapshot } from "@caltra/client";
 

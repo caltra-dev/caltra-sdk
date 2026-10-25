@@ -16,7 +16,7 @@ npm run demo -- --caltra-api-key=<key>
 
 `CALTRA_API_KEY` in the launch environment also enables and initially selects **Real Caltra API**. Signal Room’s **Connection** setting always offers **Local stub**, and automatically adds **Real Caltra API** when a key is supplied. Without a key (or with the explicit `--local-stub` isolation override), only Local stub is available. Switching connection remounts the client and session, clears drafts and the session deep link, and closes the previous event subscription. It does not cancel a server-side run. The selector stays usable during loading or authentication errors. Prefer environment injection for a saved credential; the Caltra repository's `npm run demo` launcher supplies its GitVaulty-managed demo key without copying it here. CLI keys are optional and may remain in shell history. The repository-pinned npm version rejects unknown flags before the script runs; the `--` separator is required.
 
-The launcher builds the local workspace packages and opens Signal Room at `/`. Its Chat view selector offers CaltraChat and Standard Thread over the same selected session and runtime. Both modes use the normal CaltraClient authorization exchange, REST schemas, and SSE parser.
+The launcher builds the local workspace packages and opens Signal Room at `/`. It renders the packaged CaltraChat, a thin wrapper around native assistant-ui Thread. Both connection modes use the normal CaltraClient authorization exchange, REST schemas, and SSE parser.
 
 The stub implements the demo's authorization, agent lookup, session creation/listing, paginated messages, tool details, sending, cancellation and SSE routes. It is an in-memory simulator of this API subset, not a complete Caltra backend. It starts with 60 deterministic messages and tool success/failure examples. Sending produces eight streamed steps; `/think` produces a simulated reasoning summary on the separate reasoning endpoint and SSE stream. New conversations are empty; state resets when the server restarts.
 
@@ -31,7 +31,7 @@ Stub browser requests are isolated under `/demo/stub`; real browser requests use
 The demo imports `CaltraChat` from `@caltra/react/ui`, which loads its CSS automatically. Default styling uses the
 SDK's assistant-ui preset. Independent Theme, Color mode (System/Light/Dark), and Language
 selectors demonstrate both presets, a custom brand, and Italian labels while preserving
-the session, transcript, scroll position, and draft within CaltraChat. Switching chat views remounts the composer, so an unsent draft is view-local. Selecting a session writes `?session=<id>`
+the session, transcript, scroll position, and draft within CaltraChat. Selecting a session writes `?session=<id>`
 so reloading that URL exercises loading the saved transcript directly; IDs are resolved only
 within the authorized session list.
 
@@ -65,25 +65,24 @@ The seed is idempotent, grants demo tools to the development workspace audience,
 ## Local API stub scenarios
 
 Send `/tools` in Local stub mode to stream three consecutive tool-only steps and
-a final answer. Standard Thread should show one native **3 tool calls** group;
+a final answer. CaltraChat should show one native **3 tool calls** group;
 expand it to see all three calls. Reload the session to check history grouping.
 This command is a deterministic local fixture, not a production agent command.
 
 The adapter keeps one assistant UI message per user-delimited response throughout
-empty, thinking, tool and answer steps. Standard Thread's native top anchor stays
+empty, thinking, tool and answer steps. Thread's native top anchor stays
 attached to that stable message. A 1rem inset on the demo host sits outside the
 scrollport so the pinned user message does not touch the header; the upstream
 Thread, reserve-space logic and scroll behavior are unchanged. Native top anchoring
 still intentionally leaves room below a new question for its incoming answer.
 
 Launch with `npm run demo -- --local-stub`. Signal Room loads 60 saved messages,
-initially displaying the newest 20. Scroll up in CaltraChat, or use **Load earlier
-messages** in Standard Thread, to load older pages. Send any text for eight streamed
+initially displaying the newest 20. Use native **Load earlier messages** to load older pages. Send any text for eight streamed
 message/tool steps; use Stop to cancel. Create a session to start empty.
 
-Saved messages 58 and 60 include successful/failed tool calls. In CaltraChat, expand
-a tool to fetch details. Copy stays directly below the text, before trailing tools.
-Standard Thread retains its upstream action-bar placement below the message.
+Saved messages 58 and 60 include successful/failed tool calls. Expand the native
+tool group, then a tool to fetch its details. The native Copy action follows the
+entire response, including trailing tools.
 
 The old `?demo=runtime` simulation and separate `/thread.html` entry are removed.
 The server stub still uses deterministic fixtures, but the browser always uses the
@@ -91,14 +90,14 @@ real CaltraClient HTTP/SSE path. The browser regression sources now target Signa
 Room. Scroll assertions should compare a visible message's viewport-relative
 position, not only scrollTop, because layout changes can trigger native anchoring.
 
-## Controls in both chat views
+## Chat controls
 
-Both views show Chat view, Thinking display, Theme, Color mode, Language, and
-Stream thinking (enabled only in local-stub mode). Settings stay selected when switching views. Theme presets map
+The demo shows Thinking display, Theme, Color mode, Language, and Stream thinking
+(enabled only in local-stub mode). Theme presets map
 to the standard Thread's CSS tokens; System mode follows the OS preference live.
 The Thread reset and tokens are scoped to its panel, including tooltip/dialog portals.
 
-Both views support English and Italian. Thread's copied components consume a
+CaltraChat supports English and Italian. Thread's copied components consume a
 small typed locale context; changing language updates labels, placeholders,
 tooltips, tool/reasoning controls and accessibility text without remounting Thread
 or clearing the composer draft. Common Italian strings reuse the CaltraChat labels.
@@ -111,31 +110,27 @@ It is enabled only with the HTTP stub. `/think` is not a production API command;
 the real demo model may answer it as ordinary text without returning reasoning.
 Real mode explains this restriction and disables the test button. Display settings
 control existing reasoning; they cannot enable reasoning in a model.
-The Standard Thread pending indicator uses the upstream pulsing dot,
+The native Thread pending indicator uses the upstream pulsing dot,
 separate from a Reasoning disclosure. It disappears when an answer arrives.
 
-Both views support Thinking display. A demo adapter composes the stock Thread
+CaltraChat supports Thinking display. The SDK adapter composes the stock Thread
 message and reasoning disclosure with `useCaltraReasoning`; reasoning text is
 fetched only when the disclosure opens. Auto expands during reasoning and collapses afterward; Collapsed
 fetches only when opened, Hidden never fetches, and Expanded stays open. Changing
 these controls does not remount the composer.
 
-## Standard Thread integration boundary
+## Native Thread integration boundary
 
-The upstream Thread uses Base UI and is pinned to assistant-ui React 0.15.30 source;
-see [provenance](src/upstream/README.md). Its Reload and Markdown export controls
-are omitted. Copy and capability-gated feedback remain. No SDK consumer needs the
-demo's Tailwind dependencies.
-
-The standard tool UI does not load Caltra's lazy tool details automatically. It can
-show a completed marker for a failed result. CaltraChat handles durable tool status
-and lazy loading. Attachments, editing, regeneration and feedback are not supported
-by this text-only runtime. Neither production Piria nor the SDK default changes.
+CaltraChat wraps the pinned assistant-ui React 0.15.30 Thread with its Caltra
+runtime and lazy resources; see [provenance](../../packages/react/src/ui/upstream/README.md).
+There is no second layout or view selector. The SDK bundles scoped styles,
+so consumers need no Tailwind setup. The demo uses the exported SDK component
+and supplies only its model controls through ComposerControls. Attachments,
+editing, regeneration and feedback remain unavailable in this text-only runtime.
 
 ## Model and reasoning choices (unreleased)
 
-Signal Room shares a **Model and reasoning** picker across CaltraChat
-and Standard Thread. In Standard Thread it sits directly inside the managed composer; in CaltraChat it remains in the header. Choices come from `GET /client/v1/sessions/:id/model-choices`;
+Signal Room puts the **Model and reasoning** picker inside the native composer. Choices come from `GET /client/v1/sessions/:id/model-choices`;
 the UI never hard-codes production models or supported efforts. A selection
 applies to the next message in the current conversation and remains selected
 while that runtime is mounted. The picker is disabled during a turn.
@@ -148,9 +143,9 @@ release and hosted-agent user choices. Older servers retain session-default
 messaging and show a model-catalog error with Retry. This feature does not deploy
 or publish either repository automatically.
 
-The Model and reasoning control uses upstream assistant-ui ModelSelector and its native ModelContext registration. Caltra's session model-choices endpoint supplies all choices and effort levels; the local stub supplies deterministic equivalents. Both chat views consume the same context, and changing view preserves the selection. Controls are disabled while a reply is active. ModelContext selection is separate from Thinking display, which only controls disclosure visibility. When an older API does not expose choices, default messaging remains available.
+The Model and reasoning control uses upstream assistant-ui ModelSelector and its native ModelContext registration. Caltra's session model-choices endpoint supplies all choices and effort levels; the local stub supplies deterministic equivalents. The picker registers with the same runtime as the composer. Controls are disabled while a reply is active. ModelContext selection is separate from Thinking display, which only controls disclosure visibility. When an older API does not expose choices, default messaging remains available.
 
-### Preview verification (2026-10-24)
+### Previous preview verification (before the native wrapper migration)
 
 The connection picker and composer ModelSelector were verified on the private
 branch Sprite, including a 390px viewport, selection across chat views, and the

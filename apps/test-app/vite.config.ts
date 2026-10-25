@@ -1,5 +1,3 @@
-import { fileURLToPath } from "node:url";
-import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 import { TestAppApiProxy } from "./server/api_proxy.js";
@@ -10,7 +8,7 @@ import { TestAppAuthorizationPlugin } from "./server/authorization_plugin.js";
 import { TestAppAuthorizationProxy } from "./server/authorization_proxy.js";
 
 export default defineConfig(({ command, mode }) => {
-  const plugins = [...react(), tailwindcss()];
+  const plugins = [...react()];
   let apiUrl = mode === "test" ? "http://caltra.test" : "https://api.caltra.dev";
   const environment = loadEnv(mode, process.cwd(), "");
   const connections = demoConnectionSettings(environment);
@@ -22,7 +20,6 @@ export default defineConfig(({ command, mode }) => {
     plugins.push(new TestAppAuthorizationPlugin(new TestAppAuthorizationProxy(config)).toVitePlugin());
   }
   return {
-    resolve: { alias: { "@": fileURLToPath(new URL("./src/upstream", import.meta.url)) } },
     define: { __CALTRA_API_URL__: JSON.stringify(apiUrl), __CALTRA_REAL_API_AVAILABLE__: JSON.stringify(connections.realApiAvailable), __CALTRA_DEFAULT_CONNECTION__: JSON.stringify(connections.defaultConnection) },
     plugins,
     server: { allowedHosts: [".sprites.app"] },

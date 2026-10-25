@@ -1,13 +1,13 @@
 import { ChevronDownIcon } from "lucide-react";
-import { useModelSelectorEfforts } from "../upstream/components/assistant-ui/elements/model-selector.aui.js";
-import { Button } from "../upstream/components/ui/button.js";
+import { useModelSelectorEfforts } from "@caltra/react/ui/model-selector";
+import { Button } from "@caltra/react/ui/model-selector";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
-} from "../upstream/components/ui/dropdown-menu.js";
+} from "@caltra/react/ui/model-selector";
 
 /** Upstream's documented effort-menu composition supports catalogs with many levels. */
 export function ThinkingDropdown() {

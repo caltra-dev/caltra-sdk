@@ -3,21 +3,24 @@
 import { CaltraReasoning, type CaltraReasoningDisplay, type CaltraReasoningProps } from "./reasoning.js";
 
 import {
-  ActionBarPrimitive, AssistantRuntimeProvider, AuiIf,
-  ComposerPrimitive, MessagePrimitive, ThreadPrimitive, useAui, useAuiState, type ToolCallMessagePartProps,
+  AssistantRuntimeProvider,
+  ComposerPrimitive, ThreadPrimitive, useAuiState, type ToolCallMessagePartProps,
 } from "@assistant-ui/react";
-import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ComponentType, type ComponentPropsWithoutRef } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ComponentType, type ComponentPropsWithoutRef, type CSSProperties } from "react";
 import { CaltraSessionRuntime, type CaltraMessageContext } from "@caltra/client";
 import { useAssistantUiRuntime, useCaltraReasoningMessages } from "@caltra/assistant-ui";
 import { type UseCaltraRuntimeOptions, type UseCaltraRuntimeResult } from "../use_caltra_runtime.js";
 import { caltraThemes, type CaltraColorMode, type CaltraTheme, type CaltraThemeName } from "../themes/index.js";
 import { themeStyle, type CaltraChatStyle } from "./theme_style.js";
 import { defaultCaltraChatLabels, type CaltraChatLabels } from "./labels.js";
+import { italian } from "./italian-labels.js";
 
 import { LazyTool } from "./lazy_tool.js";
-import { ToolFallback } from "./assistant-ui/tool-fallback.js";
-import { MarkdownText } from "./assistant-ui/markdown-text.js";
-import { Composer } from "./assistant-ui/composer.js";
+import { ToolFallback } from "./upstream/components/assistant-ui/elements/tool-fallback.aui.js";
+import { Thread, AssistantMessage, UserMessage, ThreadWelcome, ThreadHistorySkeleton, Composer, type ThreadComponents } from "./upstream/components/assistant-ui/elements/thread.aui.js";
+import { ThreadLocaleProvider, ThreadTextOverrides, type ThreadLocale, type ThreadLabel } from "./upstream/lib/thread-i18n.js";
+import { ThreadPortalContainer } from "./upstream/lib/portal-container.js";
+import { PopoverPortalContainer } from "./upstream/components/ui/popover.js";
 
 const ToolContext = createContext<{ labels: CaltraChatLabels; session?: CaltraSessionRuntime; Tool?: ComponentType<ToolCallMessagePartProps>; reasoningDisplay?: CaltraReasoningDisplay; Reasoning?: ComponentType<CaltraReasoningProps> }>({ labels: defaultCaltraChatLabels });
 
@@ -37,6 +40,8 @@ export interface CaltraConnectionProps extends CaltraChatSlotProps {
 
 /** Slots replace presentation while staying inside the same assistant-ui runtime provider. */
 export interface CaltraChatComponents {
+  /** Inserts controls without replacing the native composer. */
+  ComposerControls?: ComponentType;
   Welcome?: ComponentType<CaltraChatSlotProps>;
   Loading?: ComponentType<CaltraChatSlotProps>;
   Message?: ComponentType<CaltraChatSlotProps>;
@@ -51,6 +56,9 @@ export type CaltraChatSource =
   | { runtime: CaltraSessionRuntime; client?: never; sessionId?: never };
 
 export interface CaltraChatPresentationProps {
+  /** Native presentation locale; explicit labels take precedence. */
+  locale?: ThreadLocale;
+  autoFocus?: boolean;
   /** Snapshot application data with each send; not returned in the visible transcript. */
   getContext?: () => CaltraMessageContext | undefined;
   /** Fetching is disclosure-owned. Hidden opens no reasoning stream. */
@@ -81,139 +89,92 @@ export function CaltraChat(props: CaltraChatProps) {
   return <Session {...props} />;
 }
 
+
+const ChatSlots = createContext<{ labels: CaltraChatLabels; components: CaltraChatComponents; submitMode: CaltraComposerProps["submitMode"]; inputProps?: CaltraComposerInputProps }>({ labels: defaultCaltraChatLabels, components: {}, submitMode: "enter" });
+const threadStyle = { "--thread-max-width": "var(--caltra-content-width, var(--caltra-theme-content-width, 44rem))" } as CSSProperties;
+
 function ChatSession(props: CaltraChatProps) {
-  const { labels: overrides, components = {}, className, style, hidden, theme = "assistant-ui",
-    colorMode = "system", submitMode = "enter", slotProps = {} } = props;
-  const session = useMemo(() => props.runtime ?? new CaltraSessionRuntime(props.client!, props.sessionId!),
-    [props.runtime, props.client, props.sessionId]);
+  const { components = {}, className, style, hidden, theme = "assistant-ui", colorMode = "system", submitMode = "enter", slotProps = {} } = props;
+  const session = useMemo(() => props.runtime ?? new CaltraSessionRuntime(props.client!, props.sessionId!), [props.runtime, props.client, props.sessionId]);
   useEffect(() => {
-    if (props.runtime) return; // Supplied runtimes belong to the caller, including their connection lifetime.
+    if (props.runtime) return;
     void session.start().catch(() => undefined);
     return () => { void session.stop(); };
   }, [session, props.runtime]);
   const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
   const runtime = useAssistantUiRuntime(session, { getContext: props.getContext });
-  const caltra = { ...snapshot, runtime, reconnect: () => session.reconnect() };
-  const viewport = slotProps.viewport ?? {};
+  const labels = useMemo(() => ({ ...defaultCaltraChatLabels, ...(props.locale === "it" ? italian : {}), ...props.labels }), [props.labels, props.locale]);
   const resolvedTheme = typeof theme === "string" ? caltraThemes[theme] : theme;
-  const labels = useMemo(() => ({ ...defaultCaltraChatLabels, ...overrides }), [overrides]);
-  const { Welcome = CaltraWelcome, Loading = CaltraHistoryLoading, Message = CaltraMessage,
-    Composer = CaltraComposer, Connection = CaltraConnection } = components;
-
-  return <AssistantRuntimeProvider runtime={caltra.runtime}>
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
+  const [systemDark, setSystemDark] = useState(() => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const update = () => setSystemDark(media.matches);
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  const dark = colorMode === "dark" || (colorMode === "system" && systemDark);
+  const nativeComponents: ThreadComponents = {
+    AssistantMessage: AssistantSlot,
+    UserMessage: components.Message ? MessageSlot : undefined,
+    Welcome: components.Welcome || props.labels?.welcomeDescription ? WelcomeSlot : undefined,
+    Loading: components.Loading ? LoadingSlot : undefined,
+    Composer: components.Composer ? ComposerSlot : undefined,
+    ComposerControls: components.ComposerControls,
+    ToolFallback: ToolRenderer,
+  };
+  const Connection = components.Connection ?? CaltraConnection;
+  return <AssistantRuntimeProvider runtime={runtime}>
+    <ThreadLocaleProvider value={props.locale ?? "en"}><ThreadTextOverrides.Provider value={nativeLabels(props.labels)}>
+    <ChatSlots.Provider value={{ labels, components, submitMode, inputProps: slotProps.composerInput }}>
     <ToolContext.Provider value={{ labels, session, Tool: components.Tool, reasoningDisplay: hidden ? "hidden" : (props.reasoningDisplay ?? "hidden"), Reasoning: components.Reasoning }}>
-    <ThreadPrimitive.Root className={`caltra-chat${className ? ` ${className}` : ""}`} style={{ ...themeStyle(resolvedTheme), ...style }} data-theme={resolvedTheme.name} data-color-mode={colorMode} hidden={hidden} aria-label={labels.chat}>
-      <Connection labels={labels} connection={caltra.connection} error={caltra.error} historyLoaded={caltra.historyLoaded} retry={caltra.reconnect} />
-      {!caltra.historyLoaded && caltra.connection !== "failed" && <Loading labels={labels} />}
-      <ThreadPrimitive.Viewport {...viewport}
-        onScroll={event => {
-          viewport.onScroll?.(event);
-          // Load only as the reader reaches the beginning; errors wait for explicit retry.
-          // The native runtime coalesces requests and the viewport preserves the visible rows.
-          if (!hidden && caltra.historyLoaded && !caltra.olderError && event.currentTarget.scrollTop <= 120 &&
-            runtime.thread.getState().hasEarlier && !runtime.thread.getState().isLoadingEarlier) {
-            void runtime.thread.loadEarlier();
-          }
-        }}
-        className={`caltra-chat__viewport${viewport.className ? ` ${viewport.className}` : ""}`}
-        autoScroll={viewport.autoScroll ?? true}
-        scrollToBottomOnRunStart={viewport.scrollToBottomOnRunStart ?? false}
-        hidden={!caltra.historyLoaded && caltra.connection !== "failed"}>
-        <div className="caltra-chat__content">
-          {caltra.historyLoaded && <>
-            <AuiIf condition={state => state.thread.hasEarlier || state.thread.isLoadingEarlier}>
-              <div className="caltra-chat__history-pagination">
-                <AuiIf condition={state => state.thread.isLoadingEarlier}>
-                  <div className="caltra-chat__skeleton caltra-chat__history-skeleton" role="status" aria-label={labels.olderLoading}>
-                    {[0, 1].map(group => <div className="caltra-chat__skeleton-message" key={group} aria-hidden="true"><i /><i /></div>)}
-                  </div>
-                </AuiIf>
-                {caltra.olderError && <>
-                  <p role="alert">{labels.olderFailed}</p>
-                  <ThreadPrimitive.LoadEarlier>{labels.retry}</ThreadPrimitive.LoadEarlier>
-                </>}
-              </div>
-            </AuiIf>
-            <AuiIf condition={(state) => state.thread.messages.length === 0 && !state.thread.isLoading}>
-              <Welcome labels={labels} />
-            </AuiIf>
-            <div className="caltra-chat__messages"><ThreadPrimitive.Messages>{() => <Message labels={labels} />}</ThreadPrimitive.Messages></div>
-          </>}
-          <ThreadPrimitive.ViewportFooter className="caltra-chat__footer">
-            <ThreadPrimitive.ScrollToBottom className="caltra-chat__scroll" aria-label={labels.scrollToBottom}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 5v14m-7-7 7 7 7-7" /></svg>
-            </ThreadPrimitive.ScrollToBottom>
-            <Composer labels={labels} submitMode={submitMode} inputProps={slotProps.composerInput} />
-          </ThreadPrimitive.ViewportFooter>
-        </div>
-      </ThreadPrimitive.Viewport>
-    </ThreadPrimitive.Root>
-    </ToolContext.Provider>
+    <ThreadPortalContainer.Provider value={container}><PopoverPortalContainer.Provider value={container}>
+      <div ref={setContainer} className={`caltra-chat${dark ? " dark" : ""}${className ? ` ${className}` : ""}`} style={{ ...themeStyle(resolvedTheme), ...style }} data-theme={resolvedTheme.name} data-color-mode={colorMode} hidden={hidden} aria-label={labels.chat} lang={props.locale}>
+        <Connection labels={labels} connection={snapshot.connection} error={snapshot.error} historyLoaded={snapshot.historyLoaded} retry={() => session.reconnect()} />
+        {snapshot.olderError && <div className="caltra-chat__connection" role="alert">{labels.olderFailed}</div>}
+        <Thread components={nativeComponents} autoFocus={props.autoFocus} rootStyle={threadStyle} viewportProps={slotProps.viewport} composerInputProps={slotProps.composerInput} submitMode={submitMode} />
+      </div>
+    </PopoverPortalContainer.Provider></ThreadPortalContainer.Provider>
+    </ToolContext.Provider></ChatSlots.Provider></ThreadTextOverrides.Provider></ThreadLocaleProvider>
   </AssistantRuntimeProvider>;
 }
 
+/** Explicit caller labels adapt native strings; absent overrides keep upstream defaults. */
+function nativeLabels(labels?: Partial<CaltraChatLabels>): Partial<Record<ThreadLabel, string>> {
+  const map: Partial<Record<keyof CaltraChatLabels, ThreadLabel>> = {
+    welcomeTitle: "How can I help you today?", placeholder: "Send a message...", messageInput: "Message input",
+    send: "Send message", stop: "Stop generating", copy: "Copy", scrollToBottom: "Scroll to bottom",
+    loading: "Loading conversation", loadOlder: "Load earlier messages", olderLoading: "Loading earlier messages",
+    thought: "Reasoning", reasoningLoading: "Loading reasoning…", reasoningFailed: "Could not load reasoning.", retry: "Try again",
+  };
+  const result: Partial<Record<ThreadLabel, string>> = {};
+  for (const [key, text] of Object.entries(labels ?? {})) {
+    const native = map[key as keyof CaltraChatLabels];
+    if (native && text !== undefined) result[native] = text;
+  }
+  return result;
+}
+function WelcomeSlot() { const { components, labels } = useContext(ChatSlots); const Component = components.Welcome ?? CaltraWelcome; return <Component labels={labels} />; }
+function LoadingSlot() { const { components, labels } = useContext(ChatSlots); const Component = components.Loading!; return <Component labels={labels} />; }
+function MessageSlot() { const { components, labels } = useContext(ChatSlots); const Component = components.Message!; return <Component labels={labels} />; }
+function ComposerSlot() { const { components, ...props } = useContext(ChatSlots); const Component = components.Composer!; return <Component {...props} />; }
+function AssistantSlot() { const { components, labels } = useContext(ChatSlots); return components.Message ? <MessageSlot /> : <CaltraMessage labels={labels} />; }
+
 export function CaltraWelcome({ labels }: CaltraChatSlotProps) {
-  return <div className="caltra-chat__welcome" data-caltra-state="empty">
-    <h2>{labels.welcomeTitle}</h2>
-    {labels.welcomeDescription && <p>{labels.welcomeDescription}</p>}
-  </div>;
+  return <ThreadTextOverrides.Provider value={nativeLabels(labels)}><ThreadWelcome />{labels.welcomeDescription && <p>{labels.welcomeDescription}</p>}</ThreadTextOverrides.Provider>;
 }
-
 export function CaltraHistoryLoading({ labels }: CaltraChatSlotProps) {
-  return <div className="caltra-chat__loading" role="status" data-caltra-state="loading">
-    <span className="caltra-chat__sr-only">{labels.loading}</span>
-    <div className="caltra-chat__skeleton" aria-hidden="true">
-      {[0, 1, 2, 3].map(group => <div className="caltra-chat__skeleton-message" key={group}><i /><i /><i /></div>)}
-    </div>
-    <div className="caltra-chat__skeleton-composer" aria-hidden="true"><i /><span /></div>
-  </div>;
+  return <ThreadTextOverrides.Provider value={nativeLabels(labels)}><ThreadHistorySkeleton /></ThreadTextOverrides.Provider>;
 }
-
-export function CaltraMessage({ labels }: CaltraChatSlotProps) {
-  const role = useAuiState((state) => state.message.role);
-  const { session, reasoningDisplay = "hidden" } = useContext(ToolContext);
-  const hasReasoning = useAuiState(state => Boolean(state.message.metadata.custom?.caltraReasoning));
-  const emptyCompleted = useAuiState((state) => state.message.role === "assistant"
-    && state.message.status?.type === "complete"
-    && !state.message.content.some((part) => part.type !== "text" || part.text !== ""));
-  // Text-only transcripts can retain an empty checkpoint for a server-side tool call.
-  if (emptyCompleted && (!hasReasoning || reasoningDisplay === "hidden")) return null;
-  return <MessagePrimitive.Root className="caltra-chat__message" data-role={role}>
-    <span className="caltra-chat__sr-only">{role === "user" ? labels.user : labels.assistant}</span>
-    <div className="caltra-chat__message-body">
-      {session && hasReasoning && <ReasoningRenderer session={session} />}
-      <MessagePrimitive.Parts components={{ Text: MessageText, tools: { Fallback: ToolRenderer } }} />
-      <AuiIf condition={(state) => state.message.status?.type === "incomplete"}>
-        <p className="caltra-chat__message-error" role="alert">{labels.messageFailed}</p>
-      </AuiIf>
-    </div>
-  </MessagePrimitive.Root>;
-}
-
-// One response can contain several text/tool steps. Keep one message-level Copy
-// action after its last text part, before any trailing tool disclosures.
-function MessageText() {
-  const { labels } = useContext(ToolContext);
-  const query = useAui().part.query;
+export function CaltraMessage(_props: CaltraChatSlotProps) {
   const role = useAuiState(state => state.message.role);
-  const isCopied = useAuiState((state) => state.message.isCopied);
-  const isLastText = useAuiState(state => query !== null && "index" in query
-    && query.index === state.message.content.findLastIndex(part => part.type === "text" && part.text.length > 0));
-  // Thread-wide running state must not remove controls from earlier completed messages.
-  const isMessageRunning = useAuiState((state) => state.message.status?.type === "running");
-  return <>
-    <MarkdownText />
-    {role === "assistant" && isLastText && !isMessageRunning && <ActionBarPrimitive.Root className="caltra-chat__actions">
-      <ActionBarPrimitive.Copy className="caltra-chat__copy" aria-label={isCopied ? labels.copied : labels.copy} title={isCopied ? labels.copied : labels.copy}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-          {isCopied ? <path d="m20 6-11 11-5-5" /> : <>
-            <rect width="14" height="14" x="8" y="8" rx="2" />
-            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-          </>}
-        </svg>
-      </ActionBarPrimitive.Copy>
-    </ActionBarPrimitive.Root>}
-  </>;
+  const { session } = useContext(ToolContext);
+  if (role === "user") return <UserMessage />;
+  return <>{session && <ReasoningRenderer session={session} />}<AssistantMessage /></>;
+}
+export function CaltraComposer({ labels, submitMode, inputProps }: CaltraComposerProps) {
+  return <ThreadTextOverrides.Provider value={nativeLabels(labels)}><Composer inputProps={inputProps} submitMode={submitMode} /></ThreadTextOverrides.Provider>;
 }
 
 function ToolRenderer(props: ToolCallMessagePartProps) {
@@ -227,7 +188,7 @@ export function CaltraTool(props: ToolCallMessagePartProps) {
   const artifact = props.artifact;
   const lifecycle = artifact && typeof artifact === "object" && "caltraToolStatus" in artifact
     ? artifact.caltraToolStatus : undefined;
-  // assistant-ui 0.15.16 derives a completed part from any result, even isError.
+  // assistant-ui derives a completed part from any result, even isError.
   // Normalize Caltra's durable per-call status at the boundary, not in upstream UI.
   const status: ToolCallMessagePartProps["status"] = lifecycle === "cancelled"
     ? { type: "incomplete", reason: "cancelled" }
@@ -242,10 +203,6 @@ export function CaltraTool(props: ToolCallMessagePartProps) {
       lifecycle={String(lifecycle)} labels={labels} />;
   }
   return <ToolFallback {...props} status={status} />;
-}
-
-export function CaltraComposer({ labels, submitMode, inputProps }: CaltraComposerProps) {
-  return <Composer labels={labels} submitMode={submitMode} inputProps={inputProps} />;
 }
 
 export function CaltraConnection({ labels, connection, error, historyLoaded, retry }: CaltraConnectionProps) {

@@ -25,8 +25,8 @@ body {
 }
 
 /* Keep shell defaults out of the stock assistant-ui component scopes. */
-:is(button, input, select, textarea):not(:where(.signal-thread *, .signal-ui *)) { font: inherit; }
-button:not(:where(.signal-thread *, .signal-ui *)) { color: inherit; }
+:is(button, input, select, textarea):not(:where(.caltra-chat *)) { font: inherit; }
+button:not(:where(.caltra-chat *)) { color: inherit; }
 
 .app-frame {
   display: grid;
@@ -257,5 +257,3 @@ button:not(:where(.signal-thread *, .signal-ui *)) { color: inherit; }
 @media (max-width: 760px) {
   .demo-app .session-rail, .demo-app .chat-shell { height: auto; }
 }
-
-.demo-controls > .signal-ui { grid-column: 1 / -1; }

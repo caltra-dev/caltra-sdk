@@ -13,11 +13,6 @@
       "node",
       "vite/client"
     ],
-    "paths": {
-      "@/*": [
-        "./src/upstream/*"
-      ]
-    },
     "module": "ESNext",
     "moduleResolution": "Bundler"
   },

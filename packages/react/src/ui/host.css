@@ -1,0 +1,68 @@
+.caltra-chat {
+  --caltra-resolved-background: var(--caltra-background, var(--caltra-theme-light-background, #ffffff));
+  --caltra-resolved-foreground: var(--caltra-foreground, var(--caltra-theme-light-foreground, #18181b));
+  --caltra-resolved-muted: var(--caltra-muted, var(--caltra-theme-light-muted, #f4f4f5));
+  --caltra-resolved-muted-foreground: var(--caltra-muted-foreground, var(--caltra-theme-light-muted-foreground, #71717a));
+  --caltra-resolved-accent: var(--caltra-accent, var(--caltra-theme-light-accent, #18181b));
+  --caltra-resolved-accent-foreground: var(--caltra-accent-foreground, var(--caltra-theme-light-accent-foreground, #fafafa));
+  --caltra-resolved-border: var(--caltra-border, var(--caltra-theme-light-border, #e4e4e7));
+  --caltra-resolved-error: var(--caltra-error, var(--caltra-theme-light-error, #b42318));
+
+  --background: var(--caltra-resolved-background);
+  --foreground: var(--caltra-resolved-foreground);
+  --muted: var(--caltra-resolved-muted);
+  --muted-foreground: var(--caltra-resolved-muted-foreground);
+  --primary: var(--caltra-resolved-accent);
+  --primary-foreground: var(--caltra-resolved-accent-foreground);
+  --accent: var(--caltra-resolved-muted);
+  --accent-foreground: var(--caltra-resolved-foreground);
+  --secondary: var(--caltra-resolved-muted);
+  --secondary-foreground: var(--caltra-resolved-foreground);
+  --border: var(--caltra-resolved-border);
+  --input: var(--caltra-resolved-border);
+  --ring: var(--caltra-resolved-accent);
+  --popover: var(--caltra-resolved-background);
+  --popover-foreground: var(--caltra-resolved-foreground);
+  --card: var(--caltra-resolved-background);
+  --card-foreground: var(--caltra-resolved-foreground);
+  --destructive: var(--caltra-resolved-error);
+  --radius: var(--caltra-radius, var(--caltra-theme-radius, 0.625rem));
+  color: var(--foreground); background: var(--background);
+  font-family: var(--caltra-font-family, var(--caltra-theme-font-family, ui-sans-serif, system-ui, sans-serif));
+  font-size: 16px; line-height: 1.5; color-scheme: light;
+  display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0;
+  box-sizing: border-box; padding-block-start: 1rem; overflow: hidden;
+}
+.caltra-chat[hidden] { display: none; }
+.caltra-chat > .aui-thread-root { flex: 1; min-height: 0; }
+.caltra-chat[data-color-mode="dark"] {
+  --caltra-resolved-background: var(--caltra-background, var(--caltra-theme-dark-background, #09090b));
+  --caltra-resolved-foreground: var(--caltra-foreground, var(--caltra-theme-dark-foreground, #fafafa));
+  --caltra-resolved-muted: var(--caltra-muted, var(--caltra-theme-dark-muted, #27272a));
+  --caltra-resolved-muted-foreground: var(--caltra-muted-foreground, var(--caltra-theme-dark-muted-foreground, #a1a1aa));
+  --caltra-resolved-accent: var(--caltra-accent, var(--caltra-theme-dark-accent, #fafafa));
+  --caltra-resolved-accent-foreground: var(--caltra-accent-foreground, var(--caltra-theme-dark-accent-foreground, #18181b));
+  --caltra-resolved-border: var(--caltra-border, var(--caltra-theme-dark-border, #3f3f46));
+  --caltra-resolved-error: var(--caltra-error, var(--caltra-theme-dark-error, #fda29b));
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  .caltra-chat[data-color-mode="system"] {
+  --caltra-resolved-background: var(--caltra-background, var(--caltra-theme-dark-background, #09090b));
+  --caltra-resolved-foreground: var(--caltra-foreground, var(--caltra-theme-dark-foreground, #fafafa));
+  --caltra-resolved-muted: var(--caltra-muted, var(--caltra-theme-dark-muted, #27272a));
+  --caltra-resolved-muted-foreground: var(--caltra-muted-foreground, var(--caltra-theme-dark-muted-foreground, #a1a1aa));
+  --caltra-resolved-accent: var(--caltra-accent, var(--caltra-theme-dark-accent, #fafafa));
+  --caltra-resolved-accent-foreground: var(--caltra-accent-foreground, var(--caltra-theme-dark-accent-foreground, #18181b));
+  --caltra-resolved-border: var(--caltra-border, var(--caltra-theme-dark-border, #3f3f46));
+  --caltra-resolved-error: var(--caltra-error, var(--caltra-theme-dark-error, #fda29b));
+    color-scheme: dark;
+  }
+}
+
+
+.caltra-chat__connection { padding: .5rem 1rem; font-size: .875rem; }
+.caltra-chat__connection[role="alert"] { color: var(--destructive); }
+.caltra-chat__connection button { text-decoration: underline; margin-inline-start: .5rem; }
+.caltra-chat .caltra-details-spinner { width: .75rem; height: .75rem; animation: spin 1s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .caltra-chat .caltra-details-spinner { animation: none; } }

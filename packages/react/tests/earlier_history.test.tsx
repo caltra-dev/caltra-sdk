@@ -10,7 +10,7 @@ beforeAll(() => {
 });
 afterEach(cleanup);
 
-it("loads near the top through the native runtime, pauses on error, and retries without losing the draft", async () => {
+it("uses native history loading, reports failure, and retries without losing the draft", async () => {
   const message = (id: string) => ({ id, role: "assistant" as const, text: id, status: "completed" as const, created_at: "2026-10-21T00:00:00Z" });
   let resolvePage!: (value: unknown) => void;
   let rejectPage!: (error: Error) => void;
@@ -24,31 +24,30 @@ it("loads near the top through the native runtime, pauses on error, and retries 
   await runtime.start();
   const onScroll = vi.fn();
   const view = render(<CaltraChat runtime={runtime} hidden slotProps={{ viewport: { onScroll } }} />);
-  const viewport = view.container.querySelector(".caltra-chat__viewport")!;
-  fireEvent.change(view.container.querySelector('textarea[aria-label="Message"]')!, { target: { value: "Keep my draft" } });
+  const viewport = view.container.querySelector('[data-slot="aui_thread-viewport"]')!;
+  fireEvent.change(view.container.querySelector("textarea")!, { target: { value: "Keep my draft" } });
   fireEvent.scroll(viewport, { target: { scrollTop: 0 } });
   expect(client.listSessionMessages).toHaveBeenCalledTimes(1);
   view.rerender(<CaltraChat runtime={runtime} slotProps={{ viewport: { onScroll } }} />);
-  fireEvent.scroll(viewport, { target: { scrollTop: 300 } });
-  expect(client.listSessionMessages).toHaveBeenCalledTimes(1);
   fireEvent.scroll(viewport, { target: { scrollTop: 100 } });
-  fireEvent.scroll(viewport, { target: { scrollTop: 50 } });
-  await screen.findByRole("status", { name: "Loading older messages…" });
+  expect(client.listSessionMessages).toHaveBeenCalledTimes(1);
+  expect(onScroll).toHaveBeenCalledTimes(2);
+  fireEvent.click(screen.getByRole("button", { name: "Load earlier messages" }));
+  await waitFor(() => expect(client.listSessionMessages).toHaveBeenCalledTimes(2));
+  fireEvent.click(screen.getByRole("button", { name: "Loading earlier messages" }));
   expect(client.listSessionMessages).toHaveBeenCalledTimes(2);
-  expect(onScroll).toHaveBeenCalledTimes(4);
   await act(async () => rejectPage(new Error("Do not display raw failure")));
   await screen.findByRole("alert");
   expect(screen.queryByText("Do not display raw failure")).toBeNull();
   fireEvent.scroll(viewport, { target: { scrollTop: 0 } });
   expect(client.listSessionMessages).toHaveBeenCalledTimes(2);
-  fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+  fireEvent.click(screen.getByRole("button", { name: "Load earlier messages" }));
   await waitFor(() => expect(client.listSessionMessages).toHaveBeenCalledTimes(3));
   await act(async () => resolvePage({ data: [message("Earlier")], next_cursor: null }));
   await screen.findByText("Earlier");
   expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("Keep my draft");
   expect(screen.queryByRole("alert")).toBeNull();
-  expect(screen.queryByRole("status")).toBeNull();
-  expect(screen.queryByRole("button", { name: "Load older messages" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Load earlier messages" })).toBeNull();
   fireEvent.scroll(viewport);
   expect(client.listSessionMessages).toHaveBeenCalledTimes(3);
   view.unmount();

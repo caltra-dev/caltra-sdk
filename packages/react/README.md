@@ -8,7 +8,7 @@ The styled entry point is available starting in **0.9.0**.
 Install the styled chat and its peer dependencies:
 
 ```bash
-npm install @caltra/client@0.11.0 @caltra/react@0.12.0 @assistant-ui/react@0.15.16 react react-dom
+npm install @caltra/client @caltra/react @assistant-ui/react@0.15.30 react react-dom
 ```
 
 ```tsx
@@ -27,9 +27,8 @@ available for compatibility. The headless `@caltra/react` entry does not import 
 include a welcome, skeleton-only loading state (the loading label is screen-reader-only), Markdown transcript, copy icon with checkmark feedback and localized accessible labels/tooltips, scroll-to-bottom button,
 upstream text composer, connection recovery and retry. Enter sends; Shift+Enter inserts a newline.
 While a turn runs, the native Stop control calls `CaltraClient.cancelSession`, then reloads persisted history. A failed cancellation preserves the running state and exposes the existing error alert; Stop can be retried. HTTP cancellation also works while the event stream reconnects. Running-state presentation follows the persisted queued/running turn on current servers, including pauses between messages and tools. Older servers retain the legacy message-activity fallback.
-Initial loading fills the panel with 16px gutters and reserves the composer's bottom
-position. The real composer becomes available after history resolves, in the same
-position for both saved and empty conversations. Bootstrap integrations may render
+Initial loading uses the native history skeleton. The native composer is centered
+for a confirmed empty conversation and docked for an existing transcript. Bootstrap integrations may render
 `CaltraHistoryLoading` inside the SDK's `caltra-chat` root to use the same presentation.
 Markdown uses the upstream assistant-ui `MarkdownText` component, including heading
 hierarchy, paragraph/list/blockquote spacing and the standard code-copy header. The
@@ -46,14 +45,12 @@ history is pending. History merges by message ID, stream events deduplicate by e
 and completed canonical text replaces provisional text without appending it twice.
 HTTP reconciliation never blocks consumption of subsequent events.
 
-The shared chat loads one older cursor page when scrolling within 120 pixels of the top.
-assistant-ui 0.15.30 owns the earlier-history loading state and keeps visible messages anchored
-when a page is prepended. Skeleton messages appear in reserved space above the transcript during the fetch. Failures pause
-automatic loading and show a local error with a native **Try again** control. Hidden chats
-do not trigger history loads. There is no automatic traversal of older cursors on mount.
-The headless result exposes `hasOlderMessages`, `loadingOlder`, `olderError`, and `loadOlder()`.
-Use `olderLoading`, `olderFailed`, and `retry` to localize history feedback. The legacy
-`loadOlder` label remains available for custom interfaces.
+The native **Load earlier messages** control requests one cursor page. Assistant-ui
+owns loading state and anchoring while messages are prepended. Failures show sanitized
+feedback; use the same native control to retry. There is no automatic traversal of
+older cursors on mount or scroll. The headless result exposes `hasOlderMessages`,
+`loadingOlder`, `olderError`, and `loadOlder()`. Explicit `loadOlder` and `olderLoading`
+labels override the native control, while `olderFailed` customizes error feedback.
 
 Keep the same client instance for the same authenticated identity. Keep the component mounted
 and use `hidden` when collapsing a panel to retain its draft and connection.
@@ -97,6 +94,26 @@ contains only data/types/helpers and does not import CSS. Existing `--caltra-*` 
 still take precedence; a fixed override applies in both modes, so use theme tokens for
 mode-specific branding. `labels` and component slots remain independent of appearance.
 
+## Native Thread
+
+CaltraChat is a session/provider wrapper around the pinned native assistant-ui Thread,
+shared with the demo. Thread owns the welcome/loading states, composer, pending dot,
+message layout, action bars, grouping, and scrolling. Consecutive backend assistant
+steps are projected into one response before Thread groups its content. Copy appears
+after the full response, tool calls are disclosed through native count groups, and
+older history loads with the native **Load earlier messages** button.
+
+The SDK bundles scoped Tailwind output, including preflight inside each chat only.
+Consumers need no Tailwind configuration. Themes and explicit CSS overrides map
+onto native tokens; native fixed sizes remain native. A host inset keeps the pinned
+turn clear of the enclosing header.
+
+For advanced composition, `@caltra/react/ui/thread` exports the pinned Thread and
+its types, default components and locale providers. Supply AssistantRuntimeProvider
+and a `.caltra-chat` host when using it directly. `@caltra/react/ui/model-selector`
+exports the native selector and its effort-composition parts; its portal container
+should be inside that host. CaltraChat supplies these providers automatically.
+
 ## Customize
 
 ```tsx
@@ -105,8 +122,9 @@ mode-specific branding. `labels` and component slots remain independent of appea
   style={{ "--caltra-accent": "#1d4ed8", "--caltra-radius": "0.75rem" }} />
 ```
 
-`labels` accepts every built-in visible and accessible label; use `CaltraChatLabels` for a complete
-translation. Theme variables include `--caltra-background`, `--caltra-foreground`,
+`locale="en" | "it"` translates native Thread controls. Explicit `labels` override
+matching native controls and Caltra connection/resource feedback; legacy label fields
+remain available to custom slots. Native actions retain their own structure and states. Theme variables include `--caltra-background`, `--caltra-foreground`,
 `--caltra-muted`, `--caltra-muted-foreground`, `--caltra-accent`, `--caltra-accent-foreground`,
 `--caltra-border`, `--caltra-error`, `--caltra-font-family`, `--caltra-content-width`, and
 `--caltra-radius`. CSS is scoped to `.caltra-chat`; `className` is also supported.
@@ -118,7 +136,8 @@ function Welcome() { return <h2>Ask about your project</h2>; }
 <CaltraChat client={client} sessionId={sessionId} components={{ Welcome }} />
 ```
 
-Available slots: `Welcome`, `Loading`, `Message`, `Composer`, `Connection`. Each receives the
+Available slots: `Welcome`, `Loading`, `Message`, `Composer`, `Connection`, `Tool`,
+`Reasoning`, and `ComposerControls`. The last inserts controls inside the native composer. Each receives the
 resolved labels and renders inside the assistant-ui provider. The composer also receives
 `submitMode`; connection receives `connection`, `error`, `historyLoaded`, and `retry`.
 The default components are exported as `CaltraWelcome`, `CaltraHistoryLoading`, `CaltraMessage`,
@@ -204,16 +223,15 @@ Opening a tool's details never executes or retries it.
 
 Replace it with `components={{ Tool: MyToolRenderer }}`. This slot receives
 assistant-ui `ToolCallMessagePartProps`. The upstream default is also exported
-as `CaltraTool`. It retains upstream English labels; use the custom slot for
-localized tool presentation. The existing tool label fields remain available to
-custom renderers. See [source provenance](src/ui/assistant-ui/README.md).
+as `CaltraTool`. Native tool labels follow `locale`; legacy tool label fields remain
+available to custom renderers. See [source provenance](src/ui/upstream/README.md).
 
 React 0.12.0 with client 0.11.0 requests `include_tools=summary` for history: tool ID, name
 and status arrive with the page, while arguments/results are omitted. Opening the default tool
 card calls `getSessionToolDetails(sessionId, messageId, toolCallId)` once. The session runtime
 caches and deduplicates requests per call/lifecycle state, retries failed reads, and refreshes
 details when a running call becomes terminal. The panel uses upstream ToolFallback parts;
-its source files are unchanged. Closing/reopening a completed call reuses its cached details.
+their presentation stays native. Closing/reopening a completed call reuses its cached details.
 While details load, the panel shows a mini spinner with an accessible loading label.
 The custom `components.Tool` slot remains caller-owned; headless integrations can use
 `runtime.getToolDetails(messageId, toolCallId)`. `CaltraToolCall.arguments` is optional on
@@ -225,12 +243,10 @@ this SDK change. Legacy `include_tools=true` still returns full details.
 Client 0.8.3 originally opted in to structured tool history and tool-start events. Deploy the matching
 Caltra API support before publishing this client version; older clients keep their existing
 text-only wire format. The API exposes public tool arguments/results, never raw model metadata
-or reasoning. Copy appears immediately beneath the assistant text, before any trailing
-tool disclosures. It copies the message's text only, never tool arguments or results.
-User and tool-only messages have no Copy action. The active message gets Copy once
-its text response finishes; earlier completed messages keep their controls while
-the rest of the turn is running. A successful copy uses assistant-ui's standard
-three-second checkmark feedback.
+or reasoning. Copy follows the entire response and copies text only, never tool
+arguments or results. Native action bars control visibility during streaming and
+on hover; Copy is disabled for a tool-only response. Successful copying shows the
+native three-second checkmark.
 
 ## Session runtime integration (0.11.0)
 

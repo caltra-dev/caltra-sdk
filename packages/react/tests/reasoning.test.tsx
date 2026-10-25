@@ -34,13 +34,13 @@ describe("thinking display modes", () => {
     f.client.getSessionReasoning.mockClear();
     f.client.getSessionReasoning.mockImplementationOnce(() => new Promise(resolve => { resolveThinking = resolve; }));
     const view = render(<CaltraChat runtime={f.runtime} />);
-    expect(screen.queryByRole("button", { name: /Thinking/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Reasoning/ })).toBeNull();
     expect(f.client.openSessionReasoningEvents).not.toHaveBeenCalled();
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "Draft" } });
     view.rerender(<CaltraChat runtime={f.runtime} reasoningDisplay="collapsed" />);
-    expect(screen.getByRole("button", { name: /Thinking/ }).getAttribute("aria-expanded")).toBe("false");
+    expect(screen.getByRole("button", { name: /Reasoning/ }).getAttribute("aria-expanded")).toBe("false");
     expect(f.client.getSessionReasoning).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: /Thinking/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Reasoning/ }));
     const loading = await screen.findByRole("status", { name: "Loading thinking…" });
     expect(loading.querySelector("svg")).toBeTruthy();
     expect(loading.textContent).toBe("");
@@ -49,7 +49,7 @@ describe("thinking display modes", () => {
     await screen.findByText("Separate thinking text");
     expect(screen.queryByRole("status", { name: "Loading thinking…" })).toBeNull();
     await act(f.complete);
-    expect(screen.getByRole("button", { name: /Thinking/ }).getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("button", { name: /Reasoning/ }).getAttribute("aria-expanded")).toBe("true");
     view.rerender(<CaltraChat runtime={f.runtime} reasoningDisplay="expanded" />);
     expect(screen.getByText("Separate thinking text")).toBeTruthy();
     expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe("Draft");
@@ -64,10 +64,10 @@ describe("thinking display modes", () => {
     const f = fixture(); await f.runtime.start();
     render(<CaltraChat runtime={f.runtime} reasoningDisplay="auto" />);
     await screen.findByText("Separate thinking text");
-    expect(screen.getByRole("button", { name: /Thinking/ }).getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("button", { name: /Reasoning/ }).getAttribute("aria-expanded")).toBe("true");
     await act(f.complete);
-    await waitFor(() => expect(screen.getByRole("button", { name: /Thinking/ }).getAttribute("aria-expanded")).toBe("false"));
-    fireEvent.click(screen.getByRole("button", { name: /Thinking/ }));
+    await waitFor(() => expect(screen.getByRole("button", { name: /Reasoning/ }).getAttribute("aria-expanded")).toBe("false"));
+    fireEvent.click(screen.getByRole("button", { name: /Reasoning/ }));
     await screen.findByText("Separate thinking text");
     expect(f.client.openSessionReasoningEvents).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("status", { name: "Loading thinking…" })).toBeNull();
@@ -77,7 +77,7 @@ describe("thinking display modes", () => {
   it("reopens completed cached thinking without a spinner, fetch, or stream", async () => {
     const f = fixture("completed"); await f.runtime.start();
     render(<CaltraChat runtime={f.runtime} reasoningDisplay="collapsed" />);
-    const toggle = screen.getByRole("button", { name: /Thinking/ });
+    const toggle = screen.getByRole("button", { name: /Reasoning/ });
     fireEvent.click(toggle);
     await screen.findByText("Separate thinking text");
     fireEvent.click(toggle);
@@ -92,7 +92,7 @@ describe("thinking display modes", () => {
   it("keeps cached streaming text visible without a spinner while reopening catches up", async () => {
     const f = fixture(); await f.runtime.start();
     render(<CaltraChat runtime={f.runtime} reasoningDisplay="collapsed" />);
-    const toggle = screen.getByRole("button", { name: /Thinking/ });
+    const toggle = screen.getByRole("button", { name: /Reasoning/ });
     fireEvent.click(toggle);
     await screen.findByText("Separate thinking text");
     fireEvent.click(toggle);

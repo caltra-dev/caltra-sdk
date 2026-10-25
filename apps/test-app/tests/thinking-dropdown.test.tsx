@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
-import { ModelSelector } from "../src/upstream/components/assistant-ui/elements/model-selector.aui.js";
+import { ModelSelector } from "@caltra/react/ui/model-selector";
 import { ThinkingDropdown } from "../src/demo/thinking-dropdown.js";
-import { PopoverPortalContainer } from "../src/upstream/components/ui/popover.js";
+import { PopoverPortalContainer } from "@caltra/react/ui/model-selector";
 
 beforeAll(() => {
   vi.stubGlobal("ResizeObserver", class {
