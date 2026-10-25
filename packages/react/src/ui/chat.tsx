@@ -92,9 +92,10 @@ export function CaltraChat(props: CaltraChatProps) {
 
 const ChatSlots = createContext<{ labels: CaltraChatLabels; components: CaltraChatComponents; submitMode: CaltraComposerProps["submitMode"]; inputProps?: CaltraComposerInputProps }>({ labels: defaultCaltraChatLabels, components: {}, submitMode: "enter" });
 const threadStyle = { "--thread-max-width": "var(--caltra-content-width, var(--caltra-theme-content-width, 44rem))" } as CSSProperties;
+const emptyComponents: CaltraChatComponents = {};
 
 function ChatSession(props: CaltraChatProps) {
-  const { components = {}, className, style, hidden, theme = "assistant-ui", colorMode = "system", submitMode = "enter", slotProps = {} } = props;
+  const { components = emptyComponents, className, style, hidden, theme = "assistant-ui", colorMode = "system", submitMode = "enter", slotProps = {} } = props;
   const session = useMemo(() => props.runtime ?? new CaltraSessionRuntime(props.client!, props.sessionId!), [props.runtime, props.client, props.sessionId]);
   useEffect(() => {
     if (props.runtime) return;
@@ -115,7 +116,9 @@ function ChatSession(props: CaltraChatProps) {
     return () => media.removeEventListener("change", update);
   }, []);
   const dark = colorMode === "dark" || (colorMode === "system" && systemDark);
-  const nativeComponents: ThreadComponents = {
+  // Streaming changes runtime state, not presentation configuration. Stable contexts
+  // let native selectors update the affected parts without rerendering every slot.
+  const nativeComponents = useMemo<ThreadComponents>(() => ({
     AssistantMessage: AssistantSlot,
     UserMessage: components.Message ? MessageSlot : undefined,
     Welcome: components.Welcome || props.labels?.welcomeDescription ? WelcomeSlot : undefined,
@@ -123,17 +126,25 @@ function ChatSession(props: CaltraChatProps) {
     Composer: components.Composer ? ComposerSlot : undefined,
     ComposerControls: components.ComposerControls,
     ToolFallback: ToolRenderer,
-  };
+  }), [components, props.labels?.welcomeDescription]);
+  const textOverrides = useMemo(() => nativeLabels(props.labels), [props.labels]);
+  const slots = useMemo(() => ({ labels, components, submitMode, inputProps: slotProps.composerInput }), [labels, components, submitMode, slotProps.composerInput]);
+  const toolSettings = useMemo(() => ({ labels, session, Tool: components.Tool,
+    reasoningDisplay: hidden ? "hidden" as const : (props.reasoningDisplay ?? "hidden"), Reasoning: components.Reasoning }),
+  [labels, session, components.Tool, components.Reasoning, hidden, props.reasoningDisplay]);
+  const thread = useMemo(() => <Thread components={nativeComponents} autoFocus={props.autoFocus} rootStyle={threadStyle}
+    viewportProps={slotProps.viewport} composerInputProps={slotProps.composerInput} submitMode={submitMode} />,
+  [nativeComponents, props.autoFocus, slotProps.viewport, slotProps.composerInput, submitMode]);
   const Connection = components.Connection ?? CaltraConnection;
   return <AssistantRuntimeProvider runtime={runtime}>
-    <ThreadLocaleProvider value={props.locale ?? "en"}><ThreadTextOverrides.Provider value={nativeLabels(props.labels)}>
-    <ChatSlots.Provider value={{ labels, components, submitMode, inputProps: slotProps.composerInput }}>
-    <ToolContext.Provider value={{ labels, session, Tool: components.Tool, reasoningDisplay: hidden ? "hidden" : (props.reasoningDisplay ?? "hidden"), Reasoning: components.Reasoning }}>
+    <ThreadLocaleProvider value={props.locale ?? "en"}><ThreadTextOverrides.Provider value={textOverrides}>
+    <ChatSlots.Provider value={slots}>
+    <ToolContext.Provider value={toolSettings}>
     <ThreadPortalContainer.Provider value={container}><PopoverPortalContainer.Provider value={container}>
       <div ref={setContainer} className={`caltra-chat${dark ? " dark" : ""}${className ? ` ${className}` : ""}`} style={{ ...themeStyle(resolvedTheme), ...style }} data-theme={resolvedTheme.name} data-color-mode={colorMode} hidden={hidden} aria-label={labels.chat} lang={props.locale}>
         <Connection labels={labels} connection={snapshot.connection} error={snapshot.error} historyLoaded={snapshot.historyLoaded} retry={() => session.reconnect()} />
         {snapshot.olderError && <div className="caltra-chat__connection" role="alert">{labels.olderFailed}</div>}
-        <Thread components={nativeComponents} autoFocus={props.autoFocus} rootStyle={threadStyle} viewportProps={slotProps.viewport} composerInputProps={slotProps.composerInput} submitMode={submitMode} />
+        {thread}
       </div>
     </PopoverPortalContainer.Provider></ThreadPortalContainer.Provider>
     </ToolContext.Provider></ChatSlots.Provider></ThreadTextOverrides.Provider></ThreadLocaleProvider>

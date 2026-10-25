@@ -209,8 +209,9 @@ rules with your own CSS class. No `!important` is needed:
 Keep a visible scroll affordance where needed; `none` hides the scrollbar.
 `--caltra-scrollbar-size` controls width/height only in older WebKit browsers
 without the standard properties. The theme does not alter overflow, layout,
-scroll anchoring, keyboard navigation or touch input. The styled UI loads the scrollbar rules automatically. Import `scrollbar.css` explicitly
-when using your own components; it has no React dependency
+scroll anchoring, keyboard navigation or touch input. The styled UI loads these optional rules automatically but leaves the native Thread
+scrollbar unchanged. Opt in with `slotProps={{ viewport: { className: "caltra-scrollbar" } }}`.
+Import `scrollbar.css` explicitly when using your own components; it has no React dependency
 at runtime.
 
 ## Tool calls

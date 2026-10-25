@@ -332,3 +332,22 @@ it("changes native locale without remounting the composer or grouped tool contro
   expect(screen.getByRole("button", { name: "Strumento usato: demo.read" })).toBeTruthy();
   expect(f.client.openSessionEvents).toHaveBeenCalledOnce();
 });
+
+it("does not rerender unchanged composer controls for answer text updates", async () => {
+  const f = fixture();
+  let text = "First chunk";
+  f.client.listSessionMessages.mockImplementation(async () => ({ data: [{ id: "stream", role: "assistant", text,
+    status: "completed", created_at: "2026-10-24T00:00:00Z" }], next_cursor: null }));
+  f.client.getSessionById.mockImplementation(async id => ({ id, is_running: true }));
+  const runtime = new CaltraSessionRuntime(f.client as never, "render-count");
+  await runtime.start();
+  const Controls = vi.fn(() => <button type="button">Stable controls</button>);
+  const view = render(<CaltraChat runtime={runtime} components={{ ComposerControls: Controls }} />);
+  const initialRenderCount = Controls.mock.calls.length;
+  text = "First chunk and second chunk";
+  await act(async () => runtime.refresh());
+  await screen.findByText(text);
+  expect(Controls.mock.calls.length).toBe(initialRenderCount);
+  view.unmount();
+  await runtime.stop();
+});

@@ -35,6 +35,10 @@
 
 @source "./";
 
+@layer base {
+  * { @apply border-border; }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

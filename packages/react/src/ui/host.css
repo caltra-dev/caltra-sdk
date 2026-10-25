@@ -27,6 +27,11 @@
   --card-foreground: var(--caltra-resolved-foreground);
   --destructive: var(--caltra-resolved-error);
   --radius: var(--caltra-radius, var(--caltra-theme-radius, 0.625rem));
+  /* Native inline styles and gradient utilities reference these theme aliases. */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
   color: var(--foreground); background: var(--background);
   font-family: var(--caltra-font-family, var(--caltra-theme-font-family, ui-sans-serif, system-ui, sans-serif));
   font-size: 16px; line-height: 1.5; color-scheme: light;
