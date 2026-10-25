@@ -1,4 +1,4 @@
-import type { ThreadMessageLike, ToolCallMessagePart } from "@assistant-ui/react";
+import { ExportedMessageRepository, type ThreadMessage, type ThreadMessageLike, type ToolCallMessagePart } from "@assistant-ui/react";
 import type { CaltraSessionMessage } from "@caltra/client";
 
 /** Projects execution steps into UI messages without changing the canonical transcript.
@@ -7,7 +7,32 @@ import type { CaltraSessionMessage } from "@caltra/client";
  * its user/assistant pair between execution steps. Source resource IDs survive.
  */
 export class MessageProjection {
+  private readonly responseIds = new Map<string, string>();
+  private groups = new Map<string, { source: readonly CaltraSessionMessage[]; running: boolean; message: ThreadMessageLike }>();
+  private readonly converted = new WeakMap<ThreadMessageLike, ThreadMessage>();
+
+  constructor(private readonly getMessageKey: (id: string) => string = id => id) {}
+
   static project(messages: readonly CaltraSessionMessage[], isRunning = false): ThreadMessageLike[] {
+    return new MessageProjection().project(messages, isRunning);
+  }
+
+  /** Reuse native messages for untouched history while keeping an authoritative
+   * repository, so removed optimistic inputs cannot become phantom branches.
+   */
+  repository(messages: readonly CaltraSessionMessage[], isRunning: boolean): ExportedMessageRepository {
+    const projected = this.project(messages, isRunning);
+    return { messages: projected.map((message, index) => {
+      let converted = this.converted.get(message);
+      if (!converted) {
+        converted = ExportedMessageRepository.fromArray([message]).messages[0]!.message;
+        this.converted.set(message, converted);
+      }
+      return { message: converted, parentId: index > 0 ? projected[index - 1]!.id! : null };
+    }) };
+  }
+
+  project(messages: readonly CaltraSessionMessage[], isRunning = false): ThreadMessageLike[] {
     const groups: CaltraSessionMessage[][] = [];
     for (const message of messages) {
       const group = groups.at(-1);
@@ -18,7 +43,43 @@ export class MessageProjection {
         groups.push([message]);
       }
     }
-    return groups.map((group, index) => this.message(group, isRunning && index === groups.length - 1));
+    const retained = new Map<string, { source: readonly CaltraSessionMessage[]; running: boolean; message: ThreadMessageLike }>();
+    const userKeys = new Set<string>();
+    const result = groups.map((group, index) => {
+      const first = group[0]!;
+      const previous = groups[index - 1]?.[0];
+      let id = this.getMessageKey(first.id);
+      if (first.role === "user") userKeys.add(id);
+      if (first.role === "assistant" && previous?.role === "user") {
+        const parent = this.getMessageKey(previous.id);
+        id = this.responseIds.get(parent) ?? id;
+        this.responseIds.set(parent, id);
+      }
+      const running = isRunning && index === groups.length - 1;
+      const cached = this.groups.get(id);
+      const message = cached?.running === running && cached.source.length === group.length
+        && group.every((source, position) => source === cached.source[position])
+        ? cached.message : { ...MessageProjection.message(group, running), id };
+      retained.set(id, { source: group, running, message });
+      return message;
+    });
+    const last = messages.at(-1);
+    if (isRunning && last?.role === "user") {
+      const parent = this.getMessageKey(last.id);
+      const id = this.responseIds.get(parent) ?? `caltra-response:${parent}`;
+      this.responseIds.set(parent, id);
+      // Supply the upcoming response ourselves so the native pending indicator
+      // and its root keep their identity when the first server step arrives.
+      const message = this.groups.get(id)?.message ?? {
+        id, role: "assistant" as const, content: [], createdAt: new Date(last.created_at),
+        status: { type: "running" as const },
+      };
+      retained.set(id, { source: [], running: true, message });
+      result.push(message);
+    }
+    for (const parent of this.responseIds.keys()) if (!userKeys.has(parent)) this.responseIds.delete(parent);
+    this.groups = retained;
+    return result;
   }
 
   private static message(group: readonly CaltraSessionMessage[], isRunning: boolean): ThreadMessageLike {

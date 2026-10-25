@@ -8,6 +8,30 @@ const step = (id: string, overrides: Partial<CaltraSessionMessage> = {}): Caltra
 });
 
 describe("tool step projection", () => {
+  it("reuses the upcoming response for source events and keeps lazy resource IDs canonical", () => {
+    const projection = new MessageProjection();
+    const user = step("user", { role: "user", text: "Research", tool_calls: undefined });
+    const pending = projection.project([user], true)[1]!;
+    const source = step("source", { status: "streaming", reasoning: { status: "streaming" } });
+    const running = projection.project([user, source], true)[1]!;
+    expect(running.id).toBe(pending.id);
+    expect(running.content).toEqual([expect.objectContaining({ artifact: expect.objectContaining({ caltraMessageId: "source" }) })]);
+    expect(running.metadata?.custom?.caltraReasoningMessages).toEqual([{ messageId: "source", status: "streaming" }]);
+    const finished = projection.project([user, { ...source, status: "completed" }], false)[1]!;
+    expect(finished.id).toBe(pending.id);
+    expect(finished.status).toEqual({ type: "complete", reason: "stop" });
+    const next = step("next-user", { role: "user", text: "Next", tool_calls: undefined });
+    expect(projection.project([user, source, next], true).at(-1)?.id).not.toBe(pending.id);
+  });
+
+  it("removes an unsent or cancelled pending response and does not retain a phantom branch", () => {
+    const projection = new MessageProjection();
+    const user = step("pending-user", { role: "user", tool_calls: undefined });
+    expect(projection.repository([user], true).messages).toHaveLength(2);
+    expect(projection.repository([user], false).messages.map(item => item.message.id)).toEqual(["pending-user"]);
+    expect(projection.repository([], false).messages).toEqual([]);
+  });
+
   it("coalesces tool-only steps and retains each lazy resource identity without mutating history", () => {
     const source = [step("one"), step("two"), step("three")];
     const original = structuredClone(source);

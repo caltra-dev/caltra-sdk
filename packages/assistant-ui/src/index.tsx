@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ExportedMessageRepository,
   type AppendMessage,
   type AssistantRuntime,
   type ThreadMessage,
@@ -31,11 +30,9 @@ export function useAssistantUiRuntime(store: CaltraSessionRuntime, { getContext 
     await store.send(text, { context: getContext?.(), modelSelection });
   }, [store, getContext]);
 
-  const messages = useMemo(() => MessageProjection.project(snapshot.messages, snapshot.isRunning), [snapshot.messages, snapshot.isRunning]);
-
-  // Caltra owns a linear transcript. Replace the repository so removed optimistic
-  // IDs cannot survive as phantom edit/regeneration branches in assistant-ui.
-  const messageRepository = useMemo(() => ExportedMessageRepository.fromArray(messages), [messages]);
+  const projection = useMemo(() => new MessageProjection(store.getMessageKey), [store]);
+  const messageRepository = useMemo(() => projection.repository(snapshot.messages, snapshot.isRunning),
+    [projection, snapshot.messages, snapshot.isRunning]);
   const runtime = useExternalStoreRuntime<ThreadMessage>({
     isLoading: !snapshot.historyLoaded,
     isRunning: snapshot.isRunning,

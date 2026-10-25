@@ -19,6 +19,53 @@ function fixture() {
 }
 
 describe("useAssistantUiRuntime", () => {
+  it("keeps both native anchor IDs stable from optimistic send through the first thinking/tool step", async () => {
+    const f = fixture();
+    f.client.getSessionById.mockResolvedValue({ id: "session", is_running: false } as never);
+    let accept!: (value: { message_id: string; turn_id: string }) => void;
+    f.client.sendMessage.mockImplementationOnce(() => new Promise(resolve => { accept = resolve; }));
+    const hook = renderHook(() => useAssistantUiRuntime(f.session));
+    await act(() => f.session.start());
+    act(() => hook.result.current.thread.append("Research"));
+    await waitFor(() => expect(f.client.sendMessage).toHaveBeenCalledOnce());
+    const ids = () => hook.result.current.thread.getState().messages.map(message => message.id);
+    const initial = ids();
+    expect(initial).toHaveLength(2);
+    f.client.getSessionById.mockResolvedValue({ id: "session", is_running: true } as never);
+    await act(async () => { accept({ message_id: "saved", turn_id: "turn" }); });
+    expect(ids()).toEqual(initial);
+    const user = { id: "saved", role: "user", text: "Research", status: "completed", created_at: "2026-10-24T00:00:00Z" };
+    const first = { ...user, id: "response", role: "assistant", text: "", status: "streaming" };
+    for (const message of [first, { ...first, reasoning: { status: "streaming" } },
+      { ...first, tool_calls: [{ id: "tool", name: "demo.read", status: "running" }] }]) {
+      f.client.listSessionMessages.mockResolvedValue({ data: [user, message], next_cursor: null } as never);
+      await act(() => f.session.refresh());
+      expect(ids()).toEqual(initial);
+    }
+    hook.unmount(); await f.session.stop();
+  });
+
+  it("retains unchanged native message objects during text streaming", async () => {
+    const f = fixture();
+    const user = { id: "user", role: "user", text: "Research", status: "completed", created_at: "2026-10-24T00:00:00Z" };
+    const answer = { ...user, id: "response", role: "assistant", text: "First", status: "streaming" };
+    // A controlled transport callback exercises real event application without HTTP timing noise.
+    let emit!: (value: IteratorResult<unknown>) => void;
+    f.client.openSessionEvents.mockResolvedValue({ close: f.close, [Symbol.asyncIterator]: () => ({
+      next: () => new Promise(resolve => { emit = resolve; }),
+    }) } as never);
+    f.client.listSessionMessages.mockResolvedValue({ data: [user, answer], next_cursor: null } as never);
+    const hook = renderHook(() => useAssistantUiRuntime(f.session));
+    await act(() => f.session.start());
+    const original = hook.result.current.thread.getState().messages[0];
+    await act(async () => { emit({ done: false, value: { event: "message.delta", id: "delta", data: {
+      message_id: "response", session_id: "session", turn_id: "turn", delta: " chunk",
+    } } }); });
+    expect(hook.result.current.thread.getState().messages[1]?.content).toEqual([{ type: "text", text: "First chunk" }]);
+    expect(hook.result.current.thread.getState().messages[0]).toBe(original);
+    hook.unmount(); await f.session.stop();
+  });
+
   it("retains the native user/assistant anchor pair through every streaming step", async () => {
     const f = fixture();
     f.client.getSessionById.mockResolvedValue({ id: "session", is_running: true } as never);
@@ -172,7 +219,9 @@ describe("useAssistantUiRuntime", () => {
     expect(f.client.openSessionEvents).not.toHaveBeenCalled();
     await act(() => f.session.start());
     act(() => { first.result.current.thread.append("Hello"); });
-    await waitFor(() => expect(second.result.current.thread.getState().messages[0]?.id).toBe("saved"));
+    await waitFor(() => expect(f.session.getSnapshot().messages[0]?.id).toBe("saved"));
+    expect(second.result.current.thread.getState().messages[0]?.id).toBe(f.session.getMessageKey("saved"));
+    expect(second.result.current.thread.getState().messages[0]?.id).toBe(first.result.current.thread.getState().messages[0]?.id);
     expect(second.result.current.thread.getState().messages[0]?.content).toEqual([{ type: "text", text: "Hello" }]);
     expect(f.client.openSessionEvents).toHaveBeenCalledOnce();
     expect(f.client.sendMessage).toHaveBeenCalledOnce();

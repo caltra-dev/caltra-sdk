@@ -41,12 +41,14 @@ describe("useCaltraRuntime", () => {
     await waitFor(() => expect(result.current.connection).toBe("connected"));
     act(() => { result.current.runtime.thread.append("Hi"); });
     await waitFor(() => expect(client.sendMessage).toHaveBeenCalledOnce());
+    const displayId = result.current.runtime.thread.getState().messages[0]?.id;
     expect(result.current.runtime.thread.getMessageByIndex(0).getState().branchCount).toBe(1);
     await act(async () => { accept({ message_id: "saved-user", turn_id: "turn" }); });
-    await waitFor(() => expect(result.current.runtime.thread.getState().messages[0]?.id).toBe("saved-user"));
+    expect(result.current.runtime.thread.getState().messages[0]?.id).toBe(displayId);
     expect(result.current.runtime.thread.getMessageByIndex(0).getState().branchCount).toBe(1);
     history = [{ id: "saved-user", role: "user", text: "Hi", status: "completed", created_at: new Date().toISOString() }];
     await act(async () => { await result.current.refresh(); });
+    expect(result.current.runtime.thread.getState().messages[0]?.id).toBe(displayId);
     expect(result.current.runtime.thread.getMessageByIndex(0).getState().branchCount).toBe(1);
     history = [];
     await act(async () => { await result.current.refresh(); });

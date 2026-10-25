@@ -60,6 +60,7 @@ export class CaltraSessionRuntime {
   private metadataRequest = 0;
   private legacyIsRunning = false;
   private readonly pendingSends = new Set<string>();
+  private readonly messageKeys = new Map<string, string>();
   private snapshot: CaltraSessionSnapshot = {
     session: null,
     connection: "connecting",
@@ -84,6 +85,11 @@ export class CaltraSessionRuntime {
   };
 
   readonly getSnapshot = (): CaltraSessionSnapshot => this.snapshot;
+
+  /** Stable consumer key across send acknowledgement and history refresh. API
+   * resource operations must still use the canonical message ID in the snapshot.
+   */
+  readonly getMessageKey = (messageId: string): string => this.messageKeys.get(messageId) ?? messageId;
 
   /** Creates an independent, inert reasoning resource. Its consumer owns start/stop. */
   reasoning(messageId: string): CaltraReasoningRuntime {
@@ -269,6 +275,7 @@ export class CaltraSessionRuntime {
     try {
       const submitted = await this.client.sendMessage(this.sessionId, { text, ...(context === undefined ? {} : { context }), ...(modelSelection ? { modelSelection } : {}) });
       if (generation !== this.generation) return;
+      this.messageKeys.set(submitted.message_id, temporaryId);
       this.update({
         ...(this.snapshot.session?.is_running === undefined ? {} : {
           session: { ...this.snapshot.session, is_running: true },

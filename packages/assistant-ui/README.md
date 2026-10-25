@@ -31,8 +31,11 @@ The adapter forwards the session runtime's authoritative turn state. `isRunning`
 ## Response projection
 
 Consecutive assistant steps form one UI response bounded by user messages, including
-empty, thinking, tool and answer steps. Its first source ID stays stable as new steps
-arrive, preserving native Thread's user/assistant top-anchor pair. Text and tools
+empty, thinking, tool and answer steps. A locally submitted user message keeps its
+display key through acknowledgement. Its upcoming assistant response also retains
+one display ID when the first server step arrives, preserving native Thread's
+user/assistant top-anchor pair. Responses loaded from history initially use their
+first source ID. Text and tools
 remain ordered content parts; native `MessagePrimitive.GroupedParts` groups adjacent
 tools and keeps groups separated by text. The final response stays running while the
 session turn is running, including gaps between completed steps. Failed/cancelled
@@ -40,6 +43,9 @@ terminal steps retain their interruption status.
 
 This is a presentation projection, not a rewrite of the canonical transcript or a
 new backend turn identifier. Each tool retains `caltraMessageId` for loading details.
+Display IDs are not API resource IDs; the session snapshot retains canonical IDs,
+and `session.getMessageKey(id)` provides the stable local consumer key. Unchanged
+history messages reuse their projected and native message objects across text deltas.
 Earlier history can extend the first response at a page boundary and select an
 earlier source ID; subsequent responses retain their IDs.
 
