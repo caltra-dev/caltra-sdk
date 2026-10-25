@@ -43,7 +43,7 @@ function useModelControls({ client, runtime, snapshot }: ModelControlsProps) {
 export function ModelControls() {
   const { models, selected, disabled, open, setOpen, choices, setSelection, loading, error, setReload } = useContext(ModelControlsContext)!;
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
-  return <PopoverPortalContainer.Provider value={container}><div ref={setContainer}>
+  return <PopoverPortalContainer.Provider value={container}><div ref={setContainer} className="demo-model-controls">
       {selected ? <ModelSelector models={models} value={selected.platform_model_id} effort={selected.reasoning_level ?? "provider-default"}
         aria-label="Model and reasoning" disabled={disabled} open={!disabled && open} onOpenChange={setOpen}
         onValueChange={model => {

@@ -112,6 +112,8 @@ button:not(:where(.caltra-chat *)) { color: inherit; }
 .empty-rail { padding: 18px 5px; color: var(--muted); font-size: 11px; line-height: 1.6; }
 
 .chat-shell { display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100dvh; min-width: 0; }
+/* Let the native trigger shrink within its composer slot, leaving Send its own hit area. */
+.demo-model-controls { display: flex; min-width: 0; }
 .demo-controls { display: grid; grid-template-columns: minmax(0, 1.3fr) repeat(2, minmax(0, 1fr)); gap: .75rem; width: min(100%, 370px); }
 .demo-appearance { min-width: 0; display: grid; gap: .5rem; font-size: .75rem; }
 .demo-appearance select { width: 100%; max-width: 100%; min-height: 44px; padding: .5rem; color: #ecebdc; background: var(--panel); border: 1px solid var(--line); border-radius: .5rem; }
