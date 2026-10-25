@@ -31,7 +31,7 @@ export function useAssistantUiRuntime(store: CaltraSessionRuntime, { getContext 
     await store.send(text, { context: getContext?.(), modelSelection });
   }, [store, getContext]);
 
-  const messages = useMemo(() => MessageProjection.project(snapshot.messages), [snapshot.messages]);
+  const messages = useMemo(() => MessageProjection.project(snapshot.messages, snapshot.isRunning), [snapshot.messages, snapshot.isRunning]);
 
   // Caltra owns a linear transcript. Replace the repository so removed optimistic
   // IDs cannot survive as phantom edit/regeneration branches in assistant-ui.

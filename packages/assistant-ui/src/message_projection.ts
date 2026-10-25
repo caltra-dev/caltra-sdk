@@ -2,30 +2,26 @@ import type { ThreadMessageLike, ToolCallMessagePart } from "@assistant-ui/react
 import type { CaltraSessionMessage } from "@caltra/client";
 
 /** Projects execution steps into UI messages without changing the canonical transcript.
- * Only adjacent tool-only steps coalesce; text, user messages and interrupted steps
- * remain boundaries. Original resource IDs survive for lazy tool/reasoning reads.
+ * A user-delimited response stays one message from its first empty step through
+ * thinking, tools and answer text. The native top anchor therefore never loses
+ * its user/assistant pair between execution steps. Source resource IDs survive.
  */
 export class MessageProjection {
-  static project(messages: readonly CaltraSessionMessage[]): ThreadMessageLike[] {
+  static project(messages: readonly CaltraSessionMessage[], isRunning = false): ThreadMessageLike[] {
     const groups: CaltraSessionMessage[][] = [];
     for (const message of messages) {
       const group = groups.at(-1);
       const previous = group?.at(-1);
-      if (previous && previous.status === "completed"
-        && this.isToolOnly(previous) && this.isToolOnly(message)) {
+      if (previous?.role === "assistant" && message.role === "assistant") {
         group!.push(message);
       } else {
         groups.push([message]);
       }
     }
-    return groups.map(group => this.message(group));
+    return groups.map((group, index) => this.message(group, isRunning && index === groups.length - 1));
   }
 
-  private static isToolOnly(message: CaltraSessionMessage): boolean {
-    return message.role === "assistant" && message.text === "" && Boolean(message.tool_calls?.length);
-  }
-
-  private static message(group: readonly CaltraSessionMessage[]): ThreadMessageLike {
+  private static message(group: readonly CaltraSessionMessage[], isRunning: boolean): ThreadMessageLike {
     const first = group[0]!;
     const last = group.at(-1)!;
     const reasoningMessages = group.flatMap(message => message.reasoning
@@ -51,11 +47,13 @@ export class MessageProjection {
       ]),
       metadata: { custom: { caltraReasoning: reasoning, caltraReasoningMessages: reasoningMessages } },
       ...(first.role === "assistant" ? {
-        status: last.status === "streaming"
-          ? { type: "running" as const }
-          : last.status === "completed"
-            ? { type: "complete" as const, reason: "stop" as const }
-            : { type: "incomplete" as const, reason: last.status === "cancelled" ? "cancelled" as const : "error" as const },
+        // A completed model step is not the end of the response turn. Keep native
+        // pending UI stable in tool/model gaps, while retaining terminal failures.
+        status: last.status === "cancelled" || last.status === "failed"
+          ? { type: "incomplete" as const, reason: last.status === "cancelled" ? "cancelled" as const : "error" as const }
+          : isRunning || last.status === "streaming"
+            ? { type: "running" as const }
+            : { type: "complete" as const, reason: "stop" as const },
       } : {}),
     };
   }

@@ -22,14 +22,18 @@ describe("tool step projection", () => {
     expect(source).toEqual(original);
   });
 
-  it("preserves text, user, empty and reasoning-only boundaries", () => {
+  it("keeps one response across text, empty and reasoning-only steps, bounded by user messages", () => {
     const source = [step("one"), step("two"),
       step("text", { text: "Checking another source" }), step("three"),
       step("user", { role: "user", text: "Next question", tool_calls: undefined }), step("four"),
       step("thinking", { tool_calls: undefined, reasoning: { status: "completed" } }), step("five"),
       step("empty", { tool_calls: undefined }), step("six")];
-    expect(MessageProjection.project(source).map(message => message.id)).toEqual([
-      "one", "text", "three", "user", "four", "thinking", "five", "empty", "six",
+    const result = MessageProjection.project(source);
+    expect(result.map(message => message.id)).toEqual(["one", "user", "four"]);
+    expect(result[0]?.content).toEqual([
+      expect.objectContaining({ toolCallId: "tool-one" }), expect.objectContaining({ toolCallId: "tool-two" }),
+      { type: "text", text: "Checking another source" }, expect.objectContaining({ toolCallId: "tool-text" }),
+      expect.objectContaining({ toolCallId: "tool-three" }),
     ]);
   });
 
@@ -48,10 +52,18 @@ describe("tool step projection", () => {
     });
   });
 
-  it.each(["cancelled", "failed"] as const)("preserves %s status and does not merge a following step into it", status => {
-    const result = MessageProjection.project([step("one"), step("two", { status }), step("three")]);
-    expect(result.map(message => message.id)).toEqual(["one", "three"]);
+  it.each(["cancelled", "failed"] as const)("preserves %s status before the next user turn", status => {
+    const result = MessageProjection.project([step("one"), step("two", { status }),
+      step("user", { role: "user", text: "Try again", tool_calls: undefined }), step("three")]);
+    expect(result.map(message => message.id)).toEqual(["one", "user", "three"]);
     expect(result[0]).toMatchObject({ status: { type: "incomplete", reason: status === "cancelled" ? "cancelled" : "error" } });
+  });
+
+  it("keeps the response running between completed steps until the whole turn finishes", () => {
+    const source = [step("one"), step("two")];
+    expect(MessageProjection.project(source, true)[0]).toMatchObject({ id: "one", status: { type: "running" } });
+    expect(MessageProjection.project(source, false)[0]).toMatchObject({ id: "one", status: { type: "complete" } });
+    expect(MessageProjection.project([step("one", { status: "cancelled" })], true)[0]).toMatchObject({ status: { type: "incomplete", reason: "cancelled" } });
   });
 
   it("retains all reasoning resource IDs and their independent statuses", () => {

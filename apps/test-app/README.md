@@ -69,6 +69,13 @@ a final answer. Standard Thread should show one native **3 tool calls** group;
 expand it to see all three calls. Reload the session to check history grouping.
 This command is a deterministic local fixture, not a production agent command.
 
+The adapter keeps one assistant UI message per user-delimited response throughout
+empty, thinking, tool and answer steps. Standard Thread's native top anchor stays
+attached to that stable message. A 1rem inset on the demo host sits outside the
+scrollport so the pinned user message does not touch the header; the upstream
+Thread, reserve-space logic and scroll behavior are unchanged. Native top anchoring
+still intentionally leaves room below a new question for its incoming answer.
+
 Launch with `npm run demo -- --local-stub`. Signal Room loads 60 saved messages,
 initially displaying the newest 20. Scroll up in CaltraChat, or use **Load earlier
 messages** in Standard Thread, to load older pages. Send any text for eight streamed

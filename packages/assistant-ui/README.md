@@ -28,14 +28,22 @@ Use upstream `useAui`, `useAuiState` and primitives directly inside `AssistantRu
 
 The adapter forwards the session runtime's authoritative turn state. `isRunning` remains true between messages and tools until the persisted turn completes, fails, or is cancelled. Servers without `is_running` retain legacy message-activity behavior. Turn completion does not prove a larger application workflow finished. For custom threads, use `scrollToBottomOnRunStart={false}` to preserve reading position when a new turn begins; CaltraChat applies this default automatically.
 
-## Earlier history
+## Response projection
 
-Consecutive assistant steps containing only tools are projected into one UI message,
-so native `MessagePrimitive.GroupedParts` can show one tool count. Text, user messages,
-empty/reasoning-only messages and interrupted steps remain boundaries. This changes
-only the presentation: the Caltra transcript retains its original messages. A group
-uses its first source message's ID and each tool's artifact retains `caltraMessageId`
-for loading details. Earlier history can extend a group at a page boundary.
+Consecutive assistant steps form one UI response bounded by user messages, including
+empty, thinking, tool and answer steps. Its first source ID stays stable as new steps
+arrive, preserving native Thread's user/assistant top-anchor pair. Text and tools
+remain ordered content parts; native `MessagePrimitive.GroupedParts` groups adjacent
+tools and keeps groups separated by text. The final response stays running while the
+session turn is running, including gaps between completed steps. Failed/cancelled
+terminal steps retain their interruption status.
+
+This is a presentation projection, not a rewrite of the canonical transcript or a
+new backend turn identifier. Each tool retains `caltraMessageId` for loading details.
+Earlier history can extend the first response at a page boundary and select an
+earlier source ID; subsequent responses retain their IDs.
+
+## Earlier history
 
 Requires `@assistant-ui/react` 0.15.30 or later in the supported 0.15 range. The adapter maps
 Caltra's cursor availability and `loadOlder()` into `hasEarlier` and `onLoadEarlier`.
@@ -49,7 +57,7 @@ with a retry control. CaltraChat additionally triggers loading when the reader s
 
 The adapter carries availability/status in `message.metadata.custom.caltraReasoning`.
 For the current UI message, `useCaltraReasoningMessages()` returns every source
-`{ messageId, status }`, including reasoning attached to coalesced tool steps.
+`{ messageId, status }`, including reasoning attached to all coalesced response steps.
 Render one disclosure per entry and pass that source ID to `useCaltraReasoning`;
 the UI message ID alone does not identify all reasoning resources in a group.
 Use `useCaltraReasoning(sessionRuntime, messageId, open)` inside your disclosure to load its

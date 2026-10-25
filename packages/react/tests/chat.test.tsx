@@ -63,9 +63,10 @@ describe("CaltraChat", () => {
 
   it("keeps previous copy controls mounted through thinking, answer streaming, and a running tool gap", async () => {
     const f = fixture();
-    const history: CaltraSessionMessage[] = ["First answer", "Second answer"].map(text => ({
-      id: text, role: "assistant", text, status: "completed", created_at: "2026-10-21T00:00:00Z",
-    }));
+    const history: CaltraSessionMessage[] = ["First answer", "Second answer"].flatMap(text => [
+      { id: `user-${text}`, role: "user", text: `Question for ${text}`, status: "completed", created_at: "2026-10-21T00:00:00Z" },
+      { id: text, role: "assistant", text, status: "completed", created_at: "2026-10-21T00:00:00Z" },
+    ]);
     let messages = history;
     let running = false;
     f.client.listSessionMessages.mockImplementation(async () => ({ data: messages, next_cursor: null }));
@@ -76,6 +77,8 @@ describe("CaltraChat", () => {
     const savedButtons = screen.getAllByRole("button", { name: "Copy", exact: true });
     expect(savedButtons).toHaveLength(2);
 
+    history.push({ id: "new-question", role: "user", text: "New question", status: "completed", created_at: "2026-10-21T00:01:00Z" });
+
     running = true;
     const active: CaltraSessionMessage = { id: "active", role: "assistant", text: "", status: "streaming",
       reasoning: { status: "streaming" }, created_at: "2026-10-21T00:01:00Z" };
@@ -84,17 +87,38 @@ describe("CaltraChat", () => {
     expect(screen.getByRole("button", { name: "Stop generating" })).toBeTruthy();
     expect(screen.getAllByRole("button", { name: "Copy", exact: true })).toEqual(savedButtons);
 
-    // The active response gets Copy only after completion; earlier controls never unmount.
+    // A completed step in a running turn does not expose Copy; earlier controls stay mounted.
     messages = [...history, { ...active, text: "New answer", reasoning: { status: "completed" } }];
     await act(async () => runtime.refresh());
     expect(screen.getAllByRole("button", { name: "Copy", exact: true })).toEqual(savedButtons);
     messages = [...history, { ...active, text: "New answer", status: "completed", reasoning: { status: "completed" } }];
     await act(async () => runtime.refresh());
+    expect(screen.getAllByRole("button", { name: "Copy", exact: true })).toEqual(savedButtons);
+    running = false;
+    await act(async () => runtime.refreshMetadata());
     const completedButtons = screen.getAllByRole("button", { name: "Copy", exact: true });
     expect(completedButtons).toHaveLength(3);
     expect(completedButtons.slice(0, 2)).toEqual(savedButtons);
-    expect(screen.getByRole("button", { name: "Stop generating" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Stop generating" })).toBeNull();
     await runtime.stop();
+  });
+
+  it("renders one Copy action for a response with multiple text/tool steps", async () => {
+    const f = fixture();
+    const writeText = vi.fn(async () => undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    f.client.listSessionMessages.mockImplementation(async () => ({ data: [
+      { id: "one", role: "assistant", text: "Repeated text", status: "completed", created_at: "2026-10-24T00:00:00Z",
+        tool_calls: [{ id: "read", name: "demo.read", status: "completed", arguments: {}, result: { ok: true } }] },
+      { id: "two", role: "assistant", text: "Repeated text", status: "completed", created_at: "2026-10-24T00:00:01Z" },
+    ], next_cursor: null }));
+    render(<CaltraChat client={f.client as never} sessionId="multiple-text-parts" />);
+    await screen.findByRole("button", { name: "Used tool: demo.read" });
+    expect(screen.getAllByText("Repeated text")).toHaveLength(2);
+    const copy = screen.getByRole("button", { name: "Copy", exact: true });
+    expect(screen.getAllByText("Repeated text")[1]!.compareDocumentPosition(copy) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(copy);
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("Repeated text\n\nRepeated text"));
   });
 
   it("renders upstream MarkdownText headings, lists, quotations and code controls", async () => {

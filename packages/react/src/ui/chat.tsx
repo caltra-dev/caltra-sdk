@@ -4,7 +4,7 @@ import { CaltraReasoning, type CaltraReasoningDisplay, type CaltraReasoningProps
 
 import {
   ActionBarPrimitive, AssistantRuntimeProvider, AuiIf,
-  ComposerPrimitive, MessagePrimitive, ThreadPrimitive, useAuiState, type ToolCallMessagePartProps,
+  ComposerPrimitive, MessagePrimitive, ThreadPrimitive, useAui, useAuiState, type ToolCallMessagePartProps,
 } from "@assistant-ui/react";
 import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ComponentType, type ComponentPropsWithoutRef } from "react";
 import { CaltraSessionRuntime, type CaltraMessageContext } from "@caltra/client";
@@ -190,18 +190,20 @@ export function CaltraMessage({ labels }: CaltraChatSlotProps) {
   </MessagePrimitive.Root>;
 }
 
-// The Caltra adapter exposes one text part followed by tool parts. Keep the
-// message-level Copy action with that text instead of below tool disclosures.
+// One response can contain several text/tool steps. Keep one message-level Copy
+// action after its last text part, before any trailing tool disclosures.
 function MessageText() {
   const { labels } = useContext(ToolContext);
+  const query = useAui().part.query;
   const role = useAuiState(state => state.message.role);
   const isCopied = useAuiState((state) => state.message.isCopied);
-  const hasCopyableText = useAuiState((state) => state.message.content.some(part => part.type === "text" && part.text.length > 0));
+  const isLastText = useAuiState(state => query !== null && "index" in query
+    && query.index === state.message.content.findLastIndex(part => part.type === "text" && part.text.length > 0));
   // Thread-wide running state must not remove controls from earlier completed messages.
   const isMessageRunning = useAuiState((state) => state.message.status?.type === "running");
   return <>
     <MarkdownText />
-    {role === "assistant" && hasCopyableText && !isMessageRunning && <ActionBarPrimitive.Root className="caltra-chat__actions">
+    {role === "assistant" && isLastText && !isMessageRunning && <ActionBarPrimitive.Root className="caltra-chat__actions">
       <ActionBarPrimitive.Copy className="caltra-chat__copy" aria-label={isCopied ? labels.copied : labels.copy} title={isCopied ? labels.copied : labels.copy}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
           {isCopied ? <path d="m20 6-11 11-5-5" /> : <>

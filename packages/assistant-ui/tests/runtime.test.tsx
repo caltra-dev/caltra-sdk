@@ -19,6 +19,29 @@ function fixture() {
 }
 
 describe("useAssistantUiRuntime", () => {
+  it("retains the native user/assistant anchor pair through every streaming step", async () => {
+    const f = fixture();
+    f.client.getSessionById.mockResolvedValue({ id: "session", is_running: true } as never);
+    const user = { id: "user", role: "user", text: "Research", status: "completed", created_at: "2026-10-24T00:00:00Z" };
+    const first = { ...user, id: "response", role: "assistant", text: "", tool_calls: [{ id: "tool-one", name: "demo.read", status: "completed" }] };
+    const pending = { ...user, id: "next-step", role: "assistant", text: "", status: "streaming" };
+    const tool = { ...pending, tool_calls: [{ id: "tool-two", name: "demo.read", status: "running" }] };
+    f.client.listSessionMessages.mockResolvedValue({ data: [user, first], next_cursor: null } as never);
+    const hook = renderHook(() => useAssistantUiRuntime(f.session));
+    await act(() => f.session.start());
+    for (const steps of [
+      [], [pending], [{ ...pending, reasoning: { status: "streaming" } }], [tool],
+      [{ ...tool, status: "completed" }, { ...pending, id: "answer" }],
+      [{ ...tool, status: "completed" }, { ...pending, id: "answer", text: "The answer" }],
+    ]) {
+      f.client.listSessionMessages.mockResolvedValue({ data: [user, first, ...steps], next_cursor: null } as never);
+      await act(() => f.session.refresh());
+      const messages = hook.result.current.thread.getState().messages;
+      expect(messages.map(message => [message.id, message.role])).toEqual([["user", "user"], ["response", "assistant"]]);
+      expect(messages[1]).toMatchObject({ status: { type: "running" } });
+    }
+    hook.unmount(); await f.session.stop();
+  });
   it("lets native GroupedParts count tools across steps and exposes every reasoning resource", async () => {
     const f = fixture();
     f.client.listSessionMessages.mockResolvedValueOnce({ data: ["one", "two", "three"].map(id => ({
@@ -132,7 +155,10 @@ describe("useAssistantUiRuntime", () => {
       release({ data: [message("earliest")], next_cursor: null });
       await Promise.all([first, second]);
     });
-    expect(hook.result.current.thread.getState().messages.map(message => message.id)).toEqual(["earliest", "latest"]);
+    expect(hook.result.current.thread.getState().messages.map(message => message.id)).toEqual(["earliest"]);
+    expect(hook.result.current.thread.getState().messages[0]?.content).toEqual([
+      { type: "text", text: "earliest" }, { type: "text", text: "latest" },
+    ]);
     expect(hook.result.current.thread.getState().hasEarlier).toBe(false);
     expect(hook.result.current.thread.getState().isLoadingEarlier).toBe(false);
     await act(() => hook.result.current.thread.loadEarlier());
