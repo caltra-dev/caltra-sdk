@@ -198,3 +198,7 @@ The hosted API accepts up to 16 KiB and 12 levels of JSON context. It stores the
 ## Interactive demo
 
 After `npm install`, run `npm run demo` for the local API stub or provide `CALTRA_API_KEY` in the launch environment for a real connection. `npm run demo -- --local-stub` forces simulation; `npm run demo -- --caltra-api-key=<key>` accepts a one-off key. See [demo setup](apps/test-app/README.md) for server-side credentials, automatic workspace setup, and the standard assistant-ui Thread comparison.
+
+## Native Thread minor release
+
+The native Thread integration ships in `@caltra/client@0.14.0`, `@caltra/assistant-ui@0.6.0`, and `@caltra/react@0.16.0`. `CaltraChat` is the shared native Thread wrapper; existing imports from `@caltra/react/ui` remain valid. The React package includes scoped native styles and exposes `@caltra/react/ui/thread` and `@caltra/react/ui/model-selector` for direct composition. `@caltra/server@0.9.0` remains the current server SDK. See the [React integration contract](packages/react/README.md) for supported slots and compatibility details.
