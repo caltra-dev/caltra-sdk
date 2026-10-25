@@ -738,10 +738,10 @@ export const AssistantMessage: FC = () => {
                 return (
                   <span
                     data-slot="aui_assistant-message-indicator"
-                    className="text-muted-foreground font-sans text-sm"
+                    className="animate-pulse font-sans"
                     aria-label={t("Assistant is working")}
                   >
-                    {t("Working…")}
+                    {"●"}
                   </span>
                 );
               default:

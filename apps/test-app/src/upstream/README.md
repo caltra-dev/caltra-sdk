@@ -22,7 +22,7 @@ Caltra's runtime adapter supplies the same session to both comparison views.
 The demo can use its local HTTP API stub or a real Caltra connection, selected in Signal Room when the server starts with a key. Switching views preserves history; each layout owns its composer draft.
 See the [demo setup](../../README.md) for connection modes and credential handling.
 
-The pending assistant indicator uses steady localized text instead of the upstream pulsing dot. This indicates a pending answer, not available reasoning. Preserve this presentation override on refresh.
+The pending assistant indicator retains the upstream pulsing dot.
 
 ModelSelector and its shared model-selection utility, command and popover components use the same pinned upstream commit. Import paths are adapted to this source tree. The high-level selector additionally forwards `disabled` and `aria-label` to its trigger so the demo can prevent changes during a turn and give the combined control an accessible name. Its native ModelContext registration is retained.
 
