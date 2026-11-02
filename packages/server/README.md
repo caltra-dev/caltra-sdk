@@ -150,3 +150,5 @@ await server.capabilitySettings.update({
 - `agents.get` also accepts `capabilityLoading` patches when creating or looking up a runtime. Omission preserves saved settings.
 
 The HTTP endpoints remain `/server/v1/workspaces/{workspace_id}/capability-loading/read` and `/set` for compatibility. Model-policy inheritance is separate and unchanged.
+
+Agent delegation uses these same controls. Query `capabilitySettings.list` with `query: "Agent delegation"`, select the platform-managed capability, and update its `enabled` and `mode` fields. The runtime Overview toggle edits that same record. The acting user or agent identity still needs the capability permission and Use access to a target identity with an eligible default runtime; configuring the runtime never grants either permission. Delegated sessions and their asynchronous result messages are managed by Caltra.
