@@ -117,9 +117,9 @@ Defaults apply to future sessions only. Existing sessions retain their original 
 
 The wire endpoints are `GET` and `PATCH /server/v1/workspaces/{workspace_id}/agents/{agent_id}/model-policy`. Keep server keys on your trusted server; browser client tokens cannot manage policy.
 
-## Capability settings (unreleased)
+## Capability settings (0.10.0+)
 
-The methods below require the forthcoming server SDK release. They configure saved runtime choices and environment creation defaults; they do not grant permission to a user or agent identity. The API key requires `agents:provision` in the selected environment.
+The methods below are available from `@caltra/server@0.10.0`. They configure saved runtime choices and environment creation defaults; they do not grant permission to a user or agent identity. The API key requires `agents:provision` in the selected environment.
 
 ```ts
 const page = await server.capabilitySettings.list({
