@@ -1,3 +1,4 @@
+import type { CaltraCapabilitySettingsChange } from "./capability_settings.js";
 import { z } from "zod";
 import { CaltraServerError } from "./error.js";
 import { CaltraAgentModelPolicyClient, type CaltraAgentModelPolicy, type CaltraAgentModelPolicyTarget, type CaltraAgentModelPolicyUpdate } from "./agent_model_policy.js";
@@ -9,6 +10,8 @@ export interface CaltraAgentLookup {
   instructions?: string;
   /** Synchronizes capabilities when provided; omit to preserve UI settings, or pass [] to disable all. */
   capabilities?: Array<"web_search" | "background_execution" | "display_artifacts" | "interactive_approval" | "receive_external_events">;
+  /** Patch saved loading/enablement; omission preserves settings and null is not accepted. */
+  capabilityLoading?: CaltraCapabilitySettingsChange[];
   externalId?: string;
 }
 export interface CaltraAgentCreateIfMissing extends CaltraAgentLookup {
@@ -33,7 +36,7 @@ export class CaltraAgentsClient {
     const createIfMissing = "createIfMissing" in input ? input.createIfMissing : undefined;
     const response = await this.fetchImplementation(`${this.apiUrl}/server/v1/workspaces/${encodeURIComponent(input.workspaceId)}/agents/get`, {
       method: "POST", headers: { authorization: `Bearer ${this.apiKey}`, "content-type": "application/json" },
-      body: JSON.stringify({ ...(input.capabilities !== undefined ? { capabilities: input.capabilities } : {}), ...(input.externalId !== undefined ? { external_id: input.externalId } : {}), ...(input.instructions !== undefined ? { instructions: input.instructions } : {}), owner: { tenant_user_external_id: input.owner.tenantUserExternalId },
+      body: JSON.stringify({ ...(input.capabilityLoading !== undefined ? {capability_loading:input.capabilityLoading} : {}), ...(input.capabilities !== undefined ? { capabilities: input.capabilities } : {}), ...(input.externalId !== undefined ? { external_id: input.externalId } : {}), ...(input.instructions !== undefined ? { instructions: input.instructions } : {}), owner: { tenant_user_external_id: input.owner.tenantUserExternalId },
         ...(createIfMissing ? { create_if_missing: createIfMissing } : {}), ...(input.syncName ? { sync_name: input.syncName } : {}) }),
     });
     if (!response.ok) {

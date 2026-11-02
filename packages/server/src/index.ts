@@ -19,3 +19,6 @@ export type {
 export { CaltraAgentsClient } from "./agents.js";
 export type { CaltraAgentLookup, CaltraAgentCreateIfMissing, CaltraServerAgent } from "./agents.js";
 export type { CaltraAgentModelChoice, CaltraAgentModelPolicy, CaltraAgentModelPolicyTarget, CaltraAgentModelPolicyUpdate } from "./agent_model_policy.js";
+
+export { CaltraCapabilitySettingsClient } from "./capability_settings.js";
+export type { CaltraCapabilityLoadingMode, CaltraCapabilitySettingsTarget, CaltraCapabilitySettingsChange, CaltraCapabilitySettingsRead, CaltraCapabilitySettingsUpdate, CaltraCapabilitySettingsChoice } from "./capability_settings.js";

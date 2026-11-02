@@ -1,3 +1,4 @@
+import { CaltraCapabilitySettingsClient } from "./capability_settings.js";
 import { z } from "zod";
 import { CaltraAgentsClient } from "./agents.js";
 import type { CaltraServerClientOptions } from "./types.js";
@@ -14,6 +15,7 @@ const OptionsSchema = z.object({
 
 /** Provides authenticated, server-only access to Caltra resources without exposing the API key. */
 export class CaltraServerClient {
+  readonly capabilitySettings: CaltraCapabilitySettingsClient;
   readonly agents: CaltraAgentsClient;
   readonly agentIdentities: CaltraAgentIdentitiesClient;
   readonly clientAuthorizations: CaltraClientAuthorizationsClient;
@@ -23,6 +25,7 @@ export class CaltraServerClient {
     const options = OptionsSchema.parse(input);
     const apiUrl = (options.apiUrl ?? "https://api.caltra.dev").replace(/\/+$/, "");
     const fetchImplementation = options.fetch ?? globalThis.fetch.bind(globalThis);
+    this.capabilitySettings = new CaltraCapabilitySettingsClient(options.apiKey, apiUrl, fetchImplementation);
     this.agents = new CaltraAgentsClient(options.apiKey, apiUrl, fetchImplementation);
     this.agentIdentities = new CaltraAgentIdentitiesClient(options.apiKey, apiUrl, fetchImplementation);
     this.workspaces = new CaltraWorkspacesClient(options.apiKey, apiUrl, fetchImplementation, options.workspaceNamespace);
