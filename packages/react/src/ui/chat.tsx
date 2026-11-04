@@ -218,17 +218,16 @@ export function CaltraTool(props: ToolCallMessagePartProps) {
   return <ToolFallback {...props} status={status} />;
 }
 
-export function CaltraConnection({ labels, connection, error, historyLoaded, retry }: CaltraConnectionProps) {
+export function CaltraConnection({ labels, connection, error, retry }: CaltraConnectionProps) {
   const [retrying, setRetrying] = useState(false);
-  if (connection === "connected" && !error) return null;
-  // Initial loading has its own single status region. Errors must never masquerade as an empty chat.
-  if (!historyLoaded && !error && connection !== "failed") return null;
-  return <div className="caltra-chat__connection" role={error || connection === "failed" ? "alert" : "status"}>
-    <span>{error || connection === "failed" ? labels.connectionFailed : connection === "recovering" ? labels.recovering : labels.connecting}</span>
-    {(connection === "failed" || (connection === "connected" && error)) && <button type="button" disabled={retrying} onClick={() => {
+  // Automatic connection recovery is silent; only an actionable failure needs a banner.
+  if (connection !== "failed" && !(connection === "connected" && error)) return null;
+  return <div className="caltra-chat__connection" role="alert">
+    <span>{labels.connectionFailed}</span>
+    <button type="button" disabled={retrying} onClick={() => {
       setRetrying(true);
       void retry().catch(() => undefined).finally(() => setRetrying(false));
-    }}>{labels.retry}</button>}
+    }}>{labels.retry}</button>
   </div>;
 }
 

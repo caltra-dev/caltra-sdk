@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { CaltraApiError, CaltraSessionRuntime, type CaltraSessionMessage } from "@caltra/client";
+import { CaltraApiError, CaltraSessionRuntime, type CaltraSessionMessage, type CaltraLive, type CaltraLiveSnapshot } from "@caltra/client";
 import { createCaltraTheme } from "../src/themes/index.js";
-import { CaltraChat } from "../src/ui/chat.js";
+import { CaltraChat, CaltraConnection } from "../src/ui/chat.js";
+import { CaltraConversation, CaltraLiveContext } from "../src/ui/live.js";
+import { defaultCaltraChatLabels } from "../src/ui/labels.js";
 
 beforeAll(() => {
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
@@ -359,7 +361,7 @@ it('loads live eligibility on connect and preserves caller composer controls',as
  expect(getLiveConnection).toHaveBeenCalled();expect(screen.getByRole('button',{name:'Customer control'})).toBeTruthy();
 });
 
-it('replaces the text view during Live and restores the same draft and viewport after ending',async()=>{
+it('keeps the draft and viewport visible while connecting and cancels from the Live button',async()=>{
  const f=fixture();
  const originalMedia=Object.getOwnPropertyDescriptor(navigator,'mediaDevices');
  Object.defineProperty(navigator,'mediaDevices',{configurable:true,value:{getUserMedia:vi.fn(()=>new Promise(()=>{}))}});
@@ -372,12 +374,14 @@ it('replaces the text view during Live and restores the same draft and viewport 
   viewport.scrollTop=120;
   fireEvent.change(input,{target:{value:'Keep my draft'}});
   fireEvent.click(screen.getByRole('button',{name:'Start Live'}));
-  await screen.findByRole('button',{name:'End the call'});
-  expect(screen.queryByRole('textbox')).toBeNull();
+  const cancel=await screen.findByRole('button',{name:'Cancel Live connection'});
+  expect(cancel.getAttribute('aria-busy')).toBe('true');
+  expect(screen.getByRole('textbox')).toBe(input);
   expect(input.isConnected).toBe(true);
-  expect(view.container.querySelector('.caltra-chat__text-view')?.hasAttribute('hidden')).toBe(true);
-  fireEvent.click(screen.getByRole('button',{name:'End the call'}));
-  await waitFor(()=>expect(screen.getByRole('textbox')).toBe(input));
+  expect(view.container.querySelector('.caltra-chat__text-view')?.hasAttribute('hidden')).toBe(false);
+  fireEvent.click(cancel);
+  await screen.findByRole('button',{name:'Start Live'});
+  expect(screen.getByRole('textbox')).toBe(input);
   expect(input.value).toBe('Keep my draft');
   expect(view.container.querySelector('[data-slot="aui_thread-viewport"]')).toBe(viewport);
   expect(viewport.scrollTop).toBe(120);
@@ -386,4 +390,32 @@ it('replaces the text view during Live and restores the same draft and viewport 
   if(originalMedia)Object.defineProperty(navigator,'mediaDevices',originalMedia);
   else Reflect.deleteProperty(navigator,'mediaDevices');
  }
+});
+
+it('switches to the live view only when active and restores mounted text after ending',()=>{
+ let snapshot:CaltraLiveSnapshot={enabled:true,status:'connecting',muted:false,elsewhere:false,error:null,playbackBlocked:false,amplitude:0,speaking:false,transcript:[]};
+ const listeners=new Set<()=>void>();
+ const live={getSnapshot:()=>snapshot,subscribe:(listener:()=>void)=>{listeners.add(listener);return()=>listeners.delete(listener);},stop:vi.fn(),setMuted:vi.fn()} as unknown as CaltraLive;
+ const update=(status:CaltraLiveSnapshot['status'])=>act(()=>{snapshot={...snapshot,status};listeners.forEach(listener=>listener());});
+ render(<CaltraLiveContext.Provider value={{live}}><CaltraConversation><input defaultValue="Preserved draft"/></CaltraConversation></CaltraLiveContext.Provider>);
+ const input=screen.getByRole('textbox');
+ expect(screen.queryByRole('button',{name:'End the call'})).toBeNull();
+ update('active');
+ expect(screen.queryByRole('textbox')).toBeNull();expect(input.isConnected).toBe(true);
+ expect(screen.getByRole('button',{name:'End the call'})).toBeTruthy();
+ update('ending');expect(screen.queryByRole('textbox')).toBeNull();
+ update('idle');expect(screen.getByRole('textbox')).toBe(input);
+ expect((input as HTMLInputElement).value).toBe('Preserved draft');
+});
+
+it('keeps automatic recovery silent but exposes retry after connection failure',async()=>{
+ const retry=vi.fn(async()=>{});
+ const props={labels:defaultCaltraChatLabels,error:new Error('Disconnected'),historyLoaded:true,retry};
+ const view=render(<CaltraConnection {...props} connection="recovering"/>);
+ expect(view.container.childElementCount).toBe(0);
+ view.rerender(<CaltraConnection {...props} connection="failed"/>);
+ expect(screen.getByRole('alert')).toBeTruthy();
+ fireEvent.click(screen.getByRole('button'));await waitFor(()=>expect(retry).toHaveBeenCalledOnce());
+ view.rerender(<CaltraConnection {...props} error={null} connection="connected"/>);
+ expect(view.container.childElementCount).toBe(0);
 });

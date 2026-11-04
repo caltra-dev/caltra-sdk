@@ -142,6 +142,9 @@ resolved labels and renders inside the assistant-ui provider. The composer also 
 `submitMode`; connection receives `connection`, `error`, `historyLoaded`, and `retry`.
 The default components are exported as `CaltraWelcome`, `CaltraHistoryLoading`, `CaltraMessage`,
 `CaltraComposer`, and `CaltraConnection`.
+The default connection component hides routine connecting/reconnecting messages
+and shows only actionable failures with Retry. A custom `Connection` slot can
+render those intermediate states if needed.
 
 ## Headless runtime
 
