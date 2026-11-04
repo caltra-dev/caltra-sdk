@@ -95,6 +95,8 @@ const reasoningDuration = (timing: ThreadGroupPart["timing"]) =>
 export type ThreadComponents = {
   UserMessage?: ComponentType | undefined;
   Loading?: ComponentType | undefined;
+  /** Integration slot; retains native pagination and viewport anchoring. */
+  LoadEarlier?: ComponentType | undefined;
   Composer?: ComponentType<{ autoFocus?: boolean }> | undefined;
   /** Integration slot; retains the upstream composer and send/stop controls. */
   ComposerControls?: ComponentType | undefined;
@@ -211,7 +213,7 @@ const ThreadRoot: FC<{ isEmpty: boolean; autoFocus: boolean }> = ({
   isEmpty,
   autoFocus,
 }) => {
-  const { Welcome = ThreadWelcome, Loading = ThreadHistorySkeleton, Composer: ComposerComponent = Composer } = useContext(ThreadComponentsContext);
+  const { Welcome = ThreadWelcome, Loading = ThreadHistorySkeleton, LoadEarlier = ThreadLoadEarlier, Composer: ComposerComponent = Composer } = useContext(ThreadComponentsContext);
   const { viewportProps, rootStyle } = useContext(ThreadOptionsContext);
 
   return (
@@ -245,7 +247,7 @@ const ThreadRoot: FC<{ isEmpty: boolean; autoFocus: boolean }> = ({
             <Loading />
           </AuiIf>
 
-          <ThreadLoadEarlier />
+          <LoadEarlier />
 
           <div
             data-slot="aui_message-group"
