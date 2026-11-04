@@ -36,3 +36,6 @@ export type { CaltraReasoningState } from "./reasoning_runtime.js";
 export type { CaltraReasoningSnapshot, CaltraReasoningEvent, CaltraReasoningMetadataEvent } from "./types.js";
 
 export type { CaltraModelSelection, CaltraModelChoice } from "./types.js";
+
+export { CaltraLive } from "./live.js";
+export type { CaltraLiveSnapshot, CaltraLiveOwner, CaltraLiveResponse } from "./live.js";

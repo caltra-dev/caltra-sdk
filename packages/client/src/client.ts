@@ -1,3 +1,4 @@
+import { LiveResponseSchema, type CaltraLiveOwner } from "./live.js";
 import type { CaltraModelChoice } from "./types.js";
 import { CaltraSessionRuntime, type CaltraSessionRuntimeOptions } from "./session_runtime.js";
 import { CaltraAgentsClient } from "./agents.js";
@@ -210,14 +211,25 @@ export class CaltraClient {
       });
   }
 
+  async getLiveConnection(sessionId: string) {
+    return this.request(`/sessions/${encodeURIComponent(sessionId)}/live`,LiveResponseSchema,{signal:AbortSignal.timeout(10000)});
+  }
+  async startLiveConnection(sessionId: string, owner: CaltraLiveOwner, sdp: string, signal?: AbortSignal) {
+    return this.request(`/sessions/${encodeURIComponent(sessionId)}/live`,LiveResponseSchema,{method:'POST',signal:signal?AbortSignal.any([signal,AbortSignal.timeout(25000)]):AbortSignal.timeout(25000),
+      headers:{'content-type':'application/json','x-caltra-live-control-token':owner.controlToken},body:JSON.stringify({connection_id:owner.connectionId,sdp_offer:sdp})});
+  }
+  async stopLiveConnection(sessionId: string, owner: CaltraLiveOwner) {
+    return this.request(`/sessions/${encodeURIComponent(sessionId)}/live/${encodeURIComponent(owner.connectionId)}/stop`,LiveResponseSchema,{method:'POST',signal:AbortSignal.timeout(15000),
+      headers:{'content-type':'application/json','x-caltra-live-control-token':owner.controlToken},body:'{}'});
+  }
   async openSessionEvents(
     sessionId: string,
-    options: { signal?: AbortSignal } = {},
+    options: { signal?: AbortSignal; liveOwner?: CaltraLiveOwner } = {},
   ): Promise<CaltraSessionEventConnection> {
     const response = await this.fetchImplementation(this.url(
       `/sessions/${encodeURIComponent(sessionId)}/events?include_metadata=true&include_tools=true&include_reasoning_metadata=true`,
     ), {
-      headers: await this.headers({ accept: "text/event-stream" }),
+      headers: await this.headers({ accept: "text/event-stream", 'x-caltra-live-state':'true', ...(options.liveOwner ? {'x-caltra-live-connection-id':options.liveOwner.connectionId,'x-caltra-live-control-token':options.liveOwner.controlToken}: {}) }),
       method: "GET",
       signal: options.signal,
     });

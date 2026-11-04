@@ -1,5 +1,6 @@
 "use client";
 
+import { CaltraLiveContext, CaltraLivePanel, CaltraComposerControls } from "./live.js";
 import { CaltraReasoning, type CaltraReasoningDisplay, type CaltraReasoningProps } from "./reasoning.js";
 
 import {
@@ -124,7 +125,7 @@ function ChatSession(props: CaltraChatProps) {
     Welcome: components.Welcome || props.labels?.welcomeDescription ? WelcomeSlot : undefined,
     Loading: components.Loading ? LoadingSlot : undefined,
     Composer: components.Composer ? ComposerSlot : undefined,
-    ComposerControls: components.ComposerControls,
+    ComposerControls: CaltraComposerControls,
     ToolFallback: ToolRenderer,
   }), [components, props.labels?.welcomeDescription]);
   const textOverrides = useMemo(() => nativeLabels(props.labels), [props.labels]);
@@ -136,7 +137,8 @@ function ChatSession(props: CaltraChatProps) {
     viewportProps={slotProps.viewport} composerInputProps={slotProps.composerInput} submitMode={submitMode} />,
   [nativeComponents, props.autoFocus, slotProps.viewport, slotProps.composerInput, submitMode]);
   const Connection = components.Connection ?? CaltraConnection;
-  return <AssistantRuntimeProvider runtime={runtime}>
+  const liveContext=useMemo(()=>({live:session.live,Controls:components.ComposerControls}),[session.live,components.ComposerControls]);
+  return <CaltraLiveContext.Provider value={liveContext}><AssistantRuntimeProvider runtime={runtime}>
     <ThreadLocaleProvider value={props.locale ?? "en"}><ThreadTextOverrides.Provider value={textOverrides}>
     <ChatSlots.Provider value={slots}>
     <ToolContext.Provider value={toolSettings}>
@@ -144,11 +146,12 @@ function ChatSession(props: CaltraChatProps) {
       <div ref={setContainer} className={`caltra-chat${dark ? " dark" : ""}${className ? ` ${className}` : ""}`} style={{ ...themeStyle(resolvedTheme), ...style }} data-theme={resolvedTheme.name} data-color-mode={colorMode} hidden={hidden} aria-label={labels.chat} lang={props.locale}>
         <Connection labels={labels} connection={snapshot.connection} error={snapshot.error} historyLoaded={snapshot.historyLoaded} retry={() => session.reconnect()} />
         {snapshot.olderError && <div className="caltra-chat__connection" role="alert">{labels.olderFailed}</div>}
+        <CaltraLivePanel />
         {thread}
       </div>
     </PopoverPortalContainer.Provider></ThreadPortalContainer.Provider>
     </ToolContext.Provider></ChatSlots.Provider></ThreadTextOverrides.Provider></ThreadLocaleProvider>
-  </AssistantRuntimeProvider>;
+  </AssistantRuntimeProvider></CaltraLiveContext.Provider>;
 }
 
 /** Explicit caller labels adapt native strings; absent overrides keep upstream defaults. */

@@ -351,3 +351,10 @@ it("does not rerender unchanged composer controls for answer text updates", asyn
   view.unmount();
   await runtime.stop();
 });
+
+it('loads live eligibility on connect and preserves caller composer controls',async()=>{
+ const f=fixture();const getLiveConnection=vi.fn(async()=>({enabled:true,connection:null}));
+ render(<CaltraChat client={{...f.client,getLiveConnection,startLiveConnection:vi.fn(),stopLiveConnection:vi.fn()} as never} sessionId="live-preview" components={{ComposerControls:()=> <button>Customer control</button>}}/>);
+ await f.resolve();await waitFor(()=>expect(screen.getByRole('button',{name:'Start Live'})).toBeTruthy());
+ expect(getLiveConnection).toHaveBeenCalled();expect(screen.getByRole('button',{name:'Customer control'})).toBeTruthy();
+});

@@ -1,3 +1,4 @@
+import { CaltraLive } from "./live.js";
 import type { CaltraMessageContext, CaltraModelSelection } from "./types.js";
 import { CaltraReasoningRuntime } from "./reasoning_runtime.js";
 import {
@@ -33,10 +34,11 @@ export interface CaltraSessionRuntimeOptions {
 
 /** Minimal transport contract; useful for deterministic fixtures and custom transports. */
 export type CaltraSessionTransport = Pick<CaltraClient,
-  "openSessionEvents" | "listSessionMessages" | "getSessionById" | "sendMessage" | "cancelSession" | "invalidateToken"> & Partial<Pick<CaltraClient, "getSessionToolDetails" | "getSessionReasoning" | "openSessionReasoningEvents">>;
+  "openSessionEvents" | "listSessionMessages" | "getSessionById" | "sendMessage" | "cancelSession" | "invalidateToken"> & Partial<Pick<CaltraClient, "getLiveConnection" | "startLiveConnection" | "stopLiveConnection" | "getSessionToolDetails" | "getSessionReasoning" | "openSessionReasoningEvents">>;
 
 /** Owns reconnectable session state while keeping React and assistant-ui as presentation layers. */
 export class CaltraSessionRuntime {
+  readonly live?: CaltraLive;
   private readonly pageSize = 20;
   private readonly reasoningResources = new Set<CaltraReasoningRuntime>();
   private olderCursor: string | null = null;
@@ -77,7 +79,11 @@ export class CaltraSessionRuntime {
     private readonly client: CaltraSessionTransport,
     readonly sessionId: string,
     private readonly options: CaltraSessionRuntimeOptions = {},
-  ) {}
+  ) {
+    if(client.getLiveConnection&&client.startLiveConnection&&client.stopLiveConnection) this.live=new CaltraLive({
+      getLiveConnection:client.getLiveConnection.bind(client),startLiveConnection:client.startLiveConnection.bind(client),stopLiveConnection:client.stopLiveConnection.bind(client),
+    },sessionId,()=>{void this.connection?.close().catch(()=>undefined);});
+  }
 
   readonly subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
@@ -112,6 +118,7 @@ export class CaltraSessionRuntime {
   }
 
   async stop(): Promise<void> {
+    const liveStop=this.live && this.live.getSnapshot().status!=='idle'?this.live.stop():undefined;
     const reasoningStops = [...this.reasoningResources].map(resource => resource.stop());
     this.generation += 1;
     this.update({ messages: this.snapshot.messages.filter(message => !this.pendingSends.has(message.id)) });
@@ -127,7 +134,7 @@ export class CaltraSessionRuntime {
     this.rejectReady?.(new Error("The Caltra session connection was stopped."));
     this.rejectReady = undefined;
     this.resolveReady = undefined;
-    await Promise.all([...reasoningStops, connection?.close().catch(() => undefined)]);
+    await Promise.all([liveStop,...reasoningStops, connection?.close().catch(() => undefined)]);
   }
 
   async refresh(): Promise<void> {
@@ -308,7 +315,7 @@ export class CaltraSessionRuntime {
   async cancel(): Promise<void> {
     try {
       await this.client.cancelSession(this.sessionId);
-      await Promise.all([this.refresh(), this.refreshMetadata()]);
+      await Promise.all([this.refresh(), this.refreshMetadata(), this.live?.refresh()]);
       this.update({ error: null });
     } catch (error) {
       this.update({ error: this.toError(error) });
@@ -321,12 +328,12 @@ export class CaltraSessionRuntime {
     while (!signal.aborted) {
       try {
         this.update({ connection: attempt === 0 ? "connecting" : "recovering", error: null });
-        const connection = await this.client.openSessionEvents(this.sessionId, { signal });
+        const connection = await this.client.openSessionEvents(this.sessionId, { signal, liveOwner:this.live?.owner });
         if (signal.aborted) { await connection.close().catch(() => undefined); return; }
         this.connection = connection;
         const consuming = this.consume(connection, signal);
         void consuming.catch(() => undefined);
-        await Promise.all([this.refresh(), this.refreshMetadata()]);
+        await Promise.all([this.refresh(), this.refreshMetadata(), this.live?.refresh()]);
         if (signal.aborted) return;
         this.update({ connection: "connected", error: null });
         this.resolveReady?.();
@@ -371,6 +378,7 @@ export class CaltraSessionRuntime {
       // Bound transport deduplication independently from loaded history.
       if (this.eventIds.size > 10_000) this.eventIds.delete(this.eventIds.values().next().value!);
     }
+    if(event.event === "session.live.updated") { await this.live?.refresh(); return; }
     if (event.event === "reasoning.delta") return; // Text belongs exclusively to a separate resource.
     if (event.event === "reasoning.updated") {
       if (this.canonicalMessages.has(event.data.message_id)) return;
@@ -446,7 +454,7 @@ export class CaltraSessionRuntime {
     const pending = (async () => {
       do {
         this.refreshAgain = false;
-        try { await Promise.all([this.refresh(), this.refreshMetadata()]); }
+        try { await Promise.all([this.refresh(), this.refreshMetadata(), this.live?.refresh()]); }
         catch (error) {
           if (generation === this.generation) this.update({ error: this.toError(error) });
         }

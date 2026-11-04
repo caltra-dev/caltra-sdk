@@ -202,3 +202,32 @@ After `npm install`, run `npm run demo` for the local API stub or provide `CALTR
 ## Native Thread minor release
 
 The native Thread integration ships in `@caltra/client@0.14.0`, `@caltra/assistant-ui@0.6.0`, and `@caltra/react@0.16.0`. `CaltraChat` is the shared native Thread wrapper; existing imports from `@caltra/react/ui` remain valid. The React package includes scoped native styles and exposes `@caltra/react/ui/thread` and `@caltra/react/ui/model-selector` for direct composition. `@caltra/server@0.10.0` adds concrete runtime capability settings. See the [React integration contract](packages/react/README.md) for supported slots and compatibility details.
+
+### Live voice (development preview)
+
+When a hosted runtime has Live enabled, `CaltraChat` automatically shows a Live
+button and the native assistant-ui voice panel. Caltra authenticates signaling;
+browser audio connects directly to OpenAI with WebRTC. Provider keys stay on the
+Caltra server. No additional media SDK or customer provider configuration is needed.
+
+Speech is saved in the ordinary conversation. The reasoning worker keeps running,
+and Live can delegate tasks to the same tools. Only one tab can own a call per
+conversation; other tabs observe its transcript and cannot take over. Starting a
+second owner returns HTTP 409. Stopping voice does not cancel background work.
+
+Custom UIs may use the live store on a running session runtime:
+
+```ts
+const runtime = client.createSessionRuntime({ sessionId });
+await runtime.start();
+await runtime.live?.start(); // invoke from a user gesture
+runtime.live?.setMuted(true);
+await runtime.live?.stop();
+await runtime.stop(); // dispose both text and voice connections
+```
+
+Subscribe through `runtime.live.subscribe` and read `getSnapshot()` for readiness,
+errors, mute state and ownership in another tab. Use HTTPS or localhost for
+microphone access. The first integration supplies bounded recent text context;
+it does not send image/video attachments. Browser microphone/playback validation
+is required in addition to the automated lifecycle tests.

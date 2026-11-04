@@ -30,3 +30,9 @@ Integration adaptations to retain when refreshing source:
 The SDK compiles Tailwind utilities and preflight and scopes them to `.caltra-chat`
 with CSS `@scope`. Consumers need no Tailwind build. Host theme variables and a
 1rem inset outside the scrollport are separate from the native Thread source.
+
+The standalone `VoiceConversation` and `range` elements were imported
+from the official assistant-ui element registry on 2026-11-03
+(`https://r.assistant-ui.com/elements-voice-conversation.json` and dependencies).
+They reuse the existing surfaces helpers and package-relative ESM paths. Caltra supplies media state through
+props; this does not replace the existing text runtime with a voice runtime.

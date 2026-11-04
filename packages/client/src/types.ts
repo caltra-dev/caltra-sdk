@@ -137,6 +137,7 @@ export interface CaltraReasoningMetadataEvent {
 }
 
 export type CaltraSessionEvent =
+  | { event:"session.live.updated"; id:string; data:{session_id:string;connection_id:string;state_revision:number} }
   | CaltraReasoningEvent
   | CaltraReasoningMetadataEvent
   | CaltraToolStartedEvent

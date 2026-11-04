@@ -125,5 +125,13 @@
       "local": "packages/react/src/ui/upstream/components/ui/dropdown-menu.tsx",
       "upstream": "packages/ui/src/components/react/ui/base/dropdown-menu.tsx"
     }
-  ]
+  ],
+  "registryElements": {
+    "retrievedAt": "2026-11-03",
+    "source": "https://r.assistant-ui.com/elements-voice-conversation.json",
+    "files": [
+      "components/assistant-ui/elements/voice-conversation.tsx",
+      "components/assistant-ui/utils/range.ts"
+    ]
+  }
 }

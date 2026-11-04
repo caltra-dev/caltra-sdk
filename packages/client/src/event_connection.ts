@@ -80,6 +80,7 @@ export class CaltraSessionEventConnection implements AsyncIterable<CaltraSession
   private parse(message: EventSourceMessage): CaltraSessionEvent {
     const event = message.event;
     const value: unknown = JSON.parse(message.data);
+    if(event==='session.live.updated') return {event,id:message.id??'',data:z.object({session_id:z.string().uuid(),connection_id:z.string().uuid(),state_revision:z.number().int().nonnegative()}).strict().parse(value)};
     if (event === "reasoning.updated") {
       return { data: EventDataSchema.extend({ status: z.enum(["streaming", "completed"]) }).strict().parse(value), event, id: message.id ?? "" };
     }
