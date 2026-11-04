@@ -37,7 +37,7 @@ export function VoiceConversation({
   onInterrupt,
   onEnd,
   showStatusText = true,
-  fullSize = false,
+  layout = "card",
   className,
   ...props
 }: Omit<
@@ -60,9 +60,10 @@ export function VoiceConversation({
   onEnd?: () => void;
   /** Keep the status accessible while allowing a dot-only visual presentation. */
   showStatusText?: boolean;
-  /** Fill the conversation area without the standalone card surface. */
-  fullSize?: boolean;
+  /** A full-width borderless header uses the existing chat transcript below it. */
+  layout?: "card" | "header";
 }) {
+  const fullSize = layout === "header";
   const level = clamp(amplitude, 0, 1);
   const active = mode === "listening" || mode === "speaking";
   const canInterrupt = mode === "speaking" && onInterrupt !== undefined;
@@ -72,7 +73,7 @@ export function VoiceConversation({
       data-slot="voice-conversation"
       className={cn(
         fullSize
-          ? "flex min-h-0 w-full flex-1 flex-col items-center gap-6 px-4 pt-8 pb-4"
+          ? "flex w-full shrink-0 flex-wrap items-center justify-center gap-6 px-4 py-2"
           : cn(paper, "flex w-full max-w-xs flex-col items-center gap-4 rounded-[28px] px-5 py-5"),
         className,
       )}
@@ -120,8 +121,8 @@ export function VoiceConversation({
           className={cn(
             "relative rounded-full transition-[transform,background-color] duration-150 ease-out motion-reduce:transition-none",
             fullSize ? "size-20" : "size-10",
-            mode === "connecting" && "bg-foreground/20 animate-pulse",
-            mode === "listening" && "bg-foreground/80",
+            mode === "connecting" && (fullSize ? "bg-amber-500 animate-pulse" : "bg-foreground/20 animate-pulse"),
+            mode === "listening" && (fullSize ? "bg-blue-500 dark:bg-blue-400" : "bg-foreground/80"),
             mode === "thinking" && "bg-foreground/30 animate-pulse",
             mode === "speaking" && "bg-blue-500 dark:bg-blue-400",
           )}
@@ -136,7 +137,7 @@ export function VoiceConversation({
         </span>}
       </div>
 
-      <div className={cn("flex w-full flex-col gap-1.5", fullSize ? "min-h-0 flex-1 overflow-y-auto" : "min-h-[4.5rem]")}>
+      {!fullSize && <div className="flex min-h-[4.5rem] w-full flex-col gap-1.5">
         {transcript.map((turn) => (
           <div
             key={turn.id}
@@ -165,7 +166,7 @@ export function VoiceConversation({
             </span>
           </div>
         ))}
-      </div>
+      </div>}
 
       <div className={cn("flex shrink-0 items-center", fullSize ? "gap-4" : "gap-2")}>
         <button

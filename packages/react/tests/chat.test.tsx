@@ -378,7 +378,7 @@ it('keeps the draft and viewport visible while connecting and cancels from the L
   expect(cancel.getAttribute('aria-busy')).toBe('true');
   expect(screen.getByRole('textbox')).toBe(input);
   expect(input.isConnected).toBe(true);
-  expect(view.container.querySelector('.caltra-chat__text-view')?.hasAttribute('hidden')).toBe(false);
+  expect(viewport.closest('[hidden]')).toBeNull();
   fireEvent.click(cancel);
   await screen.findByRole('button',{name:'Start Live'});
   expect(screen.getByRole('textbox')).toBe(input);
@@ -392,19 +392,21 @@ it('keeps the draft and viewport visible while connecting and cancels from the L
  }
 });
 
-it('switches to the live view only when active and restores mounted text after ending',()=>{
- let snapshot:CaltraLiveSnapshot={enabled:true,status:'connecting',muted:false,elsewhere:false,error:null,playbackBlocked:false,amplitude:0,speaking:false,transcript:[]};
+it('keeps the regular transcript visible through Live without duplicating speech in its header',()=>{
+ let snapshot:CaltraLiveSnapshot={enabled:true,status:'connecting',muted:false,elsewhere:false,error:null,playbackBlocked:false,amplitude:0,speaking:false,transcript:[{id:'speech',role:'user',text:'Recorded speech'}]};
  const listeners=new Set<()=>void>();
  const live={getSnapshot:()=>snapshot,subscribe:(listener:()=>void)=>{listeners.add(listener);return()=>listeners.delete(listener);},stop:vi.fn(),setMuted:vi.fn()} as unknown as CaltraLive;
  const update=(status:CaltraLiveSnapshot['status'])=>act(()=>{snapshot={...snapshot,status};listeners.forEach(listener=>listener());});
- render(<CaltraLiveContext.Provider value={{live}}><CaltraConversation><input defaultValue="Preserved draft"/></CaltraConversation></CaltraLiveContext.Provider>);
+ render(<CaltraLiveContext.Provider value={{live}}><CaltraConversation><p>Recorded speech</p><input defaultValue="Preserved draft"/></CaltraConversation></CaltraLiveContext.Provider>);
  const input=screen.getByRole('textbox');
- expect(screen.queryByRole('button',{name:'End the call'})).toBeNull();
- update('active');
- expect(screen.queryByRole('textbox')).toBeNull();expect(input.isConnected).toBe(true);
  expect(screen.getByRole('button',{name:'End the call'})).toBeTruthy();
- update('ending');expect(screen.queryByRole('textbox')).toBeNull();
+ update('active');
+ expect(screen.getByRole('textbox')).toBe(input);expect(input.isConnected).toBe(true);
+ expect(screen.getAllByText('Recorded speech')).toHaveLength(1);
+ expect(screen.getByRole('button',{name:'End the call'})).toBeTruthy();
+ update('ending');expect(screen.getByRole('textbox')).toBe(input);
  update('idle');expect(screen.getByRole('textbox')).toBe(input);
+ expect(screen.queryByRole('button',{name:'End the call'})).toBeNull();
  expect((input as HTMLInputElement).value).toBe('Preserved draft');
 });
 

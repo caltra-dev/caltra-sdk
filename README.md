@@ -207,10 +207,10 @@ The native Thread integration ships in `@caltra/client@0.14.0`, `@caltra/assista
 
 When a hosted runtime has Live enabled, `CaltraChat` automatically shows a Live
 button immediately left of Send. While connecting, that button shows a cancellable
-spinner and the text view stays visible. Once connected, the native assistant-ui voice panel
-fills the text view's space without a card border, with an animated dot, live
-transcript and call controls.
-Ending the call restores the mounted text view and draft. Caltra authenticates signaling;
+spinner. A full-width borderless voice header sits above the regular transcript,
+with an amber dot while connecting and a blue dot once connected, plus enlarged
+mute and end-call controls. The normal transcript and draft remain visible;
+speech is saved there rather than duplicated in a separate voice transcript. Caltra authenticates signaling;
 browser audio connects directly to OpenAI with WebRTC. Provider keys stay on the
 Caltra server. No additional media SDK or customer provider configuration is needed.
 

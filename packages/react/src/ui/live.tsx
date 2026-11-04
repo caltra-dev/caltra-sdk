@@ -26,13 +26,8 @@ function LiveButton({live}:{live:CaltraLive}) {
 
 export function CaltraConversation({children}:{children:ReactNode}) {
   const {live}=useContext(CaltraLiveContext);
-  return live?<LiveConversation live={live}>{children}</LiveConversation>:children;
-}
-
-function LiveConversation({live,children}:{live:CaltraLive;children:ReactNode}) {
-  const state=useSyncExternalStore(live.subscribe,live.getSnapshot,live.getSnapshot);
-  // Keep the native thread mounted so switching presentation retains its draft and viewport.
-  return <><LivePanel live={live}/><div className="caltra-chat__text-view" hidden={state.status==='active'||state.status==='ending'}>{children}</div></>;
+  // Voice controls are outside the native transcript scrollport; the thread always stays mounted.
+  return <>{live&&<LivePanel live={live}/>}{children}</>;
 }
 
 function LivePanel({live}:{live:CaltraLive}) {
@@ -40,11 +35,11 @@ function LivePanel({live}:{live:CaltraLive}) {
   return <>
     {state.elsewhere&&<div className="caltra-chat__connection" role="status">Live is active in another tab.</div>}
     {state.error&&<div className="caltra-chat__connection" role="alert">{state.error}</div>}
-    {(state.status==='active'||state.status==='ending')&&<VoiceConversation mode={state.status==='active'?(state.speaking?'speaking':'listening'):'connecting'}
-        showStatusText={false} fullSize
+    {state.status!=='idle'&&<VoiceConversation mode={state.status==='active'?(state.speaking?'speaking':'listening'):'connecting'}
+        showStatusText={false} layout="header"
         amplitude={state.amplitude} transcript={state.transcript} muted={state.muted}
         onToggleMute={state.status==='active'?()=>live.setMuted(!state.muted):undefined}
-        onEnd={state.status==='active'?()=>{void live.stop();}:undefined}/>}
+        onEnd={state.status!=='ending'?()=>{void live.stop();}:undefined}/>}
     {state.playbackBlocked&&<Button onClick={()=>{void live.play();}}>Enable voice playback</Button>}
   </>;
 }

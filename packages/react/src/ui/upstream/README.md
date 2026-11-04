@@ -37,8 +37,8 @@ from the official assistant-ui element registry on 2026-11-03
 They reuse the existing surfaces helpers and package-relative ESM paths. Caltra supplies media state through
 props; this does not replace the existing text runtime with a voice runtime.
 The optional `showStatusText` adaptation preserves the native default while Caltra
-uses a dot-only visual state with an accessible status announcement. During Live,
-Caltra hides the mounted text thread and restores it when the call ends.
-The optional `fullSize` adaptation fills that conversation area without the card
-surface, lets the live transcript scroll, and keeps call controls visible below it.
-It doubles the dot visualization and uses 56px call controls with 24px icons.
+uses a dot-only visual state with an accessible status announcement. The optional
+`layout="header"` adaptation sits above the mounted native transcript without a
+card surface or duplicate speech transcript. It doubles the dot visualization,
+uses amber while connecting and blue once connected, and uses 56px call controls
+with 24px icons. The ordinary transcript and composer remain visible throughout.
