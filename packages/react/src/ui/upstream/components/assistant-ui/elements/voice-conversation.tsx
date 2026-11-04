@@ -85,12 +85,15 @@ export function VoiceConversation({
         onClick={onInterrupt}
         disabled={!canInterrupt}
         aria-label="Interrupt the assistant"
-        className={cn("focus-visible:ring-foreground/20 relative flex shrink-0 items-center justify-center rounded-full outline-none focus-visible:ring-1 disabled:cursor-default", fullSize ? "size-48" : "size-24")}
+        data-mode={mode}
+        data-muted={muted || undefined}
+        className={cn("focus-visible:ring-foreground/20 relative flex shrink-0 items-center justify-center rounded-full outline-none focus-visible:ring-1 disabled:cursor-default", fullSize ? "caltra-voice-orb size-48" : "size-24")}
       >
         <span
           aria-hidden
           className={cn(
             "absolute rounded-full transition-[transform,opacity] duration-200 ease-out motion-reduce:transition-none",
+            fullSize && "caltra-voice-orb__aura",
             mode === "speaking"
               ? "bg-blue-500/12 dark:bg-blue-400/15"
               : "bg-foreground/[0.05]",
@@ -106,6 +109,7 @@ export function VoiceConversation({
           aria-hidden
           className={cn(
             "absolute rounded-full transition-[transform,opacity] duration-150 ease-out motion-reduce:transition-none",
+            fullSize && "caltra-voice-orb__ring",
             mode === "speaking"
               ? "bg-blue-500/20 dark:bg-blue-400/25"
               : "bg-foreground/[0.08]",
@@ -120,8 +124,8 @@ export function VoiceConversation({
           aria-hidden
           className={cn(
             "relative rounded-full transition-[transform,background-color] duration-150 ease-out motion-reduce:transition-none",
-            fullSize ? "size-20" : "size-10",
-            mode === "connecting" && (fullSize ? "bg-amber-500 animate-pulse" : "bg-foreground/20 animate-pulse"),
+            fullSize ? "caltra-voice-orb__core size-20" : "size-10",
+            mode === "connecting" && "bg-foreground/20 animate-pulse",
             mode === "listening" && (fullSize ? "bg-blue-500 dark:bg-blue-400" : "bg-foreground/80"),
             mode === "thinking" && "bg-foreground/30 animate-pulse",
             mode === "speaking" && "bg-blue-500 dark:bg-blue-400",

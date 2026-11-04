@@ -40,5 +40,7 @@ The optional `showStatusText` adaptation preserves the native default while Calt
 uses a dot-only visual state with an accessible status announcement. The optional
 `layout="header"` adaptation sits above the mounted native transcript without a
 card surface or duplicate speech transcript. It doubles the dot visualization,
-uses amber while connecting and blue once connected, and uses 56px call controls
-with 24px icons. The ordinary transcript and composer remain visible throughout.
+uses grey while connecting and a luminous gradient once connected, and uses 56px
+call controls with 24px icons. Caltra-owned orb styles in `host.css` add a stronger
+flowing glow while speaking and respect reduced motion. The ordinary transcript
+and composer remain visible throughout.
