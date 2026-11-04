@@ -37,6 +37,7 @@ export function VoiceConversation({
   onInterrupt,
   onEnd,
   showStatusText = true,
+  fullSize = false,
   className,
   ...props
 }: Omit<
@@ -59,6 +60,8 @@ export function VoiceConversation({
   onEnd?: () => void;
   /** Keep the status accessible while allowing a dot-only visual presentation. */
   showStatusText?: boolean;
+  /** Fill the conversation area without the standalone card surface. */
+  fullSize?: boolean;
 }) {
   const level = clamp(amplitude, 0, 1);
   const active = mode === "listening" || mode === "speaking";
@@ -68,8 +71,9 @@ export function VoiceConversation({
     <div
       data-slot="voice-conversation"
       className={cn(
-        paper,
-        "flex w-full max-w-xs flex-col items-center gap-4 rounded-[28px] px-5 py-5",
+        fullSize
+          ? "flex min-h-0 w-full flex-1 flex-col items-center gap-6 px-4 pt-8 pb-4"
+          : cn(paper, "flex w-full max-w-xs flex-col items-center gap-4 rounded-[28px] px-5 py-5"),
         className,
       )}
 
@@ -80,7 +84,7 @@ export function VoiceConversation({
         onClick={onInterrupt}
         disabled={!canInterrupt}
         aria-label="Interrupt the assistant"
-        className="focus-visible:ring-foreground/20 relative flex size-24 items-center justify-center rounded-full outline-none focus-visible:ring-1 disabled:cursor-default"
+        className="focus-visible:ring-foreground/20 relative flex size-24 shrink-0 items-center justify-center rounded-full outline-none focus-visible:ring-1 disabled:cursor-default"
       >
         <span
           aria-hidden
@@ -131,7 +135,7 @@ export function VoiceConversation({
         </span>}
       </div>
 
-      <div className="flex min-h-[4.5rem] w-full flex-col gap-1.5">
+      <div className={cn("flex w-full flex-col gap-1.5", fullSize ? "min-h-0 flex-1 overflow-y-auto" : "min-h-[4.5rem]")}>
         {transcript.map((turn) => (
           <div
             key={turn.id}
@@ -162,7 +166,7 @@ export function VoiceConversation({
         ))}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2">
         <button
           type="button"
           aria-label={

@@ -39,3 +39,5 @@ props; this does not replace the existing text runtime with a voice runtime.
 The optional `showStatusText` adaptation preserves the native default while Caltra
 uses a dot-only visual state with an accessible status announcement. During Live,
 Caltra hides the mounted text thread and restores it when the call ends.
+The optional `fullSize` adaptation fills that conversation area without the card
+surface, lets the live transcript scroll, and keeps call controls visible below it.

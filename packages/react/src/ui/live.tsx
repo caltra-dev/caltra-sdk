@@ -40,13 +40,11 @@ function LivePanel({live}:{live:CaltraLive}) {
     {state.elsewhere&&<div className="caltra-chat__connection" role="status">Live is active in another tab.</div>}
     {state.error&&<div className="caltra-chat__connection" role="alert">{state.error}</div>}
     {state.status==='ending'&&<div className="caltra-chat__connection" role="status">Ending call…</div>}
-    {state.status!=='idle'&&state.status!=='ending'&&<div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-3">
-      <VoiceConversation mode={state.status==='active'?(state.speaking?'speaking':'listening'):'connecting'}
-        showStatusText={false}
+    {state.status!=='idle'&&state.status!=='ending'&&<VoiceConversation mode={state.status==='active'?(state.speaking?'speaking':'listening'):'connecting'}
+        showStatusText={false} fullSize
         amplitude={state.amplitude} transcript={state.transcript} muted={state.muted}
         onToggleMute={state.status==='active'?()=>live.setMuted(!state.muted):undefined}
-        onEnd={()=>{void live.stop();}}/>
-    </div>}
+        onEnd={()=>{void live.stop();}}/>}
     {state.playbackBlocked&&<Button onClick={()=>{void live.play();}}>Enable voice playback</Button>}
   </>;
 }
