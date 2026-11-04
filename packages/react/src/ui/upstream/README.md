@@ -41,3 +41,4 @@ uses a dot-only visual state with an accessible status announcement. During Live
 Caltra hides the mounted text thread and restores it when the call ends.
 The optional `fullSize` adaptation fills that conversation area without the card
 surface, lets the live transcript scroll, and keeps call controls visible below it.
+It doubles the dot visualization and uses 56px call controls with 24px icons.

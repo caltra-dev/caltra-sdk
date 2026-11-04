@@ -84,7 +84,7 @@ export function VoiceConversation({
         onClick={onInterrupt}
         disabled={!canInterrupt}
         aria-label="Interrupt the assistant"
-        className="focus-visible:ring-foreground/20 relative flex size-24 shrink-0 items-center justify-center rounded-full outline-none focus-visible:ring-1 disabled:cursor-default"
+        className={cn("focus-visible:ring-foreground/20 relative flex shrink-0 items-center justify-center rounded-full outline-none focus-visible:ring-1 disabled:cursor-default", fullSize ? "size-48" : "size-24")}
       >
         <span
           aria-hidden
@@ -95,8 +95,8 @@ export function VoiceConversation({
               : "bg-foreground/[0.05]",
           )}
           style={{
-            width: "6rem",
-            height: "6rem",
+            width: fullSize ? "12rem" : "6rem",
+            height: fullSize ? "12rem" : "6rem",
             transform: `scale(${active ? 0.72 + level * 0.28 : 0.62})`,
             opacity: active ? 1 : 0.5,
           }}
@@ -110,15 +110,16 @@ export function VoiceConversation({
               : "bg-foreground/[0.08]",
           )}
           style={{
-            width: "4.25rem",
-            height: "4.25rem",
+            width: fullSize ? "8.5rem" : "4.25rem",
+            height: fullSize ? "8.5rem" : "4.25rem",
             transform: `scale(${active ? 0.8 + level * 0.22 : 0.7})`,
           }}
         />
         <span
           aria-hidden
           className={cn(
-            "relative size-10 rounded-full transition-[transform,background-color] duration-150 ease-out motion-reduce:transition-none",
+            "relative rounded-full transition-[transform,background-color] duration-150 ease-out motion-reduce:transition-none",
+            fullSize ? "size-20" : "size-10",
             mode === "connecting" && "bg-foreground/20 animate-pulse",
             mode === "listening" && "bg-foreground/80",
             mode === "thinking" && "bg-foreground/30 animate-pulse",
@@ -166,7 +167,7 @@ export function VoiceConversation({
         ))}
       </div>
 
-      <div className="flex shrink-0 items-center gap-2">
+      <div className={cn("flex shrink-0 items-center", fullSize ? "gap-4" : "gap-2")}>
         <button
           type="button"
           aria-label={
@@ -177,14 +178,15 @@ export function VoiceConversation({
           disabled={!onToggleMute}
           className={cn(
             ghostButton,
-            "size-10 disabled:pointer-events-none disabled:opacity-30",
+            "disabled:pointer-events-none disabled:opacity-30",
+            fullSize ? "size-14" : "size-10",
             muted && "bg-foreground/[0.08] text-foreground/90",
           )}
         >
           {muted ? (
-            <MicOffIcon className="size-4" />
+            <MicOffIcon className={fullSize ? "size-6" : "size-4"} />
           ) : (
-            <MicIcon className="size-4" />
+            <MicIcon className={fullSize ? "size-6" : "size-4"} />
           )}
         </button>
         <button
@@ -192,9 +194,9 @@ export function VoiceConversation({
           aria-label="End the call"
           onClick={onEnd}
           disabled={!onEnd}
-          className="flex size-10 items-center justify-center rounded-full bg-red-500/90 text-white transition-[opacity,scale] duration-150 hover:opacity-90 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-30 motion-reduce:transition-none"
+          className={cn("flex items-center justify-center rounded-full bg-red-500/90 text-white transition-[opacity,scale] duration-150 hover:opacity-90 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-30 motion-reduce:transition-none", fullSize ? "size-14" : "size-10")}
         >
-          <PhoneOffIcon className="size-4" />
+          <PhoneOffIcon className={fullSize ? "size-6" : "size-4"} />
         </button>
       </div>
     </div>
