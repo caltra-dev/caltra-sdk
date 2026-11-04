@@ -358,3 +358,32 @@ it('loads live eligibility on connect and preserves caller composer controls',as
  await f.resolve();await waitFor(()=>expect(screen.getByRole('button',{name:'Start Live'})).toBeTruthy());
  expect(getLiveConnection).toHaveBeenCalled();expect(screen.getByRole('button',{name:'Customer control'})).toBeTruthy();
 });
+
+it('replaces the text view during Live and restores the same draft and viewport after ending',async()=>{
+ const f=fixture();
+ const originalMedia=Object.getOwnPropertyDescriptor(navigator,'mediaDevices');
+ Object.defineProperty(navigator,'mediaDevices',{configurable:true,value:{getUserMedia:vi.fn(()=>new Promise(()=>{}))}});
+ const runtime=new CaltraSessionRuntime({...f.client,getLiveConnection:async()=>({enabled:true,connection:null}),startLiveConnection:vi.fn(),stopLiveConnection:vi.fn()} as never,'live-presentation');
+ const view=render(<CaltraChat runtime={runtime}/>);
+ try {
+  const starting=runtime.start();await f.resolve('Saved conversation');await starting;
+  const input=screen.getByRole('textbox') as HTMLTextAreaElement;
+  const viewport=view.container.querySelector('[data-slot="aui_thread-viewport"]')!;
+  viewport.scrollTop=120;
+  fireEvent.change(input,{target:{value:'Keep my draft'}});
+  fireEvent.click(screen.getByRole('button',{name:'Start Live'}));
+  await screen.findByRole('button',{name:'End the call'});
+  expect(screen.queryByRole('textbox')).toBeNull();
+  expect(input.isConnected).toBe(true);
+  expect(view.container.querySelector('.caltra-chat__text-view')?.hasAttribute('hidden')).toBe(true);
+  fireEvent.click(screen.getByRole('button',{name:'End the call'}));
+  await waitFor(()=>expect(screen.getByRole('textbox')).toBe(input));
+  expect(input.value).toBe('Keep my draft');
+  expect(view.container.querySelector('[data-slot="aui_thread-viewport"]')).toBe(viewport);
+  expect(viewport.scrollTop).toBe(120);
+ } finally {
+  view.unmount();await runtime.stop();
+  if(originalMedia)Object.defineProperty(navigator,'mediaDevices',originalMedia);
+  else Reflect.deleteProperty(navigator,'mediaDevices');
+ }
+});

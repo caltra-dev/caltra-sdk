@@ -36,6 +36,7 @@ export function VoiceConversation({
   onToggleMute,
   onInterrupt,
   onEnd,
+  showStatusText = true,
   className,
   ...props
 }: Omit<
@@ -56,6 +57,8 @@ export function VoiceConversation({
   onToggleMute?: () => void;
   onInterrupt?: () => void;
   onEnd?: () => void;
+  /** Keep the status accessible while allowing a dot-only visual presentation. */
+  showStatusText?: boolean;
 }) {
   const level = clamp(amplitude, 0, 1);
   const active = mode === "listening" || mode === "speaking";
@@ -121,11 +124,11 @@ export function VoiceConversation({
         />
       </button>
 
-      <div className="flex flex-col items-center gap-1">
-        <span className="text-[13.5px] font-medium">{CAPTION[mode]}</span>
-        <span className={cn(mono, "text-muted-foreground")}>
+      <div className={showStatusText ? "flex flex-col items-center gap-1" : "sr-only"} role="status">
+        <span className="text-[13.5px] font-medium">{!showStatusText && muted ? "Microphone muted" : CAPTION[mode]}</span>
+        {showStatusText && <span className={cn(mono, "text-muted-foreground")}>
           {muted ? "Mic off" : canInterrupt ? "Tap to interrupt" : HINT[mode]}
-        </span>
+        </span>}
       </div>
 
       <div className="flex min-h-[4.5rem] w-full flex-col gap-1.5">

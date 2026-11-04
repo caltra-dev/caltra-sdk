@@ -39,7 +39,10 @@
   box-sizing: border-box; padding-block-start: 1rem; overflow: hidden;
 }
 .caltra-chat[hidden] { display: none; }
-.caltra-chat > .aui-thread-root { flex: 1; min-height: 0; }
+.caltra-chat > .aui-thread-root,
+.caltra-chat__text-view > .aui-thread-root { flex: 1; min-height: 0; }
+.caltra-chat__text-view { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.caltra-chat__text-view[hidden] { display: none; }
 .caltra-chat[data-color-mode="dark"] {
   --caltra-resolved-background: var(--caltra-background, var(--caltra-theme-dark-background, #09090b));
   --caltra-resolved-foreground: var(--caltra-foreground, var(--caltra-theme-dark-foreground, #fafafa));

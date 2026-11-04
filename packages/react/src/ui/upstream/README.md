@@ -36,3 +36,6 @@ from the official assistant-ui element registry on 2026-11-03
 (`https://r.assistant-ui.com/elements-voice-conversation.json` and dependencies).
 They reuse the existing surfaces helpers and package-relative ESM paths. Caltra supplies media state through
 props; this does not replace the existing text runtime with a voice runtime.
+The optional `showStatusText` adaptation preserves the native default while Caltra
+uses a dot-only visual state with an accessible status announcement. During Live,
+Caltra hides the mounted text thread and restores it when the call ends.
