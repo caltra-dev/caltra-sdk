@@ -19,6 +19,9 @@ Integration adaptations to retain when refreshing source:
   input and root-style forwarding for existing explicit CaltraChat options. Native
   defaults remain in place when these options are absent.
 - Exported default components for compatibility slots and lazy reasoning composition.
+- Optional `LoadEarlier` slot. CaltraChat supplies automatic near-top pagination,
+  compact loading skeletons, and explicit retry after errors through this slot;
+  the standalone Thread retains its native load-earlier button and viewport anchoring.
 - Per-chat tooltip/dialog portal containers; model popovers and dropdowns accept
   their owning container through context. No document-global chat query.
 - The previously approved omission of Reload and Export as Markdown from the

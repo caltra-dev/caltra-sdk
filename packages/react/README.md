@@ -45,12 +45,14 @@ history is pending. History merges by message ID, stream events deduplicate by e
 and completed canonical text replaces provisional text without appending it twice.
 HTTP reconciliation never blocks consumption of subsequent events.
 
-The native **Load earlier messages** control requests one cursor page. Assistant-ui
-owns loading state and anchoring while messages are prepended. Failures show sanitized
-feedback; use the same native control to retry. There is no automatic traversal of
-older cursors on mount or scroll. The headless result exposes `hasOlderMessages`,
-`loadingOlder`, `olderError`, and `loadOlder()`. Explicit `loadOlder` and `olderLoading`
-labels override the native control, while `olderFailed` customizes error feedback.
+CaltraChat automatically requests an older cursor page within 256px of the top of
+its own viewport. Compact skeletons appear above existing messages during loading;
+assistant-ui owns loading state and prepend anchoring. Automatic loading pauses on
+failure until **Try again** is pressed. Browsers without IntersectionObserver retain
+a manual load button. The headless result exposes `hasOlderMessages`, `loadingOlder`,
+`olderError`, and `loadOlder()` without installing an automatic trigger. `loadOlder`
+customizes the fallback button, `olderLoading` the accessible loading announcement,
+`olderFailed` the sanitized error feedback, and `retry` the retry button.
 
 Keep the same client instance for the same authenticated identity. Keep the component mounted
 and use `hidden` when collapsing a panel to retain its draft and connection.
@@ -101,7 +103,8 @@ shared with the demo. Thread owns the welcome/loading states, composer, pending 
 message layout, action bars, grouping, and scrolling. Consecutive backend assistant
 steps are projected into one response before Thread groups its content. Copy appears
 after the full response, tool calls are disclosed through native count groups, and
-older history loads with the native **Load earlier messages** button.
+CaltraChat loads older history automatically through an integration slot that calls
+native pagination. Standalone Thread retains its **Load earlier messages** button.
 
 The SDK bundles scoped Tailwind output, including preflight inside each chat only.
 Consumers need no Tailwind configuration. Themes and explicit CSS overrides map

@@ -77,7 +77,9 @@ Thread, reserve-space logic and scroll behavior are unchanged. Native top anchor
 still intentionally leaves room below a new question for its incoming answer.
 
 Launch with `npm run demo -- --local-stub`. Signal Room loads 60 saved messages,
-initially displaying the newest 20. Use native **Load earlier messages** to load older pages. Send any text for eight streamed
+initially displaying the newest 20. Scroll near the top to load older pages automatically;
+compact skeletons appear while loading and your reading position is preserved.
+If loading fails, use **Try again**. Send any text for eight streamed
 message/tool steps; use Stop to cancel. Create a session to start empty.
 
 Saved messages 58 and 60 include successful/failed tool calls. Expand the native

@@ -17,6 +17,7 @@ import { defaultCaltraChatLabels, type CaltraChatLabels } from "./labels.js";
 import { italian } from "./italian-labels.js";
 
 import { LazyTool } from "./lazy_tool.js";
+import { EarlierHistory } from "./earlier_history.js";
 import { ToolFallback } from "./upstream/components/assistant-ui/elements/tool-fallback.aui.js";
 import { Thread, AssistantMessage, UserMessage, ThreadWelcome, ThreadHistorySkeleton, Composer, type ThreadComponents } from "./upstream/components/assistant-ui/elements/thread.aui.js";
 import { ThreadLocaleProvider, ThreadTextOverrides, type ThreadLocale, type ThreadLabel } from "./upstream/lib/thread-i18n.js";
@@ -124,6 +125,7 @@ function ChatSession(props: CaltraChatProps) {
     UserMessage: components.Message ? MessageSlot : undefined,
     Welcome: components.Welcome || props.labels?.welcomeDescription ? WelcomeSlot : undefined,
     Loading: components.Loading ? LoadingSlot : undefined,
+    LoadEarlier: EarlierHistorySlot,
     Composer: components.Composer ? ComposerSlot : undefined,
     ComposerControls: CaltraComposerControls,
     ToolFallback: ToolRenderer,
@@ -170,6 +172,7 @@ function nativeLabels(labels?: Partial<CaltraChatLabels>): Partial<Record<Thread
 }
 function WelcomeSlot() { const { components, labels } = useContext(ChatSlots); const Component = components.Welcome ?? CaltraWelcome; return <Component labels={labels} />; }
 function LoadingSlot() { const { components, labels } = useContext(ChatSlots); const Component = components.Loading!; return <Component labels={labels} />; }
+function EarlierHistorySlot() { const { session, labels } = useContext(ToolContext); return session ? <EarlierHistory session={session} labels={labels} /> : null; }
 function MessageSlot() { const { components, labels } = useContext(ChatSlots); const Component = components.Message!; return <Component labels={labels} />; }
 function ComposerSlot() { const { components, ...props } = useContext(ChatSlots); const Component = components.Composer!; return <Component {...props} />; }
 function AssistantSlot() { const { components, labels } = useContext(ChatSlots); return components.Message ? <MessageSlot /> : <CaltraMessage labels={labels} />; }
