@@ -1,4 +1,5 @@
 import type { CaltraCapabilitySettingsChange } from "./capability_settings.js";
+import { CaltraAgentLiveSettingsClient, type CaltraAgentLiveSettingsTarget, type CaltraAgentLiveSettingsUpdate } from "./agent_live_settings.js";
 import { z } from "zod";
 import { CaltraServerError } from "./error.js";
 import { CaltraAgentModelPolicyClient, type CaltraAgentModelPolicy, type CaltraAgentModelPolicyTarget, type CaltraAgentModelPolicyUpdate } from "./agent_model_policy.js";
@@ -22,6 +23,14 @@ export interface CaltraServerAgent { id: string; name: string }
 /** Resolves a user's hosted agent independently of agent_identity profiles. */
 export class CaltraAgentsClient {
   constructor(private readonly apiKey: string, private readonly apiUrl: string, private readonly fetchImplementation: typeof fetch) {}
+  /** Requires agents:provision; returns eligible public models without provider credentials. */
+  async getLiveSettings(input:CaltraAgentLiveSettingsTarget) {
+    return new CaltraAgentLiveSettingsClient(this.apiKey,this.apiUrl,this.fetchImplementation).request(input);
+  }
+  /** Replaces only Live fields; disable with enabled:false while retaining model and voice. */
+  async updateLiveSettings(input:CaltraAgentLiveSettingsUpdate) {
+    return new CaltraAgentLiveSettingsClient(this.apiKey,this.apiUrl,this.fetchImplementation).request(input,input.settings);
+  }
   /** Requires an environment server key with agents:provision authority over the target workspace. */
   async getModelPolicy(input: CaltraAgentModelPolicyTarget): Promise<CaltraAgentModelPolicy> {
     return new CaltraAgentModelPolicyClient(this.apiKey, this.apiUrl, this.fetchImplementation).request(input);

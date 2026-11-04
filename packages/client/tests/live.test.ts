@@ -4,8 +4,8 @@ const sessionId='40000000-0000-4000-8000-000000000001';
 class Peer {
  static current:Peer; constructor(){Peer.current=this;}
  iceGatheringState='complete';connectionState='new';localDescription={sdp:'offer'};
- channel={onmessage:undefined as undefined|((event:{data:string})=>void),readyState:'open',send:vi.fn(),close:vi.fn()};
- ontrack?:unknown;onconnectionstatechange?:unknown;
+ channel={onmessage:undefined as undefined|((event:{data:string})=>void),onclose:undefined as undefined|(()=>void),onerror:undefined as undefined|(()=>void),readyState:'open',send:vi.fn(),close:vi.fn()};
+ ontrack?:unknown;onconnectionstatechange?:()=>void;
  createDataChannel(){return this.channel;}addTrack=vi.fn();createOffer=async()=>({type:'offer',sdp:'offer'});
  setLocalDescription=vi.fn(async()=>{});setRemoteDescription=vi.fn(async()=>{});close=vi.fn();
  event(type:string){this.channel.onmessage?.({data:JSON.stringify({type})});}
@@ -56,4 +56,31 @@ it('does not re-enable audio when stopped while applying the remote answer',asyn
  const start=live.start();await vi.waitFor(()=>expect(release).toBeDefined());
  await live.stop();release();await start;
  expect(track.enabled).toBe(false);expect(track.stop).toHaveBeenCalledOnce();expect(live.getSnapshot().status).toBe('idle');
+});
+
+it('releases local audio immediately even when server stop is delayed',async()=>{
+ let release!:(value:{connection:null})=>void;
+ const client=transport(),live=new CaltraLive(client,sessionId,()=>{});await live.start();Peer.current.event('session.started');
+ client.stopLiveConnection.mockImplementation(()=>new Promise(resolve=>{release=resolve;}));
+ const stop=live.stop();expect(track.stop).toHaveBeenCalledOnce();expect(Peer.current.close).toHaveBeenCalledOnce();
+ release({connection:null});await stop;
+});
+
+it.each(['failed','closed','channel-close','channel-error'])('closes failed transport during startup: %s',async failure=>{
+ const client=transport(),live=new CaltraLive(client,sessionId,()=>{});await live.start();
+ if(failure==='channel-close')Peer.current.channel.onclose?.();
+ else if(failure==='channel-error')Peer.current.channel.onerror?.();
+ else {Peer.current.connectionState=failure;Peer.current.onconnectionstatechange?.();}
+ await vi.waitFor(()=>expect(live.getSnapshot().status).toBe('idle'));
+ expect(client.stopLiveConnection).toHaveBeenCalledOnce();expect(track.stop).toHaveBeenCalledOnce();
+ expect(live.getSnapshot().error).toContain('lost');
+});
+
+it('allows brief disconnection but ends a persistent one',async()=>{
+ vi.useFakeTimers();const client=transport(),live=new CaltraLive(client,sessionId,()=>{});await live.start();Peer.current.event('session.started');
+ Peer.current.connectionState='disconnected';Peer.current.onconnectionstatechange?.();await vi.advanceTimersByTimeAsync(5000);
+ Peer.current.connectionState='connected';Peer.current.onconnectionstatechange?.();await vi.advanceTimersByTimeAsync(10000);
+ expect(client.stopLiveConnection).not.toHaveBeenCalled();expect(live.getSnapshot().status).toBe('active');
+ Peer.current.connectionState='disconnected';Peer.current.onconnectionstatechange?.();await vi.advanceTimersByTimeAsync(10001);
+ expect(client.stopLiveConnection).toHaveBeenCalledOnce();expect(live.getSnapshot().status).toBe('idle');
 });

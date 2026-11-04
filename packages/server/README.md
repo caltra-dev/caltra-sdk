@@ -2,6 +2,22 @@
 
 The server-only Caltra SDK. Keep its API key in trusted backend code and never ship it to a browser.
 
+### Live voice settings (development preview)
+
+An environment key with `agents:provision` can configure a hosted runtime's Live model independently of its reasoning model:
+
+```ts
+const target = { workspaceId, agentId };
+const live = await caltra.agents.getLiveSettings(target);
+// Present live.models to your operator and use their selected model ID.
+await caltra.agents.updateLiveSettings({
+  ...target,
+  settings: { enabled: true, platformModelId: selectedLiveModelId, voice: "marin" },
+});
+```
+
+Updates require explicit `enabled`, `platformModelId` and `voice` fields. Enabling requires an eligible model and voice; disabling may retain saved choices. Disabling ends active calls through server recovery. Model and voice changes apply to new calls. These methods preserve reasoning defaults and other capabilities, and never return provider credentials. They require the API version containing the Live settings endpoints; they are not yet published in a package release.
+
 ```ts
 import { CaltraServerClient } from "@caltra/server";
 

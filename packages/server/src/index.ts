@@ -17,6 +17,7 @@ export type {
 } from "./types.js";
 
 export { CaltraAgentsClient } from "./agents.js";
+export type { CaltraAgentLiveSettings, CaltraAgentLiveConfiguration, CaltraAgentLiveSettingsTarget, CaltraAgentLiveSettingsUpdate } from "./agent_live_settings.js";
 export type { CaltraAgentLookup, CaltraAgentCreateIfMissing, CaltraServerAgent } from "./agents.js";
 export type { CaltraAgentModelChoice, CaltraAgentModelPolicy, CaltraAgentModelPolicyTarget, CaltraAgentModelPolicyUpdate } from "./agent_model_policy.js";
 

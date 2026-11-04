@@ -220,6 +220,14 @@ and Live can delegate tasks to the same tools. Only one tab can own a call per
 conversation; other tabs observe its transcript and cannot take over. Starting a
 second owner returns HTTP 409. Stopping voice does not cancel background work.
 
+Configure Live in the hosted runtime Overview or through the server SDK's
+`agents.getLiveSettings` / `agents.updateLiveSettings` methods with `agents:provision`.
+The voice model remains independent of the reasoning model. See the
+[server settings example](packages/server/README.md#live-voice-settings-development-preview).
+Stopping releases local microphone/playback immediately. Brief WebRTC interruptions
+have a ten-second recovery window; failed peers or data channels close the call,
+while server ownership stays reserved until provider cleanup is confirmed.
+
 Custom UIs may use the live store on a running session runtime:
 
 ```ts

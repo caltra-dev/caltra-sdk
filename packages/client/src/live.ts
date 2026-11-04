@@ -20,7 +20,7 @@ export class CaltraLive {
   private readonly listeners=new Set<()=>void>();
   private peer?:RTCPeerConnection;private stream?:MediaStream;private audio?:HTMLAudioElement;private channel?:RTCDataChannel;
   private audioContext?:AudioContext;private frame?:number;private abort?:AbortController;
-  private pending?:Promise<void>;private stopping?:Promise<void>;private generation=0;private lastSpeakerAt=0;private readiness?:ReturnType<typeof setTimeout>;
+  private pending?:Promise<void>;private stopping?:Promise<void>;private generation=0;private lastSpeakerAt=0;private readiness?:ReturnType<typeof setTimeout>;private disconnected?:ReturnType<typeof setTimeout>;
   owner?:CaltraLiveOwner;
   constructor(private readonly client:Transport,private readonly sessionId:string,private readonly ownerChanged:()=>void) {}
   readonly subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>this.listeners.delete(listener);};
@@ -50,9 +50,17 @@ export class CaltraLive {
       this.stream=stream;const peer=new RTCPeerConnection();this.peer=peer;
       this.audio=new Audio();this.audio.autoplay=true;
       peer.ontrack=event=>{if(generation!==this.generation)return;this.audio!.srcObject=new MediaStream([event.track]);void this.play();};
-      peer.onconnectionstatechange=()=>{if(generation===this.generation&&['failed','closed'].includes(peer.connectionState)&&this.snapshot.status==='active')void this.stop();};
+      const lost=()=>{if(generation!==this.generation)return;this.update({error:'The voice connection was lost. You can start a new call.'});void this.stop();};
+      peer.onconnectionstatechange=()=>{
+        if(generation!==this.generation)return;
+        clearTimeout(this.disconnected);
+        if(['failed','closed'].includes(peer.connectionState))lost();
+        // WebRTC may recover a brief network interruption without a new provider session.
+        else if(peer.connectionState==='disconnected')this.disconnected=setTimeout(lost,10000);
+      };
       stream.getTracks().forEach(track=>{track.enabled=false;peer.addTrack(track,stream);});
       const channel=peer.createDataChannel('oai-events');this.channel=channel;
+      channel.onclose=lost;channel.onerror=lost;
       channel.onmessage=event=>{if(generation===this.generation)this.receive(event.data);};
       await peer.setLocalDescription(await peer.createOffer());
       await this.gather(peer,abort.signal);
@@ -81,6 +89,8 @@ export class CaltraLive {
     if(this.stopping)return this.stopping;
     this.generation++;this.pending=undefined;this.abort?.abort();this.update({status:'ending'});
     this.stream?.getTracks().forEach(track=>{track.enabled=false;});
+    // Local microphone and playback must stop even when server cleanup cannot respond.
+    this.cleanup();
     const owner=this.owner;
     this.stopping=(async()=>{
       try {if(owner)await this.client.stopLiveConnection(this.sessionId,owner);}
@@ -128,7 +138,7 @@ export class CaltraLive {
     this.frame=requestAnimationFrame(frame);
   }
   private cleanup():void {
-    clearTimeout(this.readiness);
+    clearTimeout(this.readiness);clearTimeout(this.disconnected);
     if(this.frame!==undefined)cancelAnimationFrame(this.frame);void this.audioContext?.close();this.audioContext=undefined;
     this.stream?.getTracks().forEach(track=>track.stop());this.stream=undefined;
     this.channel?.close();this.channel=undefined;this.peer?.close();this.peer=undefined;
