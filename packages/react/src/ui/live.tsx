@@ -18,9 +18,10 @@ function LiveButton({live}:{live:CaltraLive}) {
   const state=useSyncExternalStore(live.subscribe,live.getSnapshot,live.getSnapshot);
   if(!state.enabled)return null;
   const connecting=state.status==='connecting';
-  return <TooltipIconButton type="button" className="ms-auto me-1.5 shrink-0" tooltip={state.elsewhere?'Live is active in another tab':connecting?'Cancel Live connection':'Start Live'} aria-label={connecting?'Cancel Live connection':'Start Live'} aria-busy={connecting}
+  const ending=state.status==='ending';
+  return <TooltipIconButton type="button" className="ms-auto me-1.5 shrink-0" tooltip={state.elsewhere?'Live is active in another tab':ending?'Ending Live call':connecting?'Cancel Live connection':'Start Live'} aria-label={ending?'Ending Live call':connecting?'Cancel Live connection':'Start Live'} aria-busy={connecting||ending}
     disabled={state.elsewhere||state.status==='active'||state.status==='ending'} onClick={()=>{void (connecting?live.stop():live.start());}} variant="ghost" size="icon">
-    {connecting?<LoaderCircleIcon className="size-4 animate-spin motion-reduce:animate-none"/>:<AudioLinesIcon className="size-4"/>}
+    {connecting||ending?<LoaderCircleIcon className="size-4 animate-spin motion-reduce:animate-none"/>:<AudioLinesIcon className="size-4"/>}
   </TooltipIconButton>;
 }
 
@@ -35,11 +36,11 @@ function LivePanel({live}:{live:CaltraLive}) {
   return <>
     {state.elsewhere&&<div className="caltra-chat__connection" role="status">Live is active in another tab.</div>}
     {state.error&&<div className="caltra-chat__connection" role="alert">{state.error}</div>}
-    {state.status!=='idle'&&<VoiceConversation mode={state.status==='active'?(state.speaking?'speaking':'listening'):'connecting'}
+    {(state.status==='connecting'||state.status==='active')&&<VoiceConversation mode={state.status==='active'?(state.speaking?'speaking':'listening'):'connecting'}
         showStatusText={false} layout="header"
         amplitude={state.amplitude} transcript={state.transcript} muted={state.muted}
         onToggleMute={state.status==='active'?()=>live.setMuted(!state.muted):undefined}
-        onEnd={state.status!=='ending'?()=>{void live.stop();}:undefined}/>}
+        onEnd={()=>{void live.stop();}}/>}
     {state.playbackBlocked&&<Button onClick={()=>{void live.play();}}>Enable voice playback</Button>}
   </>;
 }

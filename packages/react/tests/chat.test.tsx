@@ -405,6 +405,8 @@ it('keeps the regular transcript visible through Live without duplicating speech
  expect(screen.getAllByText('Recorded speech')).toHaveLength(1);
  expect(screen.getByRole('button',{name:'End the call'})).toBeTruthy();
  update('ending');expect(screen.getByRole('textbox')).toBe(input);
+ expect(screen.queryByRole('button',{name:'End the call'})).toBeNull();
+ expect(screen.queryByRole('status')).toBeNull();
  update('idle');expect(screen.getByRole('textbox')).toBe(input);
  expect(screen.queryByRole('button',{name:'End the call'})).toBeNull();
  expect((input as HTMLInputElement).value).toBe('Preserved draft');
