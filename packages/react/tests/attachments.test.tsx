@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { CaltraSessionRuntime } from "@caltra/client";
+import { CaltraSessionRuntime } from "@caltra/client";
 import { CaltraChat } from "../src/ui/chat.js";
 import { AttachmentSession, useAttachmentContent } from "../src/ui/attachment_content.js";
 
@@ -25,12 +25,34 @@ function fixture(mediaType: string, name: string) {
 }
 
 describe("sent attachment access", () => {
+  it("hides uploading until enabled and after disabling, preserving sent file downloads", async () => {
+    const client = fixture("text/plain", "saved.txt");
+    client.getAttachmentSettings.mockResolvedValue({ enabled: false });
+    const session = new CaltraSessionRuntime(client as never, "session");
+    render(<CaltraChat runtime={session} />);
+    expect(session.getSnapshot().attachmentsEnabled).toBeUndefined();
+    expect(screen.queryByRole("button", { name: "Add Attachment" })).toBeNull();
+    await act(async () => { await session.refresh(); await session.refreshMetadata(); });
+    expect(session.getSnapshot().attachmentsEnabled).toBe(false);
+    expect(screen.queryByRole("button", { name: "Add Attachment" })).toBeNull();
+    expect(await screen.findByRole("link", { name: "Download saved.txt" })).toBeTruthy();
+    client.getAttachmentSettings.mockResolvedValue({ enabled: true });
+    await act(() => session.refreshMetadata());
+    expect(await screen.findByRole("button", { name: "Add Attachment" })).toBeTruthy();
+    client.getAttachmentSettings.mockResolvedValue({ enabled: false });
+    await act(() => session.refreshMetadata());
+    expect(screen.queryByRole("button", { name: "Add Attachment" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Download saved.txt" })).toBeTruthy();
+  });
+
   it("restores native image preview from a reference and releases its object URL", async () => {
     const client = fixture("image/png", "diagram.png");
+    client.getAttachmentSettings.mockResolvedValue({ enabled: false });
     const fetchImage = vi.fn(async () => ({ ok: true, blob: async () => new Blob(["pixels"]) }));
     vi.stubGlobal("fetch", fetchImage);
     const view = render(<CaltraChat client={client as never} sessionId="session" />);
     const preview = await screen.findByRole("button", { name: "Preview diagram.png" });
+    expect(screen.queryByRole("button", { name: "Add Attachment" })).toBeNull();
     expect(client.downloadAttachment).toHaveBeenCalledWith("session", "attachment");
     expect(fetchImage).toHaveBeenCalledWith("https://storage.test/initial", expect.objectContaining({ credentials: "omit", cache: "no-store" }));
     fireEvent.click(preview);

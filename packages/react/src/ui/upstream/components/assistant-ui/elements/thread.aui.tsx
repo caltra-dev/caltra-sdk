@@ -564,7 +564,9 @@ const ComposerAction: FC = () => {
   return (
     <div className="aui-composer-action-wrapper relative flex items-center justify-between">
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <ComposerAddAttachment />
+        <AuiIf condition={(s) => s.thread.capabilities.attachments}>
+          <ComposerAddAttachment />
+        </AuiIf>
         {ComposerControls && <ComposerControls />}
       </div>
       <div className="flex items-center gap-1.5">
