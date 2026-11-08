@@ -8,6 +8,14 @@ const step = (id: string, overrides: Partial<CaltraSessionMessage> = {}): Caltra
 });
 
 describe("tool step projection", () => {
+  it("restores file references as native attachments without copying bytes into text", () => {
+    const source = step("uploaded", { role: "user", text: "What does this say?", tool_calls: undefined,
+      attachments: [{ id: "file-id", name: "proof.txt", media_type: "text/plain", size_bytes: 12 }] });
+    const [message] = MessageProjection.project([source]);
+    expect(message?.attachments).toEqual([{ id: "file-id", name: "proof.txt", contentType: "text/plain", type: "file", status: { type: "complete" }, content: [] }]);
+    expect(message?.content).toEqual([{ type: "text", text: "What does this say?" }]);
+  });
+
   it("reuses the upcoming response for source events and keeps lazy resource IDs canonical", () => {
     const projection = new MessageProjection();
     const user = step("user", { role: "user", text: "Research", tool_calls: undefined });

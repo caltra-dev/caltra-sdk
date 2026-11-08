@@ -1,5 +1,5 @@
 import { CaltraLive } from "./live.js";
-import type { CaltraMessageContext, CaltraModelSelection } from "./types.js";
+import type { CaltraAttachment, CaltraMessageContext, CaltraModelSelection } from "./types.js";
 import { CaltraReasoningRuntime } from "./reasoning_runtime.js";
 import {
   type CaltraSessionEvent,
@@ -13,6 +13,7 @@ import { CaltraApiError } from "./error.js";
 export type CaltraConnectionState = "connecting" | "connected" | "recovering" | "failed";
 
 export interface CaltraSessionSnapshot {
+  attachmentsEnabled?: boolean;
   session: CaltraSession | null;
   /** Selection for future sends only; never changes an accepted turn. */
   modelSelection?: CaltraModelSelection;
@@ -34,7 +35,7 @@ export interface CaltraSessionRuntimeOptions {
 
 /** Minimal transport contract; useful for deterministic fixtures and custom transports. */
 export type CaltraSessionTransport = Pick<CaltraClient,
-  "openSessionEvents" | "listSessionMessages" | "getSessionById" | "sendMessage" | "cancelSession" | "invalidateToken"> & Partial<Pick<CaltraClient, "getLiveConnection" | "startLiveConnection" | "stopLiveConnection" | "getSessionToolDetails" | "getSessionReasoning" | "openSessionReasoningEvents">>;
+  "openSessionEvents" | "listSessionMessages" | "getSessionById" | "sendMessage" | "cancelSession" | "invalidateToken"> & Partial<Pick<CaltraClient, "getAttachmentSettings" | "stageAttachment" | "finalizeAttachment" | "removeAttachment" | "getLiveConnection" | "startLiveConnection" | "stopLiveConnection" | "getSessionToolDetails" | "getSessionReasoning" | "openSessionReasoningEvents">>;
 
 /** Owns reconnectable session state while keeping React and assistant-ui as presentation layers. */
 export class CaltraSessionRuntime {
@@ -248,7 +249,11 @@ export class CaltraSessionRuntime {
     const generation = this.generation;
     const request = ++this.metadataRequest;
     const session = await this.client.getSessionById(this.sessionId);
-    if (generation === this.generation && request === this.metadataRequest) this.update({ session });
+    const attachments = this.client.getAttachmentSettings ? await this.client.getAttachmentSettings(this.sessionId).catch(error => {
+      if (error instanceof CaltraApiError && error.status === 404) return { enabled: false };
+      throw error;
+    }) : undefined;
+    if (generation === this.generation && request === this.metadataRequest) this.update({ session, ...(attachments ? { attachmentsEnabled: attachments.enabled } : {}) });
   }
 
   /** Restarts transport without throwing away a transcript already loaded for this session. */
@@ -262,11 +267,25 @@ export class CaltraSessionRuntime {
     this.update({ modelSelection: selection ? { ...selection } : undefined });
   }
 
-  async send(text: string, options: { context?: CaltraMessageContext; modelSelection?: CaltraModelSelection } = {}): Promise<void> {
+  async stageAttachment(file: File) {
+    if (!this.client.stageAttachment) throw new Error("Attachments are not supported by this transport.");
+    return this.client.stageAttachment(this.sessionId, { name: file.name, media_type: file.type || "application/octet-stream", size_bytes: file.size });
+  }
+  async finalizeAttachment(id: string) {
+    if (!this.client.finalizeAttachment) throw new Error("Attachments are not supported by this transport.");
+    return this.client.finalizeAttachment(this.sessionId, id);
+  }
+  async removeAttachment(id: string) {
+    if (!this.client.removeAttachment) throw new Error("Attachments are not supported by this transport.");
+    return this.client.removeAttachment(this.sessionId, id);
+  }
+
+  async send(text: string, options: { context?: CaltraMessageContext; modelSelection?: CaltraModelSelection; attachments?: CaltraAttachment[] } = {}): Promise<void> {
     // Snapshot both inputs before connection/authentication awaits.
     const context = options.context === undefined ? undefined : structuredClone(options.context);
     const selection = options.modelSelection ?? this.snapshot.modelSelection;
     const modelSelection = selection ? { ...selection } : undefined;
+    const attachments = options.attachments?.map(attachment => ({ ...attachment }));
     await this.start();
     const generation = this.generation;
     const temporaryId = `pending-${crypto.randomUUID()}`;
@@ -276,11 +295,12 @@ export class CaltraSessionRuntime {
       role: "user",
       status: "completed",
       text,
+      ...(attachments?.length ? { attachments } : {}),
     };
     this.pendingSends.add(temporaryId);
     this.update({ messages: [...this.snapshot.messages, optimistic] });
     try {
-      const submitted = await this.client.sendMessage(this.sessionId, { text, ...(context === undefined ? {} : { context }), ...(modelSelection ? { modelSelection } : {}) });
+      const submitted = await this.client.sendMessage(this.sessionId, { text, ...(attachments?.length ? { attachmentIds: attachments.map(attachment => attachment.id) } : {}), ...(context === undefined ? {} : { context }), ...(modelSelection ? { modelSelection } : {}) });
       if (generation !== this.generation) return;
       this.messageKeys.set(submitted.message_id, temporaryId);
       this.update({

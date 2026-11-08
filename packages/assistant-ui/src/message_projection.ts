@@ -95,6 +95,11 @@ export class MessageProjection {
       id: first.id,
       createdAt: new Date(first.created_at),
       role: first.role,
+      ...(first.role === "user" && first.attachments?.length ? { attachments: first.attachments.map(attachment => ({
+        id: attachment.id, name: attachment.name, contentType: attachment.media_type,
+        type: attachment.media_type.startsWith("image/") ? "image" as const : "file" as const,
+        status: { type: "complete" as const }, content: [],
+      })) } : {}),
       content: group.flatMap(message => [
         ...(message.text ? [{ type: "text" as const, text: message.text }] : []),
         ...(message.tool_calls ?? []).map(tool => ({

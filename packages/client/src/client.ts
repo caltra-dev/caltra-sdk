@@ -52,6 +52,7 @@ const ToolSchema = z.object({ id: z.string(), name: z.string(), arguments: z.rec
   status: z.enum(["running", "completed", "failed", "cancelled"]), result: z.unknown().optional() }).strict();
 
 const MessageSchema = z.object({
+  attachments: z.array(z.object({ id: z.string().uuid(), name: z.string(), media_type: z.string(), size_bytes: z.number().int() }).strict()).optional(),
   created_at: z.string(),
   id: z.string().uuid(),
   role: z.enum(["user", "assistant"]),
@@ -162,7 +163,7 @@ export class CaltraClient {
     input: CaltraPageInput = {},
   ): Promise<CaltraPage<CaltraSessionMessage>> {
     return await this.getPage(
-      `/sessions/${encodeURIComponent(sessionId)}/messages?include_tools=summary&include_reasoning_metadata=true`,
+      `/sessions/${encodeURIComponent(sessionId)}/messages?include_tools=summary&include_reasoning_metadata=true&include_attachments=true`,
       input,
       PageSchema(MessageSchema),
     );
@@ -251,7 +252,7 @@ export class CaltraClient {
       `/sessions/${encodeURIComponent(sessionId)}/messages`,
       SubmissionSchema,
       {
-        body: JSON.stringify({ text: input.text, request_id: input.requestId, context: input.context, ...(input.modelSelection ? { model_selection: { platform_model_id: input.modelSelection.platformModelId, reasoning_level: input.modelSelection.reasoningLevel } } : {}) }),
+        body: JSON.stringify({ text: input.text, request_id: input.requestId, context: input.context, attachment_ids: input.attachmentIds, ...(input.modelSelection ? { model_selection: { platform_model_id: input.modelSelection.platformModelId, reasoning_level: input.modelSelection.reasoningLevel } } : {}) }),
         headers: { "content-type": "application/json" },
         method: "POST",
       },
@@ -260,6 +261,27 @@ export class CaltraClient {
 
   async invalidateToken(): Promise<void> {
     this.tokenProvider.invalidate();
+  }
+
+  async getAttachmentSettings(sessionId: string): Promise<{ enabled: boolean }> {
+    return this.request(`/sessions/${encodeURIComponent(sessionId)}/attachments`, z.object({ enabled: z.boolean() }).strict());
+  }
+
+  async stageAttachment(sessionId: string, input: { name: string; media_type: string; size_bytes: number }) {
+    return this.request(`/sessions/${encodeURIComponent(sessionId)}/attachments`, z.object({
+      attachment: z.object({ id: z.string().uuid(), name: z.string(), media_type: z.string(), size_bytes: z.number().int() }).strict(),
+      url: z.string().url(), headers: z.array(z.object({ name: z.string(), value: z.string() }).strict()),
+    }).strict(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input) });
+  }
+
+  async finalizeAttachment(sessionId: string, id: string) {
+    return this.request(`/sessions/${encodeURIComponent(sessionId)}/attachments/${encodeURIComponent(id)}/finalize`, z.object({ id: z.string().uuid() }).strict(),
+      { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
+  }
+
+  async removeAttachment(sessionId: string, id: string) {
+    return this.request(`/sessions/${encodeURIComponent(sessionId)}/attachments/${encodeURIComponent(id)}/remove`, z.object({ id: z.string().uuid() }).strict(),
+      { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
   }
 
   private async getPage<T>(

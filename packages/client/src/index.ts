@@ -3,6 +3,7 @@ export { CaltraSessionsClient } from "./sessions.js";
 export { CaltraApiError } from "./error.js";
 export { CaltraSessionEventConnection } from "./event_connection.js";
 export type {
+  CaltraAttachment,
   CaltraJsonValue,
   CaltraMessageContext,
   CaltraMessageInput,

@@ -167,3 +167,9 @@ that credential into the SDK checkout.
 The model picker uses the stock assistant-ui appearance, including its default trigger and popup sizing. No selector-specific CSS or descriptive hint is added. Its popup mounts within the owning UI theme scope so light/dark and the selected chat theme remain consistent. Catalog errors still appear when actionable.
 
 Thinking uses a dropdown of the selected model’s permitted efforts, including Provider default. This follows assistant-ui’s documented custom-effort composition because its stock horizontal row clips larger catalogs. The native ModelContext registration still forwards the selected model and effort on the next message.
+
+### Session attachments
+
+On the real API connection, enable **Attachments** on the hosted agent and configure private attachment storage in Caltra. `CaltraChat` then exposes assistant-ui's native **Add Attachment** control. The adapter stages and uploads the original, verifies the upload, and keeps Send disabled until that finishes. Sending publishes the attachment by ID; transcript reloads restore authorized attachment names without embedding file bytes or storage URLs.
+
+The agent can read supported small files directly and search indexed documents when the API has a Bedrock knowledge base configured. Upload completion and search indexing are separate: the first message can be sent after upload, while search may still report that the document is processing. A stub connection does not verify real S3 or Bedrock behavior.

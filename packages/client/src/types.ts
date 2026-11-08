@@ -6,7 +6,11 @@ export interface CaltraMessageInput {
   requestId?: string;
   context?: CaltraMessageContext;
   modelSelection?: CaltraModelSelection;
+  attachmentIds?: string[];
 }
+
+/** Display metadata only; original bytes stay in private attachment storage. */
+export interface CaltraAttachment { id: string; name: string; media_type: string; size_bytes: number; }
 
 export type CaltraAuthorizationCodeProvider = () => Promise<string>;
 
@@ -74,6 +78,7 @@ export interface CaltraToolCall {
 }
 
 export interface CaltraSessionMessage {
+  attachments?: CaltraAttachment[];
   created_at: string;
   id: string;
   role: "user" | "assistant";

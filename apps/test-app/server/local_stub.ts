@@ -42,6 +42,7 @@ export class LocalStub {
     const client = match && this.sessions.get(match[1]!);
     if (!match || !client) return json({ error: "Unknown stub route or session" }, 404);
     const id = match[1]!; const suffix = match[2];
+    if (suffix === "/attachments" && request.method === "GET") return json({ enabled: false });
     if (suffix === "/model-choices" && request.method === "GET") return json(await client.getSessionModelChoices(id));
     if (!suffix && request.method === "GET") return json(await client.getSessionById(id));
     if (suffix === "/messages" && request.method === "GET") {
