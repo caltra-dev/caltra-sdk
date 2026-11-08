@@ -11,6 +11,10 @@ theme/locale providers, connection feedback, and lazy tool/reasoning adapters.
 
 Integration adaptations to retain when refreshing source:
 
+- Initial loading shows only the history skeleton until history, session attachment
+  settings, and caller-owned controls are ready. The transcript and composer then
+  appear together; later metadata refreshes preserve the composer and its draft.
+
 - Sent attachment access resolves through Caltra's current session. Raster images
   use the native preview dialog with lifecycle-managed object URLs; other files
   use native File components and reauthorize downloads. Composer tiles stay native.

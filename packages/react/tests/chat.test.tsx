@@ -31,6 +31,47 @@ function fixture() {
 }
 
 describe("CaltraChat", () => {
+  it.each(["history", "settings"])("waits for history, attachment settings and custom controls when %s resolves first", async first => {
+    const f = fixture();
+    let resolveSettings!: (value: { enabled: boolean }) => void;
+    const client = { ...f.client, getAttachmentSettings: vi.fn(() => new Promise<{ enabled: boolean }>(resolve => { resolveSettings = resolve; })) };
+    const session = new CaltraSessionRuntime(client as never, "initial-loading");
+    const components = { ComposerControls: () => <button>Ready model</button> };
+    const view = render(<CaltraChat runtime={session} initializing components={components} />);
+    let ready!: Promise<void>;
+    act(() => { ready = session.start(); });
+    await waitFor(() => expect(client.getAttachmentSettings).toHaveBeenCalledOnce());
+    const resolveMetadata = () => act(async () => { resolveSettings({ enabled: true }); });
+    if (first === "history") await f.resolve("Saved history");
+    else await resolveMetadata();
+    // Caller-owned controls becoming ready must not bypass pending native data.
+    view.rerender(<CaltraChat runtime={session} components={components} />);
+    expect(screen.getByText("Loading conversation")).toBeTruthy();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Ready model" })).toBeNull();
+    view.rerender(<CaltraChat runtime={session} initializing components={components} />);
+    if (first === "history") await resolveMetadata();
+    else await f.resolve("Saved history");
+    await act(async () => { await ready; });
+    expect(screen.queryByText("Saved history")).toBeNull();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    view.rerender(<CaltraChat runtime={session} components={components} />);
+    const input = screen.getByRole("textbox");
+    expect(screen.getByText("Saved history")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Add Attachment" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Ready model" })).toBeTruthy();
+    expect(screen.queryByText("Loading conversation")).toBeNull();
+    fireEvent.change(input, { target: { value: "Keep my draft" } });
+    let refresh!: Promise<void>;
+    act(() => { refresh = session.refreshMetadata(); });
+    await waitFor(() => expect(client.getAttachmentSettings).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole("textbox")).toBe(input);
+    await resolveMetadata();
+    await act(async () => { await refresh; });
+    expect((input as HTMLTextAreaElement).value).toBe("Keep my draft");
+    await session.stop();
+  });
+
   it("uses the native action bar after the full response and copies only answer text", async () => {
     const f = fixture();
     const writeText = vi.fn(async () => undefined);
@@ -139,10 +180,12 @@ describe("CaltraChat", () => {
     const f = fixture();
     const rendered = render(<CaltraChat client={f.client as never} sessionId="first" />);
     expect(screen.getByText("Loading conversation")).toBeTruthy();
+    expect(screen.queryByRole("textbox")).toBeNull();
     expect(screen.queryByText("How can I help you today?")).toBeNull();
     await f.resolve("Existing history");
     expect(screen.getByText("Existing history")).toBeTruthy();
     rendered.rerender(<CaltraChat client={f.client as never} sessionId="second" />);
+    expect(screen.queryByRole("textbox")).toBeNull();
     expect(screen.queryByText("Existing history")).toBeNull();
     expect(screen.queryByText("How can I help you today?")).toBeNull();
     await f.resolve();

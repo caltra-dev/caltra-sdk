@@ -28,7 +28,7 @@ export function Chat({ client, session, localStub }: { client: CaltraClient; ses
   const streamThinking = () => {
     if (localStub) void runtime.send("/think Thinking demo complete").catch(() => undefined);
   };
-  return <ModelControlsProvider client={client} runtime={runtime} snapshot={snapshot}><main className="chat-shell">
+  return <ModelControlsProvider key={session.id} client={client} runtime={runtime} snapshot={snapshot}>{initializing => <main className="chat-shell">
     <header className="chat-header" data-success-toast-anchor>
       <div data-success-toast-avoid><span className="eyebrow">CALTRA REACT SDK</span><h1>{session.agent.name}</h1></div>
       <div className="demo-controls" data-success-toast-avoid>
@@ -61,8 +61,8 @@ export function Chat({ client, session, localStub }: { client: CaltraClient; ses
           : <>Choose Local stub in Connection to use the thinking test. On the real API, a Reasoning row appears only when the model returns reasoning; display settings cannot enable it.</>}</p>
       </div>
     </header>
-    <CaltraChat runtime={runtime} autoFocus={false} reasoningDisplay={reasoningDisplay} locale={language}
+    <CaltraChat runtime={runtime} initializing={initializing} autoFocus={false} reasoningDisplay={reasoningDisplay} locale={language}
       components={nativeComponents} labels={language === "it" ? italian : undefined}
       theme={theme === "brand" ? brandTheme : theme} colorMode={colorMode} />
-  </main></ModelControlsProvider>;
+  </main>}</ModelControlsProvider>;
 }

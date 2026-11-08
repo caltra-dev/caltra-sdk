@@ -13,11 +13,13 @@ import { MessageProjection } from "./message_projection.js";
 import { CaltraAttachmentAdapter } from "./attachment_adapter.js";
 /** Maps an already-started Caltra session runtime into assistant-ui. Never starts or stops it. */
 export interface AssistantUiRuntimeOptions {
+  /** Hold the initial conversation skeleton while caller-owned controls initialize. */
+  initializing?: boolean;
   /** Evaluated synchronously for each send, never for transcript rendering. */
   getContext?: () => CaltraMessageContext | undefined;
 }
 
-export function useAssistantUiRuntime(store: CaltraSessionRuntime, { getContext }: AssistantUiRuntimeOptions = {}): AssistantRuntime {
+export function useAssistantUiRuntime(store: CaltraSessionRuntime, { getContext, initializing = false }: AssistantUiRuntimeOptions = {}): AssistantRuntime {
   const runtimeRef = useRef<AssistantRuntime | null>(null);
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   const attachmentAdapter = useMemo(() => new CaltraAttachmentAdapter(store), [store]);
@@ -39,7 +41,8 @@ export function useAssistantUiRuntime(store: CaltraSessionRuntime, { getContext 
   const messageRepository = useMemo(() => projection.repository(snapshot.messages, snapshot.isRunning),
     [projection, snapshot.messages, snapshot.isRunning]);
   const runtime = useExternalStoreRuntime<ThreadMessage>({
-    isLoading: !snapshot.historyLoaded,
+    // Session metadata is published only after attachment settings have resolved.
+    isLoading: !snapshot.historyLoaded || snapshot.session === null || initializing,
     isRunning: snapshot.isRunning,
     hasEarlier: snapshot.hasOlderMessages,
     // Caltra owns cursors/errors; assistant-ui owns loading state and prepend anchoring.

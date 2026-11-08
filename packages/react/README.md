@@ -27,7 +27,13 @@ available for compatibility. The headless `@caltra/react` entry does not import 
 include a welcome, skeleton-only loading state (the loading label is screen-reader-only), Markdown transcript, copy icon with checkmark feedback and localized accessible labels/tooltips, scroll-to-bottom button,
 upstream text composer, connection recovery and retry. Enter sends; Shift+Enter inserts a newline.
 While a turn runs, the native Stop control calls `CaltraClient.cancelSession`, then reloads persisted history. A failed cancellation preserves the running state and exposes the existing error alert; Stop can be retried. HTTP cancellation also works while the event stream reconnects. Running-state presentation follows the persisted queued/running turn on current servers, including pauses between messages and tools. Older servers retain the legacy message-activity fallback.
-Initial loading uses the native history skeleton. The native composer is centered
+Initial loading uses the native history skeleton until history and session attachment
+settings are ready; the composer stays hidden during initialization. If custom
+composer controls fetch their own data, pass `initializing` until that first request
+settles (including an error with a usable fallback). Load that data outside the
+composer slot so hiding the composer cannot prevent the request from starting.
+Do not set `initializing` again for background refreshes or retries: keep the
+composer mounted to preserve the draft. The native composer is centered
 for a confirmed empty conversation and docked for an existing transcript. Bootstrap integrations may render
 `CaltraHistoryLoading` inside the SDK's `caltra-chat` root to use the same presentation.
 Markdown uses the upstream assistant-ui `MarkdownText` component, including heading

@@ -8,14 +8,15 @@ import { CaltraApiError, type CaltraClient, type CaltraModelChoice, type CaltraS
 type ModelControlsProps = { client: CaltraClient; runtime: CaltraSessionRuntime; snapshot: CaltraSessionSnapshot };
 const ModelControlsContext = createContext<ReturnType<typeof useModelControls> | null>(null);
 
-export function ModelControlsProvider({ children, ...props }: ModelControlsProps & { children: ReactNode }) {
+export function ModelControlsProvider({ children, ...props }: ModelControlsProps & { children: (initializing: boolean) => ReactNode }) {
   const controls = useModelControls(props);
-  return <ModelControlsContext.Provider value={controls}>{children}</ModelControlsContext.Provider>;
+  return <ModelControlsContext.Provider value={controls}>{children(controls.initializing)}</ModelControlsContext.Provider>;
 }
 
 function useModelControls({ client, runtime, snapshot }: ModelControlsProps) {
   const [choices, setChoices] = useState<CaltraModelChoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initializing, setInitializing] = useState(true);
   const [error, setError] = useState<string>();
   const [selection, setSelection] = useState<{ model: string; effort: string }>();
   const [open, setOpen] = useState(false);
@@ -27,7 +28,7 @@ function useModelControls({ client, runtime, snapshot }: ModelControlsProps) {
       if (active) setError(reason instanceof CaltraApiError && reason.status === 404
         ? "This Caltra server does not yet expose model choices. The session default remains in use."
         : "Could not load permitted model choices. Retry before changing the selection.");
-    }).finally(() => { if (active) setLoading(false); });
+    }).finally(() => { if (active) { setLoading(false); setInitializing(false); } });
     return () => { active = false; };
   }, [client, runtime, reload]);
   const defaultChoice = choices.find(choice => choice.is_default) ?? choices[0];
@@ -37,7 +38,7 @@ function useModelControls({ client, runtime, snapshot }: ModelControlsProps) {
     efforts: choices.filter(choice => choice.platform_model_id === id).map(choice => ({ id: choice.reasoning_level ?? "provider-default", name: choice.reasoning_level ?? "Provider default" })),
   }));
   const disabled = snapshot.isRunning || loading || Boolean(error) || choices.length === 0;
-  return { models, selected, disabled, open, setOpen, choices, setSelection, loading, error, setReload };
+  return { models, selected, disabled, open, setOpen, choices, setSelection, loading, initializing, error, setReload };
 }
 
 export function ModelControls() {

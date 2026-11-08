@@ -158,15 +158,13 @@ const EMPTY_COMPONENTS: ThreadComponents = {};
 const ThreadComponentsContext =
   createContext<ThreadComponents>(EMPTY_COMPONENTS);
 
-// Startup exposes a loading placeholder thread; treat it as a new chat so
-// the composer mounts centered. Loads after startup keep the docked layout.
+// Confirmed empty history uses the centered welcome layout after initialization.
 const isNewChatView = (s: AssistantState) =>
   s.thread.messages.length === 0 &&
   (!s.thread.isLoading || s.threads.isLoading);
 
-// A switched thread that is still fetching its history: skeleton, not welcome.
+// History may arrive before composer metadata; keep a single skeleton until ready.
 const isHistoryLoadingView = (s: AssistantState) =>
-  s.thread.messages.length === 0 &&
   s.thread.isLoading &&
   !s.thread.isDisabled &&
   !s.threads.isLoading;
@@ -247,31 +245,33 @@ const ThreadRoot: FC<{ isEmpty: boolean; autoFocus: boolean }> = ({
             <Loading />
           </AuiIf>
 
-          <LoadEarlier />
+          <AuiIf condition={(s) => !s.thread.isLoading}>
+            <LoadEarlier />
 
-          <div
-            data-slot="aui_message-group"
-            className="mb-14 flex flex-col gap-y-6 empty:hidden"
-          >
-            <ThreadPrimitive.Messages>
-              {() => <ThreadMessage />}
-            </ThreadPrimitive.Messages>
-          </div>
+            <div
+              data-slot="aui_message-group"
+              className="mb-14 flex flex-col gap-y-6 empty:hidden"
+            >
+              <ThreadPrimitive.Messages>
+                {() => <ThreadMessage />}
+              </ThreadPrimitive.Messages>
+            </div>
 
-          <ThreadPrimitive.ViewportFooter
-            className={cn(
-              "aui-thread-viewport-footer bg-background flex flex-col gap-4 overflow-visible pb-4 md:pb-6",
-              !isEmpty &&
-                "sticky bottom-0 mt-auto rounded-t-(--composer-radius)",
-            )}
-          >
-            <ThreadScrollToBottom />
-            <ThreadFollowupSuggestions />
-            <ComposerComponent autoFocus={autoFocus} />
-            <AuiIf condition={(s) => isNewChatView(s) && s.composer.isEmpty}>
-              <ThreadSuggestions />
-            </AuiIf>
-          </ThreadPrimitive.ViewportFooter>
+            <ThreadPrimitive.ViewportFooter
+              className={cn(
+                "aui-thread-viewport-footer bg-background flex flex-col gap-4 overflow-visible pb-4 md:pb-6",
+                !isEmpty &&
+                  "sticky bottom-0 mt-auto rounded-t-(--composer-radius)",
+              )}
+            >
+              <ThreadScrollToBottom />
+              <ThreadFollowupSuggestions />
+              <ComposerComponent autoFocus={autoFocus} />
+              <AuiIf condition={(s) => isNewChatView(s) && s.composer.isEmpty}>
+                <ThreadSuggestions />
+              </AuiIf>
+            </ThreadPrimitive.ViewportFooter>
+          </AuiIf>
         </div>
       </ThreadPrimitive.Viewport>
     </ThreadPrimitive.Root>

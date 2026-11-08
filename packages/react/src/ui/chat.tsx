@@ -59,6 +59,8 @@ export type CaltraChatSource =
   | { runtime: CaltraSessionRuntime; client?: never; sessionId?: never };
 
 export interface CaltraChatPresentationProps {
+  /** Keep the initial transcript skeleton until caller-owned composer controls are ready. */
+  initializing?: boolean;
   /** Native presentation locale; explicit labels take precedence. */
   locale?: ThreadLocale;
   autoFocus?: boolean;
@@ -106,7 +108,7 @@ function ChatSession(props: CaltraChatProps) {
     return () => { void session.stop(); };
   }, [session, props.runtime]);
   const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
-  const runtime = useAssistantUiRuntime(session, { getContext: props.getContext });
+  const runtime = useAssistantUiRuntime(session, { getContext: props.getContext, initializing: props.initializing });
   const labels = useMemo(() => ({ ...defaultCaltraChatLabels, ...(props.locale === "it" ? italian : {}), ...props.labels }), [props.labels, props.locale]);
   const resolvedTheme = typeof theme === "string" ? caltraThemes[theme] : theme;
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
