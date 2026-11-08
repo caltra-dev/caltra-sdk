@@ -8,6 +8,14 @@ const step = (id: string, overrides: Partial<CaltraSessionMessage> = {}): Caltra
 });
 
 describe("tool step projection", () => {
+  it("keeps attachment publication pending until the optimistic message receives its server ID", () => {
+    const projection = new MessageProjection(() => "stable-user-key");
+    const pending = step("pending-request", { role: "user", tool_calls: undefined });
+    expect(projection.project([pending])[0]?.metadata?.custom?.caltraAttachmentsPending).toBe(true);
+    const accepted = projection.project([{ ...pending, id: "server-id" }])[0];
+    expect(accepted?.id).toBe("stable-user-key");
+    expect(accepted?.metadata?.custom?.caltraAttachmentsPending).toBe(false);
+  });
   it("restores file references as native attachments without copying bytes into text", () => {
     const source = step("uploaded", { role: "user", text: "What does this say?", tool_calls: undefined,
       attachments: [{ id: "file-id", name: "proof.txt", media_type: "text/plain", size_bytes: 12 }] });

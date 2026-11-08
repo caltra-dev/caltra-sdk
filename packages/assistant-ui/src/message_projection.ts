@@ -111,7 +111,8 @@ export class MessageProjection {
           artifact: { caltraToolStatus: tool.status, caltraToolDetailsLoaded: tool.arguments !== undefined, caltraMessageId: message.id },
         })),
       ]),
-      metadata: { custom: { caltraReasoning: reasoning, caltraReasoningMessages: reasoningMessages } },
+      // Local pending IDs are replaced after publication; don't resolve originals before that acknowledgement.
+      metadata: { custom: { ...(first.role === "user" ? { caltraAttachmentsPending: first.id.startsWith("pending-") } : {}), caltraReasoning: reasoning, caltraReasoningMessages: reasoningMessages } },
       ...(first.role === "assistant" ? {
         // A completed model step is not the end of the response turn. Keep native
         // pending UI stable in tool/model gaps, while retaining terminal failures.

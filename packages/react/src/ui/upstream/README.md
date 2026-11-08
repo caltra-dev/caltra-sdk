@@ -11,6 +11,10 @@ theme/locale providers, connection feedback, and lazy tool/reasoning adapters.
 
 Integration adaptations to retain when refreshing source:
 
+- Sent attachment access resolves through Caltra's current session. Raster images
+  use the native preview dialog with lifecycle-managed object URLs; other files
+  use native File components and reauthorize downloads. Composer tiles stay native.
+
 - Package-relative ESM imports, the existing clsx/tailwind-merge helper, and the
   Markdown package's exported `unstable_memoizeMarkdownComponents` alias.
 - Typed English/Italian labels and explicit caller label overrides. Provider text,

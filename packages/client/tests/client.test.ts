@@ -5,6 +5,15 @@ const sessionId = "40000000-0000-4000-8000-000000000001";
 const agentIdentityId = "50000000-0000-4000-8000-000000000001";
 
 describe("CaltraClient", () => {
+  it("resolves attachment downloads with the browser token and escapes resource IDs", async () => {
+    const client = new CaltraClient({ apiUrl: "https://api.example.test", authorizationCodeProvider: async () => "code", fetch: async (input, init) => {
+      if (String(input).endsWith("/auth/authenticate")) return Response.json({ client_token: "token", expires_at: new Date(Date.now()+600000).toISOString(), refresh_after: new Date(Date.now()+500000).toISOString() });
+      expect(new URL(String(input)).pathname).toBe("/client/v1/sessions/session%2Fid/attachments/file%2Fid/download");
+      expect(new Headers(init?.headers).get("authorization")).toBe("Bearer token");
+      return Response.json({ url: "https://storage.test/signed" });
+    } });
+    expect(await client.downloadAttachment("session/id", "file/id")).toEqual({ url: "https://storage.test/signed" });
+  });
   it("adds host authentication headers to the default authorization request", async () => {
     const fetchImplementation = vi.fn(async (input: URL | RequestInfo, init?: RequestInit) => {
       if (String(input) === "https://host.example.test/api/caltra/authorize") {

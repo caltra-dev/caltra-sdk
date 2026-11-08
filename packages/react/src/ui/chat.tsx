@@ -1,6 +1,7 @@
 "use client";
 
 import { CaltraLiveContext, CaltraConversation, CaltraComposerControls } from "./live.js";
+import { AttachmentSession } from "./attachment_content.js";
 import { CaltraReasoning, type CaltraReasoningDisplay, type CaltraReasoningProps } from "./reasoning.js";
 
 import {
@@ -148,7 +149,7 @@ function ChatSession(props: CaltraChatProps) {
       <div ref={setContainer} className={`caltra-chat${dark ? " dark" : ""}${className ? ` ${className}` : ""}`} style={{ ...themeStyle(resolvedTheme), ...style }} data-theme={resolvedTheme.name} data-color-mode={colorMode} hidden={hidden} aria-label={labels.chat} lang={props.locale}>
         <Connection labels={labels} connection={snapshot.connection} error={snapshot.error} historyLoaded={snapshot.historyLoaded} retry={() => session.reconnect()} />
         {snapshot.olderError && <div className="caltra-chat__connection" role="alert">{labels.olderFailed}</div>}
-        <CaltraConversation>{thread}</CaltraConversation>
+        <AttachmentSession.Provider value={session}><CaltraConversation>{thread}</CaltraConversation></AttachmentSession.Provider>
       </div>
     </PopoverPortalContainer.Provider></ThreadPortalContainer.Provider>
     </ToolContext.Provider></ChatSlots.Provider></ThreadTextOverrides.Provider></ThreadLocaleProvider>

@@ -35,7 +35,7 @@ export interface CaltraSessionRuntimeOptions {
 
 /** Minimal transport contract; useful for deterministic fixtures and custom transports. */
 export type CaltraSessionTransport = Pick<CaltraClient,
-  "openSessionEvents" | "listSessionMessages" | "getSessionById" | "sendMessage" | "cancelSession" | "invalidateToken"> & Partial<Pick<CaltraClient, "getAttachmentSettings" | "stageAttachment" | "finalizeAttachment" | "removeAttachment" | "getLiveConnection" | "startLiveConnection" | "stopLiveConnection" | "getSessionToolDetails" | "getSessionReasoning" | "openSessionReasoningEvents">>;
+  "openSessionEvents" | "listSessionMessages" | "getSessionById" | "sendMessage" | "cancelSession" | "invalidateToken"> & Partial<Pick<CaltraClient, "downloadAttachment" | "getAttachmentSettings" | "stageAttachment" | "finalizeAttachment" | "removeAttachment" | "getLiveConnection" | "startLiveConnection" | "stopLiveConnection" | "getSessionToolDetails" | "getSessionReasoning" | "openSessionReasoningEvents">>;
 
 /** Owns reconnectable session state while keeping React and assistant-ui as presentation layers. */
 export class CaltraSessionRuntime {
@@ -270,6 +270,10 @@ export class CaltraSessionRuntime {
   async stageAttachment(file: File) {
     if (!this.client.stageAttachment) throw new Error("Attachments are not supported by this transport.");
     return this.client.stageAttachment(this.sessionId, { name: file.name, media_type: file.type || "application/octet-stream", size_bytes: file.size });
+  }
+  async downloadAttachment(id: string): Promise<{ url: string }> {
+    if (!this.client.downloadAttachment) throw new Error("Attachment downloads are not supported by this transport.");
+    return this.client.downloadAttachment(this.sessionId, id);
   }
   async finalizeAttachment(id: string) {
     if (!this.client.finalizeAttachment) throw new Error("Attachments are not supported by this transport.");

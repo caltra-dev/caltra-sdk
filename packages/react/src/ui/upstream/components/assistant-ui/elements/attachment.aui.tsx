@@ -38,6 +38,8 @@ import { Avatar, AvatarImage, AvatarFallback } from "../../ui/avatar.js";
 import { TooltipIconButton } from "./tooltip-icon-button.js";
 import { useAttachmentSrc } from "../../../hooks/use-attachment-src.js";
 import { cn } from "../../../lib/utils.js";
+import { File } from "./file.js";
+import { previewableImage, useAttachmentContent } from "../../../../attachment_content.js";
 
 type AttachmentPreviewProps = {
   src: string;
@@ -115,11 +117,12 @@ const AttachmentThumb: FC<{ src: string | undefined }> = ({ src }) => {
   );
 };
 
-const AttachmentUI: FC = () => {
+const AttachmentUI: FC<{ resolvedSrc?: string }> = ({ resolvedSrc }) => {
   const t = useThreadText();
   const aui = useAui();
   const isComposer = aui.attachment.source !== "message";
-  const src = useAttachmentSrc();
+  const localSrc = useAttachmentSrc();
+  const src = resolvedSrc ?? localSrc;
 
   const isImage = useAuiState((s) => s.attachment.type === "image");
   const name = useAuiState((s) => s.attachment.name);
@@ -249,10 +252,32 @@ export const UserMessageAttachments: FC = () => {
   return (
     <div className="aui-user-message-attachments-end col-span-full col-start-1 row-start-1 flex w-full flex-row justify-end gap-2 empty:hidden">
       <MessagePrimitive.Attachments>
-        {() => <AttachmentUI />}
+        {() => <StoredAttachment />}
       </MessagePrimitive.Attachments>
     </div>
   );
+};
+
+/** Caltra resolves access; native assistant-ui owns image dialogs and file download presentation. */
+const StoredAttachment: FC = () => {
+  const t = useThreadText();
+  const id = useAuiState(s => s.attachment.id);
+  const name = useAuiState(s => s.attachment.name);
+  const mediaType = useAuiState(s => s.attachment.contentType ?? "application/octet-stream");
+  const pending = useAuiState(s => s.message.metadata.custom?.caltraAttachmentsPending === true);
+  const content = useAttachmentContent(id, mediaType, pending);
+  if (!content.available) return <AttachmentUI />;
+  return <div className="min-w-0 max-w-full" aria-busy={content.loading || content.downloading}>
+    {previewableImage(mediaType) && content.url ? <AttachmentUI resolvedSrc={content.url} /> :
+      <File.Root className="max-w-full">
+        <File.Icon mimeType={mediaType} />
+        <File.Name>{name}</File.Name>
+        {content.url && <File.Download data={content.url} sourceType="url" mimeType={mediaType} filename={name}
+          aria-disabled={content.downloading} onClick={event => { event.preventDefault(); void content.download(name); }} />}
+      </File.Root>}
+    {content.loading && <span role="status">{t("Loading attachment…")}</span>}
+    {content.error && <div role="alert">{t("Could not load attachment.")} <button type="button" onClick={content.retry}>{t("Retry")}</button></div>}
+  </div>;
 };
 
 export const ComposerAttachments: FC = () => {

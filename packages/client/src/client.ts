@@ -267,6 +267,12 @@ export class CaltraClient {
     return this.request(`/sessions/${encodeURIComponent(sessionId)}/attachments`, z.object({ enabled: z.boolean() }).strict());
   }
 
+  /** Resolve a fresh, short-lived URL after checking live session and file access. */
+  async downloadAttachment(sessionId: string, id: string): Promise<{ url: string }> {
+    return this.request(`/sessions/${encodeURIComponent(sessionId)}/attachments/${encodeURIComponent(id)}/download`,
+      z.object({ url: z.string().url() }).strict());
+  }
+
   async stageAttachment(sessionId: string, input: { name: string; media_type: string; size_bytes: number }) {
     return this.request(`/sessions/${encodeURIComponent(sessionId)}/attachments`, z.object({
       attachment: z.object({ id: z.string().uuid(), name: z.string(), media_type: z.string(), size_bytes: z.number().int() }).strict(),

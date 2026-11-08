@@ -3,6 +3,9 @@ import { italian } from "../../italian-labels.js";
 
 /** Presentation labels shared by the packaged Thread and demo; never translate protocol values. */
 const italianThreadLabels = {
+  "Loading attachment…": "Caricamento allegato…",
+  "Could not load attachment.": "Impossibile caricare l’allegato.",
+  "Retry": "Riprova",
   "Loading conversation": "Caricamento conversazione…",
   "Voice conversation": "Conversazione vocale",
   "You said": "Hai detto",
