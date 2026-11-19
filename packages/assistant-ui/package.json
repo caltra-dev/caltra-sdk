@@ -9,7 +9,7 @@
     "registry": "https://registry.npmjs.org"
   },
   "name": "@caltra/assistant-ui",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "assistant-ui adapter for framework-neutral Caltra session runtimes",
   "sideEffects": false,
   "files": [

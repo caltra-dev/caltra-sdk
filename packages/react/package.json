@@ -1,6 +1,6 @@
 {
   "name": "@caltra/react",
-  "version": "0.18.0",
+  "version": "0.18.1",
   "description": "Styled React chat and assistant-ui runtime adapter for Caltra sessions",
   "type": "module",
   "sideEffects": [
@@ -63,7 +63,7 @@
     "lucide-react": "1.34.0",
     "remark-gfm": "4.0.1",
     "tailwind-merge": "3.7.0",
-    "@caltra/assistant-ui": "0.8.0",
+    "@caltra/assistant-ui": "0.8.1",
     "cmdk": "1.1.1",
     "zustand": "5.0.15"
   },
