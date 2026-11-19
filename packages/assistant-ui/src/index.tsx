@@ -11,18 +11,22 @@ import { useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 import { modelSelectionFromContext } from "./model_context.js";
 import { MessageProjection } from "./message_projection.js";
 import { CaltraAttachmentAdapter } from "./attachment_adapter.js";
+import { defaultPhotoLongEdge, type CaltraPhotoUploadOptions } from "./photo_upload.js";
 /** Maps an already-started Caltra session runtime into assistant-ui. Never starts or stops it. */
 export interface AssistantUiRuntimeOptions {
   /** Hold the initial conversation skeleton while caller-owned controls initialize. */
   initializing?: boolean;
   /** Evaluated synchronously for each send, never for transcript rendering. */
   getContext?: () => CaltraMessageContext | undefined;
+  /** Normalize JPEG and HEIC photos before staging their upload. */
+  photoUpload?: CaltraPhotoUploadOptions;
 }
 
-export function useAssistantUiRuntime(store: CaltraSessionRuntime, { getContext, initializing = false }: AssistantUiRuntimeOptions = {}): AssistantRuntime {
+export function useAssistantUiRuntime(store: CaltraSessionRuntime, { getContext, initializing = false, photoUpload }: AssistantUiRuntimeOptions = {}): AssistantRuntime {
   const runtimeRef = useRef<AssistantRuntime | null>(null);
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
-  const attachmentAdapter = useMemo(() => new CaltraAttachmentAdapter(store), [store]);
+  const maxPhotoLongEdge = photoUpload && (photoUpload.maxLongEdge ?? defaultPhotoLongEdge);
+  const attachmentAdapter = useMemo(() => new CaltraAttachmentAdapter(store, maxPhotoLongEdge), [store, maxPhotoLongEdge]);
   const uploading = useSyncExternalStore(attachmentAdapter.subscribe, attachmentAdapter.isSendBlocked, attachmentAdapter.isSendBlocked);
 
   const onNew = useCallback(async (message: AppendMessage) => {
@@ -61,3 +65,4 @@ export function useAssistantUiRuntime(store: CaltraSessionRuntime, { getContext,
 }
 
 export { useCaltraReasoning, useCaltraReasoningMessages } from "./use_reasoning.js";
+export type { CaltraPhotoUploadOptions } from "./photo_upload.js";

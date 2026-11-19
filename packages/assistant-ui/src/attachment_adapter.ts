@@ -1,5 +1,6 @@
 import type { Attachment, AttachmentAdapter, CompleteAttachment, PendingAttachment } from "@assistant-ui/react";
 import type { CaltraSessionRuntime } from "@caltra/client";
+import { normalizePhoto, photoKind } from "./photo_upload.js";
 
 /** Native composer staging keeps bytes outside message context and blocks send until S3 confirms upload. */
 export class CaltraAttachmentAdapter implements AttachmentAdapter {
@@ -9,7 +10,8 @@ export class CaltraAttachmentAdapter implements AttachmentAdapter {
   private readonly failed = new Set<string>();
   private readonly listeners = new Set<() => void>();
   private pending = 0;
-  constructor(private readonly session: CaltraSessionRuntime) {}
+  private photoQueue = Promise.resolve();
+  constructor(private readonly session: CaltraSessionRuntime, private readonly maxPhotoLongEdge?: number) {}
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
   isSendBlocked = () => this.pending > 0 || this.failed.size > 0;
 
@@ -17,6 +19,14 @@ export class CaltraAttachmentAdapter implements AttachmentAdapter {
     this.pending += 1; this.notify();
     let id: string | undefined;
     try {
+      const maxLongEdge = this.maxPhotoLongEdge;
+      const kind = maxLongEdge === undefined ? undefined : photoKind(file);
+      if (kind && maxLongEdge !== undefined) {
+        const source = file;
+        const conversion = this.photoQueue.then(() => normalizePhoto(source, kind, maxLongEdge));
+        this.photoQueue = conversion.then(() => undefined, () => undefined);
+        file = await conversion;
+      }
       const staged = await this.session.stageAttachment(file);
       id = staged.attachment.id;
       const controller = new AbortController(); this.uploads.set(id, controller);

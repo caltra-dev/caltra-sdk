@@ -26,6 +26,8 @@ The caller starts and stops the Caltra runtime. Multiple adapters or chats may o
 
 Use upstream `useAui`, `useAuiState` and primitives directly inside `AssistantRuntimeProvider`. The adapter maps messages, tools, loading, send and cancellation. It does not enable unsupported server features: attachments, editing/regeneration, tool answers and branch persistence require corresponding Caltra backend support.
 
+Pass `useAssistantUiRuntime(session, { photoUpload: {} })` to normalize JPEG and HEIC/HEIF photos locally before upload. The longest edge defaults to 2,048 pixels and can be set with `photoUpload.maxLongEdge`. Photos retain their aspect ratio and smaller photos retain their dimensions. The upload, preview, and download all use the resulting JPEG. PNG, GIF, WebP and other files retain their uploaded format. The decoder loads only when the browser cannot decode HEIC/HEIF itself.
+
 The adapter forwards the session runtime's authoritative turn state. `isRunning` remains true between messages and tools until the persisted turn completes, fails, or is cancelled. Servers without `is_running` retain legacy message-activity behavior. Turn completion does not prove a larger application workflow finished. For custom threads, use `scrollToBottomOnRunStart={false}` to preserve reading position when a new turn begins; CaltraChat applies this default automatically.
 
 ## Response projection

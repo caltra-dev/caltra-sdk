@@ -10,7 +10,7 @@ import {
 } from "@assistant-ui/react";
 import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ComponentType, type ComponentPropsWithoutRef, type CSSProperties } from "react";
 import { CaltraSessionRuntime, type CaltraMessageContext } from "@caltra/client";
-import { useAssistantUiRuntime, useCaltraReasoningMessages } from "@caltra/assistant-ui";
+import { useAssistantUiRuntime, useCaltraReasoningMessages, type CaltraPhotoUploadOptions } from "@caltra/assistant-ui";
 import { type UseCaltraRuntimeOptions, type UseCaltraRuntimeResult } from "../use_caltra_runtime.js";
 import { caltraThemes, type CaltraColorMode, type CaltraTheme, type CaltraThemeName } from "../themes/index.js";
 import { themeStyle, type CaltraChatStyle } from "./theme_style.js";
@@ -66,6 +66,8 @@ export interface CaltraChatPresentationProps {
   autoFocus?: boolean;
   /** Snapshot application data with each send; not returned in the visible transcript. */
   getContext?: () => CaltraMessageContext | undefined;
+  /** Normalize JPEG and HEIC photos before staging their upload. */
+  photoUpload?: CaltraPhotoUploadOptions;
   /** Fetching is disclosure-owned. Hidden opens no reasoning stream. */
   reasoningDisplay?: CaltraReasoningDisplay;
   /** Upstream assistant-ui options, applied over Caltra's presentation defaults. */
@@ -108,7 +110,7 @@ function ChatSession(props: CaltraChatProps) {
     return () => { void session.stop(); };
   }, [session, props.runtime]);
   const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
-  const runtime = useAssistantUiRuntime(session, { getContext: props.getContext, initializing: props.initializing });
+  const runtime = useAssistantUiRuntime(session, { getContext: props.getContext, initializing: props.initializing, photoUpload: props.photoUpload });
   const labels = useMemo(() => ({ ...defaultCaltraChatLabels, ...(props.locale === "it" ? italian : {}), ...props.labels }), [props.labels, props.locale]);
   const resolvedTheme = typeof theme === "string" ? caltraThemes[theme] : theme;
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
