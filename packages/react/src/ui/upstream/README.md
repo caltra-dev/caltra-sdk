@@ -50,10 +50,7 @@ from the official assistant-ui element registry on 2026-11-03
 They reuse the existing surfaces helpers and package-relative ESM paths. Caltra supplies media state through
 props; this does not replace the existing text runtime with a voice runtime.
 The optional `showStatusText` adaptation preserves the native default while Caltra
-uses a dot-only visual state with an accessible status announcement. The optional
-`layout="header"` adaptation sits above the mounted native transcript without a
-card surface or duplicate speech transcript. It doubles the dot visualization,
-uses grey while connecting and a luminous gradient once connected, and uses 56px
-call controls with 24px icons. Caltra-owned orb styles in `host.css` add a stronger
-flowing glow while speaking and respect reduced motion. The ordinary transcript
+uses a dot-only visual state with an accessible status announcement. The `composer` layout places a compact orb and call controls directly above the
+message field. Caltra animates smoke inside the orb and scales it to the measured
+voice level. Reduced-motion mode retains a static orb. The ordinary transcript
 and composer remain visible throughout.

@@ -19,7 +19,7 @@ export class CaltraLive {
   private snapshot:CaltraLiveSnapshot={enabled:false,status:'idle',muted:false,elsewhere:false,error:null,playbackBlocked:false,amplitude:0,speaking:false,transcript:[]};
   private readonly listeners=new Set<()=>void>();
   private peer?:RTCPeerConnection;private stream?:MediaStream;private audio?:HTMLAudioElement;private channel?:RTCDataChannel;
-  private audioContext?:AudioContext;private frame?:number;private abort?:AbortController;
+  private playbackMeter?:AnalyserNode;private audioContext?:AudioContext;private frame?:number;private abort?:AbortController;
   private pending?:Promise<void>;private stopping?:Promise<void>;private generation=0;private lastSpeakerAt=0;private readiness?:ReturnType<typeof setTimeout>;private disconnected?:ReturnType<typeof setTimeout>;
   owner?:CaltraLiveOwner;
   constructor(private readonly client:Transport,private readonly sessionId:string,private readonly ownerChanged:()=>void) {}
@@ -49,7 +49,10 @@ export class CaltraLive {
       if(generation!==this.generation){stream.getTracks().forEach(track=>track.stop());return;}
       this.stream=stream;const peer=new RTCPeerConnection();this.peer=peer;
       this.audio=new Audio();this.audio.autoplay=true;
-      peer.ontrack=event=>{if(generation!==this.generation)return;this.audio!.srcObject=new MediaStream([event.track]);void this.play();};
+      peer.ontrack=event=>{if(generation!==this.generation)return;const playback = new MediaStream([event.track]);
+        this.audio!.srcObject = playback;
+        if (this.audioContext) this.playbackMeter = this.createAnalyser(this.audioContext, playback);
+        void this.play();};
       const lost=()=>{if(generation!==this.generation)return;this.update({error:'The voice connection was lost. You can start a new call.'});void this.stop();};
       peer.onconnectionstatechange=()=>{
         if(generation!==this.generation)return;
@@ -130,16 +133,39 @@ export class CaltraLive {
   private meter(stream:MediaStream):void {
     if(typeof AudioContext==='undefined')return;
     const context=new AudioContext();this.audioContext=context;
-    const analyser=context.createAnalyser();analyser.fftSize=256;context.createMediaStreamSource(stream).connect(analyser);
-    const samples=new Uint8Array(256);let last=0;
-    const frame=(now:number)=>{if(this.audioContext!==context)return;if(now-last>100){last=now;analyser.getByteTimeDomainData(samples);
-      const amplitude=this.snapshot.muted?0:Math.min(1,Math.sqrt(samples.reduce((sum,value)=>sum+((value-128)/128)**2,0)/samples.length)*4);
-      this.update({amplitude,speaking:Date.now()-this.lastSpeakerAt<1500});}this.frame=requestAnimationFrame(frame);};
-    this.frame=requestAnimationFrame(frame);
+    const microphone = this.createAnalyser(context, stream);
+    // The remote track may arrive before or after setRemoteDescription resolves.
+    const playback = this.audio?.srcObject;
+    if (playback instanceof MediaStream) this.playbackMeter = this.createAnalyser(context, playback);
+    const samples = new Uint8Array(microphone.fftSize);
+    let last = 0;
+    const frame = (now: number) => {
+      if (this.audioContext !== context) return;
+      if (now - last > 100) {
+        last = now;
+        const input = this.snapshot.muted ? 0 : this.voiceLevel(microphone, samples);
+        const output = this.playbackMeter && !this.snapshot.playbackBlocked ? this.voiceLevel(this.playbackMeter, samples) : 0;
+        this.update({ amplitude: Math.max(input, output), speaking: output > 0.04 || Date.now() - this.lastSpeakerAt < 1500 });
+      }
+      this.frame = requestAnimationFrame(frame);
+    };
+    this.frame = requestAnimationFrame(frame);
+  }
+  private createAnalyser(context: AudioContext, stream: MediaStream): AnalyserNode {
+    const analyser = context.createAnalyser();
+    analyser.fftSize = 256;
+    // Observe the stream without routing another copy to the audio destination.
+    context.createMediaStreamSource(stream).connect(analyser);
+    return analyser;
+  }
+  private voiceLevel(analyser: AnalyserNode, samples: Uint8Array<ArrayBuffer>): number {
+    analyser.getByteTimeDomainData(samples);
+    const sum = samples.reduce((total, value) => total + ((value - 128) / 128) ** 2, 0);
+    return Math.min(1, Math.sqrt(sum / samples.length) * 4);
   }
   private cleanup():void {
     clearTimeout(this.readiness);clearTimeout(this.disconnected);
-    if(this.frame!==undefined)cancelAnimationFrame(this.frame);void this.audioContext?.close();this.audioContext=undefined;
+    if(this.frame!==undefined)cancelAnimationFrame(this.frame);void this.audioContext?.close();this.audioContext=undefined;this.playbackMeter=undefined;
     this.stream?.getTracks().forEach(track=>track.stop());this.stream=undefined;
     this.channel?.close();this.channel=undefined;this.peer?.close();this.peer=undefined;
     if(this.audio){this.audio.pause();this.audio.srcObject=null;this.audio=undefined;}

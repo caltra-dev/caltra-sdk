@@ -207,11 +207,10 @@ The native Thread integration ships in `@caltra/client@0.14.0`, `@caltra/assista
 
 When a hosted runtime has Live enabled, `CaltraChat` automatically shows a Live
 button immediately left of Send. While connecting, that button shows a cancellable
-spinner. A full-width borderless voice header sits above the regular transcript,
-with a grey orb while connecting and a luminous gradient once connected, plus enlarged
-mute and end-call controls. The normal transcript and draft remain visible;
-speech is saved there rather than duplicated in a separate voice transcript. The
-orb's flowing glow intensifies while speaking and respects reduced-motion preferences. Caltra authenticates signaling;
+spinner. The call controls sit just above the message field. Smoke drifts inside a
+compact orb that expands and contracts with the microphone and assistant audio.
+The orb stays still when reduced motion is enabled. The regular transcript and
+draft stay visible during the call. Caltra authenticates signaling;
 browser audio connects directly to OpenAI with WebRTC. Provider keys stay on the
 Caltra server. No additional media SDK or customer provider configuration is needed.
 

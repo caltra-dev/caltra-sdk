@@ -4,7 +4,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { CaltraApiError, CaltraSessionRuntime, type CaltraSessionMessage, type CaltraLive, type CaltraLiveSnapshot } from "@caltra/client";
 import { createCaltraTheme } from "../src/themes/index.js";
 import { CaltraChat, CaltraConnection } from "../src/ui/chat.js";
-import { CaltraConversation, CaltraLiveContext } from "../src/ui/live.js";
+import { CaltraCallPanel, CaltraLiveContext } from "../src/ui/live.js";
 import { defaultCaltraChatLabels } from "../src/ui/labels.js";
 
 beforeAll(() => {
@@ -418,6 +418,10 @@ it('keeps the draft and viewport visible while connecting and cancels from the L
   fireEvent.change(input,{target:{value:'Keep my draft'}});
   fireEvent.click(screen.getByRole('button',{name:'Start Live'}));
   const cancel=await screen.findByRole('button',{name:'Cancel Live connection'});
+  const footer = input.closest('.aui-thread-viewport-footer')!;
+  const panel = footer.querySelector('[data-slot="voice-conversation"]')!;
+  expect(panel.contains(screen.getByRole('button',{name:'End the call'}))).toBe(true);
+  expect(panel.nextElementSibling?.contains(input)).toBe(true);
   expect(cancel.getAttribute('aria-busy')).toBe('true');
   expect(screen.getByRole('textbox')).toBe(input);
   expect(input.isConnected).toBe(true);
@@ -435,12 +439,12 @@ it('keeps the draft and viewport visible while connecting and cancels from the L
  }
 });
 
-it('keeps the regular transcript visible through Live without duplicating speech in its header',()=>{
+it('keeps the regular transcript visible through Live without duplicating speech beside its composer',()=>{
  let snapshot:CaltraLiveSnapshot={enabled:true,status:'connecting',muted:false,elsewhere:false,error:null,playbackBlocked:false,amplitude:0,speaking:false,transcript:[{id:'speech',role:'user',text:'Recorded speech'}]};
  const listeners=new Set<()=>void>();
  const live={getSnapshot:()=>snapshot,subscribe:(listener:()=>void)=>{listeners.add(listener);return()=>listeners.delete(listener);},stop:vi.fn(),setMuted:vi.fn()} as unknown as CaltraLive;
  const update=(status:CaltraLiveSnapshot['status'])=>act(()=>{snapshot={...snapshot,status};listeners.forEach(listener=>listener());});
- render(<CaltraLiveContext.Provider value={{live}}><CaltraConversation><p>Recorded speech</p><input defaultValue="Preserved draft"/></CaltraConversation></CaltraLiveContext.Provider>);
+ render(<CaltraLiveContext.Provider value={{live}}><p>Recorded speech</p><CaltraCallPanel/><input defaultValue="Preserved draft"/></CaltraLiveContext.Provider>);
  const input=screen.getByRole('textbox');
  expect(screen.getByRole('button',{name:'End the call'})).toBeTruthy();
  update('active');

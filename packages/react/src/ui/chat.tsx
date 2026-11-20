@@ -1,6 +1,6 @@
 "use client";
 
-import { CaltraLiveContext, CaltraConversation, CaltraComposerControls } from "./live.js";
+import { CaltraLiveContext, CaltraCallPanel, CaltraComposerControls } from "./live.js";
 import { AttachmentSession } from "./attachment_content.js";
 import { CaltraReasoning, type CaltraReasoningDisplay, type CaltraReasoningProps } from "./reasoning.js";
 
@@ -131,7 +131,7 @@ function ChatSession(props: CaltraChatProps) {
     Welcome: components.Welcome || props.labels?.welcomeDescription ? WelcomeSlot : undefined,
     Loading: components.Loading ? LoadingSlot : undefined,
     LoadEarlier: EarlierHistorySlot,
-    Composer: components.Composer ? ComposerSlot : undefined,
+    Composer: ComposerSlot,
     ComposerControls: CaltraComposerControls,
     ToolFallback: ToolRenderer,
   }), [components, props.labels?.welcomeDescription]);
@@ -153,7 +153,7 @@ function ChatSession(props: CaltraChatProps) {
       <div ref={setContainer} className={`caltra-chat${dark ? " dark" : ""}${className ? ` ${className}` : ""}`} style={{ ...themeStyle(resolvedTheme), ...style }} data-theme={resolvedTheme.name} data-color-mode={colorMode} hidden={hidden} aria-label={labels.chat} lang={props.locale}>
         <Connection labels={labels} connection={snapshot.connection} error={snapshot.error} historyLoaded={snapshot.historyLoaded} retry={() => session.reconnect()} />
         {snapshot.olderError && <div className="caltra-chat__connection" role="alert">{labels.olderFailed}</div>}
-        <AttachmentSession.Provider value={session}><CaltraConversation>{thread}</CaltraConversation></AttachmentSession.Provider>
+        <AttachmentSession.Provider value={session}>{thread}</AttachmentSession.Provider>
       </div>
     </PopoverPortalContainer.Provider></ThreadPortalContainer.Provider>
     </ToolContext.Provider></ChatSlots.Provider></ThreadTextOverrides.Provider></ThreadLocaleProvider>
@@ -179,7 +179,14 @@ function WelcomeSlot() { const { components, labels } = useContext(ChatSlots); c
 function LoadingSlot() { const { components, labels } = useContext(ChatSlots); const Component = components.Loading!; return <Component labels={labels} />; }
 function EarlierHistorySlot() { const { session, labels } = useContext(ToolContext); return session ? <EarlierHistory session={session} labels={labels} /> : null; }
 function MessageSlot() { const { components, labels } = useContext(ChatSlots); const Component = components.Message!; return <Component labels={labels} />; }
-function ComposerSlot() { const { components, ...props } = useContext(ChatSlots); const Component = components.Composer!; return <Component {...props} />; }
+function ComposerSlot({ autoFocus }: { autoFocus?: boolean }) {
+  const { components, ...props } = useContext(ChatSlots);
+  const CustomComposer = components.Composer;
+  return <>
+    <CaltraCallPanel />
+    {CustomComposer ? <CustomComposer {...props} /> : <Composer autoFocus={autoFocus} />}
+  </>;
+}
 function AssistantSlot() { const { components, labels } = useContext(ChatSlots); return components.Message ? <MessageSlot /> : <CaltraMessage labels={labels} />; }
 
 export function CaltraWelcome({ labels }: CaltraChatSlotProps) {

@@ -84,3 +84,37 @@ it('allows brief disconnection but ends a persistent one',async()=>{
  Peer.current.connectionState='disconnected';Peer.current.onconnectionstatechange?.();await vi.advanceTimersByTimeAsync(10001);
  expect(client.stopLiveConnection).toHaveBeenCalledOnce();expect(live.getSnapshot().status).toBe('idle');
 });
+
+it('meters the louder voice and keeps measuring replies with a muted microphone', async () => {
+  class RemoteStream { constructor(readonly tracks: unknown[]) {} }
+  vi.stubGlobal('MediaStream', RemoteStream);
+  let remoteSample = 128;
+  const close = vi.fn();
+  vi.stubGlobal('AudioContext', class {
+    createAnalyser() { return { fftSize: 256, getByteTimeDomainData: vi.fn() }; }
+    createMediaStreamSource(source: unknown) {
+      return { connect: (node: { getByteTimeDomainData: ReturnType<typeof vi.fn> }) => {
+        node.getByteTimeDomainData.mockImplementation((samples: Uint8Array) => samples.fill(source === stream ? 144 : remoteSample));
+      } };
+    }
+    close = close;
+  });
+  let tick!: FrameRequestCallback;
+  vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => { tick = cb; return 1; });
+  vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  const live = new CaltraLive(transport(), sessionId, () => {});
+  await live.start();
+  Peer.current.event('session.started');
+  tick(200);
+  expect(live.getSnapshot().amplitude).toBe(.5);
+  (Peer.current.ontrack as (event: { track: object }) => void)({ track: {} });
+  live.setMuted(true);
+  remoteSample = 152;
+  tick(400);
+  expect(live.getSnapshot()).toMatchObject({ amplitude: .75, speaking: true });
+  remoteSample = 128;
+  tick(600);
+  expect(live.getSnapshot().amplitude).toBe(0);
+  await live.stop();
+  expect(close).toHaveBeenCalledOnce();
+});

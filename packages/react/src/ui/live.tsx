@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useSyncExternalStore, type ComponentType, type ReactNode } from 'react';
+import { createContext, useContext, useSyncExternalStore, type ComponentType } from 'react';
 import type { CaltraLive } from '@caltra/client';
 import { AudioLinesIcon, LoaderCircleIcon } from 'lucide-react';
 import { TooltipIconButton } from './upstream/components/assistant-ui/elements/tooltip-icon-button.js';
@@ -25,10 +25,9 @@ function LiveButton({live}:{live:CaltraLive}) {
   </TooltipIconButton>;
 }
 
-export function CaltraConversation({children}:{children:ReactNode}) {
+export function CaltraCallPanel() {
   const {live}=useContext(CaltraLiveContext);
-  // Voice controls are outside the native transcript scrollport; the thread always stays mounted.
-  return <>{live&&<LivePanel live={live}/>}{children}</>;
+  return live ? <LivePanel live={live}/> : null;
 }
 
 function LivePanel({live}:{live:CaltraLive}) {
@@ -37,7 +36,7 @@ function LivePanel({live}:{live:CaltraLive}) {
     {state.elsewhere&&<div className="caltra-chat__connection" role="status">Live is active in another tab.</div>}
     {state.error&&<div className="caltra-chat__connection" role="alert">{state.error}</div>}
     {(state.status==='connecting'||state.status==='active')&&<VoiceConversation mode={state.status==='active'?(state.speaking?'speaking':'listening'):'connecting'}
-        showStatusText={false} layout="header"
+        showStatusText={false} layout="composer"
         amplitude={state.amplitude} transcript={state.transcript} muted={state.muted}
         onToggleMute={state.status==='active'?()=>live.setMuted(!state.muted):undefined}
         onEnd={()=>{void live.stop();}}/>}
