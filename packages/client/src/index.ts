@@ -1,3 +1,5 @@
+export { ClerkAuthProvider, type ClerkAuthOptions } from "./clerk_auth_provider.js";
+export type { CaltraAuthProvider } from "./auth_provider_interface.js";
 export { CaltraClient } from "./client.js";
 export { CaltraSessionsClient } from "./sessions.js";
 export { CaltraApiError } from "./error.js";

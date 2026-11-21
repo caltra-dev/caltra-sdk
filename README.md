@@ -243,3 +243,22 @@ errors, mute state and ownership in another tab. Use HTTPS or localhost for
 microphone access. The first integration supplies bounded recent text context;
 it does not send image/video attachments. Browser microphone/playback validation
 is required in addition to the automated lifecycle tests.
+
+### Open a workspace with Clerk
+
+Connect Clerk in the Caltra environment's Authentication settings, allow your exact browser origin, and copy the provider ID. To let signed-in users create workspaces, choose a creator role under Workspace creation.
+
+```ts
+import { CaltraClient, ClerkAuthProvider } from "@caltra/client";
+
+const client = new CaltraClient({
+  auth: new ClerkAuthProvider({
+    providerId,
+    getToken: () => clerk.session?.getToken() ?? Promise.resolve(null),
+    workspace: { createIfMissing: { key: "personal", name: "My workspace" } },
+  }),
+});
+const { id } = await client.connectWorkspace();
+```
+
+The creation key is private to the verified tenant user. Reusing it opens the same workspace. Use `workspace: { id }` to open an existing workspace where the current user already has a membership. Read the current Clerk session in `getToken` so sign-out and account switches take effect. The provider ID is public.

@@ -78,7 +78,7 @@ export class CaltraClient {
   constructor(options: CaltraClientOptions) {
     this.apiUrl = (options.apiUrl ?? "https://api.caltra.dev").replace(/\/+$/, "");
     this.fetchImplementation = options.fetch ?? globalThis.fetch.bind(globalThis);
-    const authorizationCodeProvider = options.authorizationCodeProvider
+    const authorizationCodeProvider = options.auth ?? options.authorizationCodeProvider
       ?? this.endpointAuthorizationCodeProvider(options);
     this.tokenProvider = new CaltraClientTokenProvider(
       this.apiUrl,
@@ -87,6 +87,13 @@ export class CaltraClient {
     );
     this.agents = new CaltraAgentsClient(this);
     this.sessions = new CaltraSessionsClient(this);
+  }
+
+  /** Opens the provider-selected workspace and returns the workspace ID assigned by Caltra. */
+  async connectWorkspace(): Promise<{ id: string }> {
+    const { workspaceId } = await this.tokenProvider.getConfiguration();
+    if (!workspaceId) throw new Error("Workspace discovery requires a workspace authentication provider.");
+    return { id: workspaceId };
   }
 
   /** Creates an inert, caller-owned session runtime. Call start(), then stop() on disposal. */

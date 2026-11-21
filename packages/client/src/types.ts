@@ -1,3 +1,4 @@
+import type { CaltraAuthProvider } from "./auth_provider_interface.js";
 /** JSON-only application data captured with a user message; never projected into UI history. */
 export type CaltraJsonValue = string | number | boolean | null | readonly CaltraJsonValue[] | { readonly [key: string]: CaltraJsonValue };
 export type CaltraMessageContext = { readonly [key: string]: CaltraJsonValue };
@@ -16,11 +17,13 @@ export type CaltraAuthorizationCodeProvider = () => Promise<string>;
 
 export interface CaltraTokenConfiguration {
   clientToken: string;
+  workspaceId?: string;
   expiresAt: Date;
   refreshAfter: Date;
 }
 
 export interface CaltraClientOptions {
+  auth?: CaltraAuthProvider;
   apiUrl?: string;
   authorizationCodeProvider?: CaltraAuthorizationCodeProvider;
   authorizationHeadersProvider?: () => Promise<HeadersInit>;
