@@ -86,6 +86,10 @@ Without `createIfMissing`, `workspaces.get()` returns `null` when the external I
 `createIfMissing`, concurrent calls converge on the same workspace for the API key's Caltra
 environment. The same external ID in another environment identifies a separate workspace.
 
+Use `workspaces.update({ externalId, name })` to rename an existing workspace. Omitted fields keep
+their stored values, and an unknown external ID throws a `resource_not_found` error. It requires
+`client_tokens:create` and Caltra API 0.2.121 or later.
+
 Agent provisioning requires `agents:provision`. It creates or reuses the user’s hosted agent without creating an agent identity. Add `syncName` to update an existing agent’s display name; creation is idempotent for the same workspace and user. Caltra must expose the agent provisioning API before deploying this SDK version to consumers.
 
 Use `caltra.agentIdentities.get(...)` when you need a separate identity with its own instructions and access relationships. That operation requires `agent-identities:provision`.
