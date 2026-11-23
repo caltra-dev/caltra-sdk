@@ -5,6 +5,11 @@ import { Button } from "./upstream/components/ui/button.js";
 
 /** How often the interactive lease is renewed; comfortably inside the server's lease window. */
 const HEARTBEAT_INTERVAL_MS = 20_000;
+/**
+ * Heartbeat answers that mean the lease is definitively gone: another holder, an ended session, or
+ * a profile this user can no longer reach (revoked or deleted). Anything else is retried.
+ */
+const CONTROL_ENDED_CODES = new Set(["not_controller", "no_active_session", "resource_not_found"]);
 
 export interface BrowserLiveViewLabels {
   title: string;
@@ -102,7 +107,7 @@ function BrowserLiveViewInstance({ client, browserProfileId, className, labels: 
     const timer = setInterval(() => {
       void client.browserProfiles.heartbeat(browserProfileId).catch((error: unknown) => {
         // Only a definitive loss ends control; a network blip is retried at the next tick.
-        if (!(error instanceof CaltraApiError) || error.code !== "not_controller" || !mounted.current) return;
+        if (!(error instanceof CaltraApiError) || !CONTROL_ENDED_CODES.has(error.code) || !mounted.current) return;
         holdsControl.current = false;
         setNotice(labels.controlLost);
         setView({ kind: "loading" });

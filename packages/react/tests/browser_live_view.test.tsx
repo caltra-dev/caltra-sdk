@@ -92,6 +92,29 @@ it("falls back to read-only and stops heartbeating when control is lost", async 
   expect(browserProfiles.releaseControl).not.toHaveBeenCalled();
 });
 
+it.each([
+  ["no_active_session", 409, "No browser session"],
+  ["resource_not_found", 404, "could not be loaded"],
+] as const)("stops heartbeating and leaves the interactive view when the heartbeat answers %s", async (code, status, shown) => {
+  const heartbeat = vi.fn().mockRejectedValue(problem(status, code));
+  // The session or profile is gone, so the read-only reload fails the same way.
+  const liveView = vi.fn().mockResolvedValueOnce({ url: "https://view.example/ro", mode: "read_only", sessionId: "s" })
+    .mockRejectedValue(problem(status, code));
+  const { client, browserProfiles } = fakeClient({ heartbeat, liveView });
+  render(<BrowserLiveView client={client} browserProfileId={id} />);
+  await settle();
+  fireEvent.click(screen.getByRole("button", { name: "Take over" }));
+  await settle();
+  await act(async () => { vi.advanceTimersByTime(20_000); });
+  await settle();
+  expect(iframe()).toBeNull();
+  expect(document.body.textContent).toContain(shown);
+  await act(async () => { vi.advanceTimersByTime(60_000); });
+  expect(heartbeat).toHaveBeenCalledTimes(1);
+  cleanup();
+  expect(browserProfiles.releaseControl).not.toHaveBeenCalled();
+});
+
 it("releases control with keepalive on unmount and on pagehide, but only while held", async () => {
   const first = fakeClient();
   const view = render(<BrowserLiveView client={first.client} browserProfileId={id} />);
