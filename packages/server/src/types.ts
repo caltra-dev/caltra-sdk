@@ -43,6 +43,10 @@ export interface CaltraWorkspaceLookup {
   externalId: string;
 }
 
+/** Workspace metadata to change; omitted fields keep their stored values. */
+export interface CaltraWorkspaceUpdate extends CaltraWorkspaceLookup {
+  name?: string;
+}
 export interface CaltraWorkspaceCreateIfMissing extends CaltraWorkspaceLookup {
   createIfMissing: { name: string };
 }

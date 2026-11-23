@@ -4,6 +4,7 @@ import type {
   CaltraServerWorkspace,
   CaltraWorkspaceCreateIfMissing,
   CaltraWorkspaceLookup,
+  CaltraWorkspaceUpdate,
 } from "./types.js";
 
 const WorkspaceSchema = z.object({
@@ -49,7 +50,31 @@ export class CaltraWorkspacesClient {
       }
       throw error;
     }
-    const workspace = WorkspaceSchema.parse(await response.json());
+    return this.toWorkspace(await response.json());
+  }
+
+  /**
+   * Updates metadata of an existing externally identified workspace, such as its display name.
+   * Unlike `get`, an unknown workspace is an error because there is nothing to update.
+   */
+  async update(input: CaltraWorkspaceUpdate): Promise<CaltraServerWorkspace> {
+    if (input.name === undefined) throw new TypeError("Provide at least one workspace field to update.");
+    const headers = new Headers({ "content-type": "application/json" });
+    headers.set("authorization", `Bearer ${this.apiKey}`);
+    const response = await this.fetchImplementation(`${this.apiUrl}/server/v1/workspaces/update`, {
+      body: JSON.stringify({
+        external_id: this.workspaceNamespace ? `${this.workspaceNamespace}:${input.externalId}` : input.externalId,
+        name: input.name,
+      }),
+      headers,
+      method: "POST",
+    });
+    if (!response.ok) throw await CaltraServerError.fromResponse(response);
+    return this.toWorkspace(await response.json());
+  }
+
+  private toWorkspace(body: unknown): CaltraServerWorkspace {
+    const workspace = WorkspaceSchema.parse(body);
     return {
       externalId: workspace.external_id,
       id: workspace.id,

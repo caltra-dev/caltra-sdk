@@ -14,6 +14,7 @@ export type {
   CaltraServerWorkspace,
   CaltraWorkspaceCreateIfMissing,
   CaltraWorkspaceLookup,
+  CaltraWorkspaceUpdate,
 } from "./types.js";
 
 export { CaltraAgentsClient } from "./agents.js";
