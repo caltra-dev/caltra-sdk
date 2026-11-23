@@ -9,3 +9,6 @@ export type { CaltraChatStyle } from "./theme_style.js";
 
 export { CaltraReasoning } from "./reasoning.js";
 export type { CaltraReasoningDisplay, CaltraReasoningProps } from "./reasoning.js";
+
+export { BrowserLiveView } from "./browser_live_view.js";
+export type { BrowserLiveViewProps, BrowserLiveViewLabels } from "./browser_live_view.js";

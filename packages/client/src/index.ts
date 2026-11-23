@@ -42,3 +42,17 @@ export type { CaltraModelSelection, CaltraModelChoice } from "./types.js";
 
 export { CaltraLive } from "./live.js";
 export type { CaltraLiveSnapshot, CaltraLiveOwner, CaltraLiveResponse } from "./live.js";
+
+export { CaltraBrowserProfilesClient } from "./browser_profiles.js";
+export { CaltraWebCredentialsClient } from "./web_credentials.js";
+export type {
+  CaltraBrowserProfile,
+  CaltraBrowserProfileActiveSession,
+  CaltraBrowserProfileControl,
+  CaltraBrowserProfileCreateInput,
+  CaltraBrowserProfileLiveView,
+  CaltraBrowserProfileRole,
+  CaltraMember,
+  CaltraWebCredential,
+  CaltraWebCredentialCreateInput,
+} from "./types.js";

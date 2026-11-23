@@ -8,6 +8,8 @@ import { CaltraSessionEventConnection } from "./event_connection.js";
 import { CaltraClientTokenProvider } from "./token_provider.js";
 import { CaltraAuthorizationCodeEndpointProvider } from "./authorization_code_provider.js";
 import { CaltraSessionsClient } from "./sessions.js";
+import { CaltraBrowserProfilesClient } from "./browser_profiles.js";
+import { CaltraWebCredentialsClient } from "./web_credentials.js";
 import type {
   CaltraMessageInput,
   CaltraAgentIdentity,
@@ -71,6 +73,8 @@ const SubmissionSchema = z.object({
 export class CaltraClient {
   readonly agents: CaltraAgentsClient;
   readonly sessions: CaltraSessionsClient;
+  readonly browserProfiles: CaltraBrowserProfilesClient;
+  readonly webCredentials: CaltraWebCredentialsClient;
   private readonly apiUrl: string;
   private readonly fetchImplementation: typeof fetch;
   private readonly tokenProvider: CaltraClientTokenProvider;
@@ -87,6 +91,8 @@ export class CaltraClient {
     );
     this.agents = new CaltraAgentsClient(this);
     this.sessions = new CaltraSessionsClient(this);
+    this.browserProfiles = new CaltraBrowserProfilesClient(this);
+    this.webCredentials = new CaltraWebCredentialsClient(this);
   }
 
   /** Opens the provider-selected workspace and returns the workspace ID assigned by Caltra. */
@@ -322,6 +328,17 @@ export class CaltraClient {
     );
     if (!response.ok) throw await CaltraApiError.fromResponse(response);
     return schema.parse(await response.json());
+  }
+
+  /** Authenticated JSON call for resource clients; non-2xx responses surface as CaltraApiError. */
+  async requestResource<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
+    return await this.request(path, schema, init);
+  }
+
+  /** Authenticated call whose success response is 204 No Content. keepalive lets it outlive a closing page. */
+  async requestNoContent(path: string, init: RequestInit = {}): Promise<void> {
+    const response = await this.fetchImplementation(this.url(path), { ...init, headers: await this.headers(init.headers) });
+    if (!response.ok) throw await CaltraApiError.fromResponse(response);
   }
 
   private async headers(input?: HeadersInit): Promise<Headers> {
