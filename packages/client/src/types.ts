@@ -172,3 +172,35 @@ export interface CaltraApiProblem {
 /** Explicit selection for one new turn; omission preserves the session default. */
 export interface CaltraModelSelection { platformModelId: string; reasoningLevel: string | null }
 export interface CaltraModelChoice { platform_model_id: string; model_name: string; reasoning_level: string | null; is_default: boolean }
+
+/** Exactly one principal that can be granted or revoked access to a shared resource. */
+export type CaltraMember = { agentIdentityId: string } | { tenantUserId: string };
+
+export type CaltraBrowserProfileRole = "owner" | "operator" | "viewer";
+
+export interface CaltraBrowserProfileActiveSession {
+  id: string;
+  startedAt: string;
+  controlledBy: "agent" | "user";
+}
+
+export interface CaltraBrowserProfile {
+  id: string;
+  name: string;
+  dedicatedStickyIp: boolean;
+  /** Absent only on the create response, where the caller is always the owner. */
+  role?: CaltraBrowserProfileRole;
+  activeSession: CaltraBrowserProfileActiveSession | null;
+}
+
+export interface CaltraBrowserProfileCreateInput { name: string; dedicatedStickyIp?: boolean }
+
+/** Read-only live view URL; it stops working when the browser session ends. */
+export interface CaltraBrowserProfileLiveView { url: string; mode: "read_only"; sessionId: string }
+
+/** Interactive URL; control lapses at expiresAt unless renewed with a heartbeat. */
+export interface CaltraBrowserProfileControl { url: string; mode: "interactive"; expiresAt: string }
+
+export interface CaltraWebCredential { id: string; label: string; origin: string; username: string; createdAt: string }
+
+export interface CaltraWebCredentialCreateInput { label: string; origin: string; username: string; password: string }
