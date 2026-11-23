@@ -51,7 +51,15 @@ type View =
  * connection alive after its token is revoked, so only navigating the iframe closes it. Control is
  * also released (best effort, keepalive) on unmount and on pagehide.
  */
-export function BrowserLiveView({ client, browserProfileId, className, labels: labelOverrides }: BrowserLiveViewProps) {
+export function BrowserLiveView(props: BrowserLiveViewProps) {
+  // Each (client, profile) pair gets its own instance, so a change releases the old lease against
+  // the old id and discards its late responses (they resolve against the unmounted instance).
+  const clientVersion = useRef({ client: props.client, version: 0 });
+  if (clientVersion.current.client !== props.client) clientVersion.current = { client: props.client, version: clientVersion.current.version + 1 };
+  return <BrowserLiveViewInstance key={`${clientVersion.current.version}:${props.browserProfileId}`} {...props} />;
+}
+
+function BrowserLiveViewInstance({ client, browserProfileId, className, labels: labelOverrides }: BrowserLiveViewProps) {
   const labels = { ...defaultLabels, ...labelOverrides };
   const [view, setView] = useState<View>({ kind: "loading" });
   const [notice, setNotice] = useState<string | null>(null);

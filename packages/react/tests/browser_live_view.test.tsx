@@ -127,3 +127,53 @@ it("stays read-only and reports when take over is refused", async () => {
   expect(iframe().getAttribute("src")).toBe("https://view.example/ro");
   expect(screen.getByRole("alert").textContent).toContain("take over");
 });
+
+const idB = "30000000-0000-4000-8000-000000000002";
+
+it("discards a late liveView result for the previous profile and heartbeats only the current one", async () => {
+  let resolveA!: (value: unknown) => void;
+  const liveView = vi.fn((profile: string) => profile === id
+    ? new Promise((resolve) => { resolveA = resolve; })
+    : Promise.resolve({ url: "https://view.example/b", mode: "read_only", sessionId: "s" }));
+  const { client, browserProfiles } = fakeClient({ liveView });
+  const view = render(<BrowserLiveView client={client} browserProfileId={id} />);
+  view.rerender(<BrowserLiveView client={client} browserProfileId={idB} />);
+  await settle();
+  await act(async () => resolveA({ url: "https://view.example/a", mode: "read_only", sessionId: "s" }));
+  expect(iframe().getAttribute("src")).toBe("https://view.example/b");
+  fireEvent.click(screen.getByRole("button", { name: "Take over" }));
+  await settle();
+  await act(async () => { vi.advanceTimersByTime(20_000); });
+  expect(browserProfiles.heartbeat.mock.calls).toEqual([[idB]]);
+});
+
+it("releases a late takeControl for the previous profile against that profile and resets the view", async () => {
+  let resolveTake!: (value: unknown) => void;
+  const takeControl = vi.fn(() => new Promise((resolve) => { resolveTake = resolve; }));
+  const { client, browserProfiles } = fakeClient({ takeControl });
+  const view = render(<BrowserLiveView client={client} browserProfileId={id} />);
+  await settle();
+  fireEvent.click(screen.getByRole("button", { name: "Take over" }));
+  view.rerender(<BrowserLiveView client={client} browserProfileId={idB} />);
+  await settle();
+  expect(screen.getByRole("button", { name: "Take over" })).toBeTruthy();
+  await act(async () => resolveTake({ url: "https://view.example/rw-a", mode: "interactive", expiresAt: "x" }));
+  expect(browserProfiles.releaseControl.mock.calls).toEqual([[id, { keepalive: true }]]);
+  expect(iframe().getAttribute("src")).toBe("https://view.example/ro");
+  view.unmount();
+  expect(browserProfiles.releaseControl).toHaveBeenCalledTimes(1);
+});
+
+it("releases the held lease against the previous profile when the id changes", async () => {
+  const { client, browserProfiles } = fakeClient();
+  const view = render(<BrowserLiveView client={client} browserProfileId={id} />);
+  await settle();
+  fireEvent.click(screen.getByRole("button", { name: "Take over" }));
+  await settle();
+  view.rerender(<BrowserLiveView client={client} browserProfileId={idB} />);
+  await settle();
+  expect(browserProfiles.releaseControl.mock.calls).toEqual([[id, { keepalive: true }]]);
+  expect(iframe().getAttribute("src")).toBe("https://view.example/ro");
+  await act(async () => { vi.advanceTimersByTime(60_000); });
+  expect(browserProfiles.heartbeat).not.toHaveBeenCalled();
+});
