@@ -117,4 +117,32 @@ describe("CaltraWorkspacesClient", () => {
       status: 503,
     });
   });
+
+  it("updates workspace metadata with the namespaced external ID", async () => {
+    const fetchImplementation = vi.fn(async () => Response.json({ external_id: "preview:owner-1", id: workspaceId, name: "Home projects · Jane" }));
+    const client = new CaltraServerClient({
+      apiKey: "caltra_test_key", apiUrl: "https://api.example.test", workspaceNamespace: "preview",
+      fetch: fetchImplementation as typeof fetch,
+    });
+
+    await expect(client.workspaces.update({ externalId: "owner-1", name: "Home projects · Jane" }))
+      .resolves.toEqual({ externalId: "preview:owner-1", id: workspaceId, name: "Home projects · Jane" });
+    expect(fetchImplementation.mock.calls[0]![0].toString()).toBe("https://api.example.test/server/v1/workspaces/update");
+    expect(fetchImplementation.mock.calls[0]![1]).toMatchObject({
+      body: JSON.stringify({ external_id: "preview:owner-1", name: "Home projects · Jane" }), method: "POST",
+    });
+  });
+
+  it("rejects an empty update and surfaces a missing workspace as an error", async () => {
+    const fetchImplementation = vi.fn(async () => Response.json({
+      code: "resource_not_found", detail: "The workspace was not found.", request_id: "request-3",
+      retryable: false, status: 404, title: "Resource not found", type: "about:blank",
+    }, { status: 404 }));
+    const client = new CaltraServerClient({ apiKey: "caltra_test_key", apiUrl: "https://api.example.test", fetch: fetchImplementation as typeof fetch });
+
+    await expect(client.workspaces.update({ externalId: "owner-1" })).rejects.toThrow(TypeError);
+    expect(fetchImplementation).not.toHaveBeenCalled();
+    await expect(client.workspaces.update({ externalId: "missing", name: "Nobody" }))
+      .rejects.toMatchObject({ code: "resource_not_found", status: 404 });
+  });
 });
