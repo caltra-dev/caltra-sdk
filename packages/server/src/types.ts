@@ -67,7 +67,6 @@ export interface CaltraAgentIdentityLookup {
 
 export interface CaltraAgentIdentityCreateIfMissing extends CaltraAgentIdentityLookup {
   createIfMissing: {
-    browserVisible?: boolean;
     description?: string;
     instructions: string;
     name: string;

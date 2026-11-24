@@ -36,7 +36,6 @@ export class CaltraAgentIdentitiesClient {
           } } : {}),
           ...(createIfMissing ? {
             create_if_missing: {
-              browser_visible: createIfMissing.browserVisible ?? true,
               description: createIfMissing.description ?? "",
               instructions: createIfMissing.instructions,
               name: createIfMissing.name,

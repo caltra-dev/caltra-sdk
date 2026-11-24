@@ -50,7 +50,6 @@ describe("CaltraAgentIdentitiesClient", () => {
       expect.objectContaining({
         body: JSON.stringify({
           create_if_missing: {
-            browser_visible: true,
             description: "",
             instructions: "Help with accounting.",
             name: "Piria Assistant",

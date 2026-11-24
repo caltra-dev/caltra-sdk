@@ -42,13 +42,6 @@ export interface CaltraPage<T> {
   next_cursor: string | null;
 }
 
-export interface CaltraAgentIdentity {
-  created_at: string;
-  description: string | null;
-  id: string;
-  name: string;
-}
-
 export interface CaltraSession {
   /** Authoritative queued/running turn state; absent only on older servers. */
   is_running?: boolean;
@@ -67,10 +60,6 @@ export interface CaltraSession {
 
 export interface CaltraSessionLookup {
   externalId: string;
-}
-
-export interface CaltraSessionCreateIfMissing extends CaltraSessionLookup {
-  createIfMissing: { agentIdentityExternalId: string; autoName?: boolean };
 }
 
 export interface CaltraToolCall {

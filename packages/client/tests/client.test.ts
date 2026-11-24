@@ -72,7 +72,7 @@ describe("CaltraClient", () => {
     }
   });
 
-  it("uses the browser token for session discovery and creation", async () => {
+  it("uses the browser token for session discovery", async () => {
     const fetchImplementation = vi.fn(async (input: URL | RequestInfo, init?: RequestInit) => {
       const url = String(input);
       if (url.endsWith("/caltra/v1/auth/authenticate")) {
@@ -106,7 +106,6 @@ describe("CaltraClient", () => {
     });
 
     await client.listSessions({ cursor: "next", limit: 10 });
-    await client.createSession({ agentIdentityId });
 
     const listUrl = fetchImplementation.mock.calls[1]![0] as URL;
     expect(listUrl.toString()).toBe(
@@ -115,13 +114,9 @@ describe("CaltraClient", () => {
     const listHeaders = fetchImplementation.mock.calls[1]![1]!.headers as Headers;
     expect(listHeaders.get("authorization")).toBe("Bearer client-token");
     expect(listHeaders.get("x-caltra-session-metadata")).toBe("true");
-    expect(fetchImplementation.mock.calls[2]![1]).toMatchObject({
-      body: JSON.stringify({ agent_identity_id: agentIdentityId }),
-      method: "POST",
-    });
   });
 
-  it("gets or creates the tenant user's stable session by external ID", async () => {
+  it("looks up the tenant user's stable session by external ID", async () => {
     const fetchImplementation = vi.fn(async (input: URL | RequestInfo) => {
       if (input.toString().endsWith("/caltra/v1/auth/authenticate")) {
         return Response.json({
@@ -150,15 +145,10 @@ describe("CaltraClient", () => {
       fetch: fetchImplementation as typeof fetch,
     });
 
-    await expect(client.sessions.get({
-      createIfMissing: { agentIdentityExternalId: "personal-assistant" },
-      externalId: "primary",
-    })).resolves.toMatchObject({ id: sessionId, external_id: "primary" });
+    await expect(client.sessions.get({ externalId: "primary" }))
+      .resolves.toMatchObject({ id: sessionId, external_id: "primary" });
     expect(fetchImplementation.mock.calls[1]![1]).toMatchObject({
-      body: JSON.stringify({
-        create_if_missing: { agent_identity_external_id: "personal-assistant" },
-        external_id: "primary",
-      }),
+      body: JSON.stringify({ external_id: "primary" }),
       method: "POST",
     });
   });

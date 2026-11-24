@@ -12,13 +12,11 @@ import { CaltraBrowserProfilesClient } from "./browser_profiles.js";
 import { CaltraWebCredentialsClient } from "./web_credentials.js";
 import type {
   CaltraMessageInput,
-  CaltraAgentIdentity,
   CaltraClientOptions,
   CaltraMessageSubmission,
   CaltraPage,
   CaltraPageInput,
   CaltraSession,
-  CaltraSessionCreateIfMissing,
   CaltraSessionLookup,
   CaltraSessionMessage,
 } from "./types.js";
@@ -26,13 +24,6 @@ import type {
 const PageSchema = <T extends z.ZodType>(item: T) => z.object({
   data: z.array(item),
   next_cursor: z.string().nullable(),
-}).strict();
-
-const AgentIdentitySchema = z.object({
-  created_at: z.string(),
-  description: z.string().nullable(),
-  id: z.string(),
-  name: z.string(),
 }).strict();
 
 const SessionSchema = z.object({
@@ -131,42 +122,20 @@ export class CaltraClient {
     }
   }
 
-  async listAgentIdentities(input: CaltraPageInput = {}): Promise<CaltraPage<CaltraAgentIdentity>> {
-    return await this.getPage("/agent-identities", input, PageSchema(AgentIdentitySchema));
-  }
-
   async listSessions(input: CaltraPageInput = {}): Promise<CaltraPage<CaltraSession>> {
     return await this.getPage("/sessions", input, PageSchema(SessionSchema));
   }
 
-  async createSession(input: { agentIdentityId: string; autoName?: boolean }): Promise<CaltraSession> {
-    return await this.request("/sessions", SessionSchema, {
-      body: JSON.stringify({ agent_identity_id: input.agentIdentityId, auto_name: input.autoName }),
-      headers: { "content-type": "application/json" },
-      method: "POST",
-    });
-  }
-
-  async getSession(input: CaltraSessionCreateIfMissing): Promise<CaltraSession>;
-  async getSession(input: CaltraSessionLookup): Promise<CaltraSession | null>;
-  async getSession(
-    input: CaltraSessionLookup | CaltraSessionCreateIfMissing,
-  ): Promise<CaltraSession | null> {
-    const createIfMissing = "createIfMissing" in input ? input.createIfMissing : undefined;
+  /** Looks up a session the signed-in user owns by external ID; returns null when it does not exist. */
+  async getSession(input: CaltraSessionLookup): Promise<CaltraSession | null> {
     try {
       return await this.request("/sessions/get", SessionSchema, {
-        body: JSON.stringify({
-          ...(createIfMissing ? {
-            create_if_missing: { agent_identity_external_id: createIfMissing.agentIdentityExternalId, auto_name: createIfMissing.autoName },
-          } : {}),
-          external_id: input.externalId,
-        }),
+        body: JSON.stringify({ external_id: input.externalId }),
         headers: { "content-type": "application/json" },
         method: "POST",
       });
     } catch (error) {
-      if (!createIfMissing && error instanceof CaltraApiError
-        && error.status === 404 && error.code === "resource_not_found") return null;
+      if (error instanceof CaltraApiError && error.status === 404 && error.code === "resource_not_found") return null;
       throw error;
     }
   }
